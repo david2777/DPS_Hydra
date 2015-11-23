@@ -1,0 +1,7 @@
+-Get management UI setup
+
+-Get SQL setup and hookup to UI
+
+-Make some sort of job submitter
+
+-Everything else
