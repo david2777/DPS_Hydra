@@ -133,8 +133,7 @@ class tupleObject:
             self.__dict__[self.autoColumn] = id
         
     def update (self, transaction):
-        
-        names = list (self.__dirty__)
+        names = list(self.__dirty__)
         if not names:
             return
         
