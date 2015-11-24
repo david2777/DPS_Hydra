@@ -1,4 +1,4 @@
-#Authors: David Gladstein and Aaron Cohn
+#Original Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
 class Answer: 
