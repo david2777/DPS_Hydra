@@ -1,6 +1,4 @@
--Get management UI setup
-
--Get SQL setup and hookup to UI
+-Multi-select for Task View
 
 -Make some sort of job submitter
 

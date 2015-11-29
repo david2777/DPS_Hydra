@@ -19,7 +19,7 @@ from TaskSearchDialog import TaskSearchDialog
 from MySQLSetup import *                        #@UnusedWildImport
 from LoggingSetup import logger                 #@Reimport
 import Utils                                    #@Reimport
-from MessageBoxes import aboutBox, yesNoBox
+from MessageBoxes import aboutBox, yesNoBox, intBox
 from JobKill import sendKillQuestion, killJob, killTask, resurrectTask, resurrectJob, haltJob
 import pickle
 import JobTicket                                # @UnusedImport
@@ -79,8 +79,6 @@ class FarmView( QMainWindow, Ui_FarmView ):
                         self.pauseJobButtonHandler)
         QObject.connect(self.haltJobButton, SIGNAL("clicked()"),
                         self.haltJobButtonHandler)
-        QObject.connect(self.refreshButton, SIGNAL("clicked()"),
-                        self.updateJobTable)
         QObject.connect(self.jobTable, SIGNAL ("cellClicked(int,int)"),
                         self.jobCellClickedHandler)
         QObject.connect (self.killJobButton, SIGNAL ("clicked()"),
@@ -97,10 +95,11 @@ class FarmView( QMainWindow, Ui_FarmView ):
                         self.setPriorityButtonHandler)
         QObject.connect(self.taskIDLineEdit, SIGNAL("returnPressed()"),
                         self.searchByTaskID)
-
+        QObject.connect(self.testFramesButton, SIGNAL("clicked()"),
+                        self.callTestFrameBox)
+                        
         self.jobTable.setColumnWidth(0, 60)         #Job ID
         self.jobTable.setColumnWidth(1, 60)         #Priority
-        self.splitter_jobList.setSizes([100, 100])  #Makes the left pane a little bigger, not 100% sure why though
         self.jobTable.sortItems(0, order = Qt.DescendingOrder)
 
         #Partial applications for convenience
@@ -588,9 +587,12 @@ class FarmView( QMainWindow, Ui_FarmView ):
         
     def getJobIDAndRow(self):
         item = self.jobTable.currentItem()
-        if item and item.isSelected ():
+        if item and item.isSelected():
             row = self.jobTable.currentRow()
-            job_id = int(self.jobTable.item(row, 0).text()) # @ReservedAssignment
+            job_id = int(self.jobTable.item(row, 0).text())
+        else:
+            aboutBox(self, "Select a job!", "Please select a job to contine....")
+            raise Exception("No job selected.")
         return job_id, row
 
     def getTaskIDAndRow(self):
@@ -599,6 +601,17 @@ class FarmView( QMainWindow, Ui_FarmView ):
             row = self.taskTable.currentRow ()
             task_id = int(self.taskTable.item(row, 0).text())
         return task_id, row
+        
+    def callTestFrameBox(self):
+        job_id, row = self.getJobIDAndRow()
+        reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
+        if reply[1] == True:
+            logger.info("Starting %d test frames on job_id %d" % (reply[0], job_id))
+            tasks = hydra_rendertask.fetch ("where job_id = %d" % job_id)
+            for taskOBJ in tasks[0:reply[0]]:
+                TaskUtils.changeStatusViaTaskID(taskOBJ.id, "R", ["U", "H"])
+            logger.info("Test Tasks Started!")
+            self.jobCellClickedHandler(row, 0)
         
 #------------------------------------------------------------------------#                        
 #---------------------------EXTERNAL FUNCTIONS---------------------------#
@@ -704,6 +717,7 @@ def prioritizeJob(job_id, priority):
         t.cur.execute("""update hydra_rendertask
                         set priority = '%d'
                         where job_id = '%d'""" % (priority, job_id))
+                        
 
 #------------------------------------------------------------------------#                        
 #-------------------------------UI CLASSES-------------------------------#

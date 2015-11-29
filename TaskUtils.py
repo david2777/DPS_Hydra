@@ -24,6 +24,20 @@ def changeStatusViaJobID(job_id, new_status, old_status_list=[]):
     with transaction() as t:
         t.cur.execute(command)
         
+        
+def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
+    if type(old_status_list) is not list:
+        logger.error("Bad Old Status List in TaskUtils!")
+        raise Exception("Please use a list for old statuses")
+    command = """update hydra_rendertask set status = '%s' where id = '%d'""" % (new_status, task_id)
+    if len(old_status_list) > 0:
+        command = command + """ and status = '%s'""" % old_status_list[0]
+        for status in old_status_list[1:]:
+            command = command + """ or status = '%s'""" % status
+    
+    with transaction() as t:
+        t.cur.execute(command)
+        
 def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
     with transaction () as t:
         if taskID:

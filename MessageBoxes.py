@@ -1,5 +1,5 @@
 #Standard
-from PyQt4.QtGui import QMessageBox
+from PyQt4.QtGui import QMessageBox, QInputDialog
 
 #Original Author: Aaron Cohn
 #Taken from Cogswell's Project Hydra
@@ -15,3 +15,7 @@ def yesNoBox(parent=None, title="", msg=""):
     return QMessageBox.question(parent, title, msg,
         buttons=(QMessageBox.Yes | QMessageBox.No),
         defaultButton=QMessageBox.Yes)
+        
+def intBox(parent = None, title="", msg="", default = 0):
+    """TEST"""
+    return(QInputDialog.getInt(parent, title, msg, default))
