@@ -163,7 +163,6 @@ CREATE TABLE `hydra_rendertask` (
   `exitCode` int(11) DEFAULT NULL COMMENT 'Exit code returned by the task (0 = regular, anything else is a possible error)',
   `endTime` datetime DEFAULT NULL COMMENT 'Time the task completed',
   `requirements` varchar(255) DEFAULT NULL COMMENT 'Requirements for the task',
-  `phase` int(11) DEFAULT NULL COMMENT 'Phase that job belongs to',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COMMENT='Keeps a record of all render tasks (which are owned by jobs)';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -174,7 +173,7 @@ CREATE TABLE `hydra_rendertask` (
 
 LOCK TABLES `hydra_rendertask` WRITE;
 /*!40000 ALTER TABLE `hydra_rendertask` DISABLE KEYS */;
-INSERT INTO `hydra_rendertask` VALUES (1,'F','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL,1),(2,'F','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL,2),(3,'F','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL,2),(4,'F','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL,3),(5,'F','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL,3),(6,'F','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL,4);
+INSERT INTO `hydra_rendertask` VALUES (1,'U','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL),(2,'U','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL),(3,'U','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL),(4,'U','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL),(5,'U','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL),(6,'K','[\'c:\\\\program files\\\\autodesk\\\\maya2014\\\\bin\\\\render.exe\', \'-mr:v\', \'5\', \'-s\', \'1\', \'-e\', \'1\', \'-proj\', \'F:/Projects/Fruits/\', \'F:/Projects/Fruits/scenes/orangeSliceTest.ma\']',1,50,'DPS','2015-11-20 22:10:41',NULL,NULL,NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `hydra_rendertask` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -187,4 +186,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-11-24  0:16:32
+-- Dump completed on 2015-11-28 23:15:55

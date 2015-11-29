@@ -89,9 +89,7 @@ CREATE TABLE `hydra_rendernode` (
   `minPriority` int(11) NOT NULL COMMENT 'Lowest priority task that can be run by this node (Note this also exists in the hydraSettings.cfg file on each node but that one does nothing- David)',
   `task_id` int(11) DEFAULT NULL COMMENT 'The ID of the task currently running (if any)',
   `software_version` varchar(255) DEFAULT NULL COMMENT 'The version of the RenderNodeMain.exe currently running on this node',
-  `project` varchar(45) DEFAULT 'Unassigned' COMMENT 'The project which the render node currently belongs to (ie ProjectX, MediaWorks, StudioE)',
   `capabilities` varchar(255) DEFAULT '' COMMENT 'The render nodes current capabilites in alphabetical order. (ie VRay, RenderMan, SOuP)',
-  `restrict_to_project` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Determines weather the node can pickup jobs from other projects if it has none from its own',
   `pulse` datetime DEFAULT NULL COMMENT 'The last time RenderNodeMain.exe was known to be running, if ever',
   PRIMARY KEY (`host`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Describes all of the RenderNodes. Made in MySQL Workbench. ';
@@ -131,4 +129,4 @@ CREATE TABLE `hydra_rendertask` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-11-21 23:56:57
+-- Dump completed on 2015-11-28 23:16:30
