@@ -2,8 +2,8 @@
 from sys import argv
 from socket import error as socketerror
 
-#RenderAgent
-from MySQLSetup import renderagent_rendertask, transaction, KILLED, READY, STARTED
+#Hydra
+from MySQLSetup import hydra_rendertask, transaction, KILLED, READY, STARTED
 from Connections import TCPConnection
 from Questions import KillCurrentJobQuestion
 from LoggingSetup import logger
@@ -33,7 +33,7 @@ def killJob(job_id):
     #Get hostnames for tasks that were already started
     tuples = None # @UnusedVariable
     with transaction() as t:
-        t.cur.execute("""select host from renderagent_rendertask 
+        t.cur.execute("""select host from hydra_rendertask 
                         where job_id = '%d' and status = 'S'""" % job_id)
         tuples = t.cur.fetchall()
         
@@ -63,7 +63,7 @@ def haltJob(job_id):
     #Get hostnames for tasks that were already started
     tuples = None
     with transaction() as t:
-        t.cur.execute("""select host from renderagent_rendertask where job_id = '%d' and status = 'S'""" % job_id)
+        t.cur.execute("""select host from hydra_rendertask where job_id = '%d' and status = 'S'""" % job_id)
         tuples = t.cur.fetchall()
         
     #Make flat list out of single-element tuples fetched from db
@@ -87,7 +87,7 @@ def killTask(task_id):
     kill request is sent to the node running it.
     @return: True if there were no errors killing the task, else False."""
     
-    [task] = renderagent_rendertask.fetch("where id = '%d'" % task_id)
+    [task] = hydra_rendertask.fetch("where id = '%d'" % task_id)
     if task.status == READY:
         task.status = KILLED
         with transaction() as t:
@@ -104,7 +104,7 @@ def resurrectJob(job_id):
     """Resurrects job with the given id. Tasks marked 'K' or 'F' will have 
     their data cleared and their statuses set to 'R'"""
     with transaction() as t:
-        t.cur.execute("""select id from renderagent_rendertask 
+        t.cur.execute("""select id from hydra_rendertask 
                         where job_id = '%d'""" % job_id)
         tuples = t.cur.fetchall()
         
@@ -124,7 +124,7 @@ def resurrectTask(task_id, ignoreStarted = False):
     @return: True if there was an error, such as when the user tries to 
              resurrect a task that is marked as Started, else False."""
     
-    [task] = renderagent_rendertask.fetch("where id = '%d'" % task_id)
+    [task] = hydra_rendertask.fetch("where id = '%d'" % task_id)
     if (
             task.status == 'K' or task.status == 'F' or task.status == 'C' or 
             (task.status == 'S' and ignoreStarted == True)

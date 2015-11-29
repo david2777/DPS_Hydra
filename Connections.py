@@ -4,7 +4,7 @@ import exceptions
 import socket
 import pickle
 
-#RenderAgent
+#Hydra
 import Servers
 import Constants
 from LoggingSetup import logger
@@ -13,13 +13,13 @@ from LoggingSetup import logger
 #Taken from Cogswell's Project Hydra
 
 class Connection:
-    "A connection to a RenderAgent server. Base class, must be subclassed."
+    "A connection to a Hydra server. Base class, must be subclassed."
     def getAnswer( self, question ):
         """Protocol for getting the server to answer a question. Must be implemented in subclasses."""
         raise exceptions.NotImplementedError
 
 class LocalConnection( Connection ):
-    """A connection to a local RenderAgent server"""
+    """A connection to a local Hydra server"""
     def __init__( self, localServer = Servers.Server()):
         """Constructor. By default it creates a new local server if you don't supply one."""
         self.localServer = localServer
@@ -29,7 +29,7 @@ class LocalConnection( Connection ):
         return question.computeAnswer( self.localServer )
 
 class TCPConnection( Connection ):
-    """A connection to a remote RenderAgent server, using TCP"""
+    """A connection to a remote Hydra server, using TCP"""
     def __init__( self,
                   hostname = Constants.HOSTNAME,
                   port = Constants.PORT

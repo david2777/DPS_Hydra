@@ -7,7 +7,7 @@ import datetime
 import traceback
 import subprocess
 
-#RenderAgent
+#Hydra
 from Constants import *             #@UnusedWildImport
 from Servers import TCPServer
 from LoggingSetup import logger     #@UnusedImport
@@ -36,7 +36,7 @@ class RenderTCPServer(TCPServer):
         self.statusAfterDeath = None #Must be a status from MySQLSetup
 
         #Clean up in case we had an unexpected termination last time around
-        [thisNode] = renderagent_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
+        [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
 
         if thisNode.task_id:
             if thisNode.status == PENDING or thisNode.status == OFFLINE:
@@ -53,7 +53,7 @@ class RenderTCPServer(TCPServer):
                 thisNode.update(t)
 
     def processRenderTasks(self):
-        [thisNode] = renderagent_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
+        [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
         logger.info("""Host: %r
          Status: %r
          Capabilities %r""", thisNode.host, thisNode.status, thisNode.capabilities)
@@ -69,7 +69,7 @@ class RenderTCPServer(TCPServer):
         queryString += " and '%s' like requirements" % thisNode.capabilities
 
         with transaction() as t:
-            render_tasks = renderagent_rendertask.fetch (queryString, limit=1, explicitTransaction=t)
+            render_tasks = hydra_rendertask.fetch (queryString, limit=1, explicitTransaction=t)
             if not render_tasks:
                 return
             render_task = render_tasks[0]
@@ -90,7 +90,7 @@ class RenderTCPServer(TCPServer):
         log = file(render_task.logFile, 'w')
 
         try:
-            log.write('renderagent log file %s on %s\n' % (render_task.logFile, render_task.host))
+            log.write('hydra log file %s on %s\n' % (render_task.logFile, render_task.host))
             log.write('RenderNodeMain is %s\n' % sys.argv)
             log.write('Command: %s\n\n' % (render_task.command))
             Utils.flushOut(log)
@@ -113,7 +113,7 @@ class RenderTCPServer(TCPServer):
         finally:
             #Get the latest info about this render node
             with transaction() as t:
-                [thisNode] = renderagent_rendernode.fetch ("where host = '%s'" % Utils.myHostName(), explicitTransaction=t)
+                [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName(), explicitTransaction=t)
 
                 #Check if job was killed, update the job board accordingly
                 if self.childKilled:
@@ -165,7 +165,7 @@ def heartbeat(interval = 5):
     while True:
         try:
             with transaction() as t:
-                t.cur.execute("update renderagent_rendernode "
+                t.cur.execute("update hydra_rendernode "
                     "set pulse = NOW() "
                     "where host = '%s'" % host)
         except Exception, e:

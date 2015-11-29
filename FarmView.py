@@ -15,7 +15,7 @@ from PyQt4.QtCore import *                      #@UnusedWildImport
 from UI_FarmView import Ui_FarmView
 from TaskSearchDialog import TaskSearchDialog
 
-#RenderAgent
+#Hydra
 from MySQLSetup import *                        #@UnusedWildImport
 from LoggingSetup import logger                 #@Reimport
 import Utils                                    #@Reimport
@@ -209,7 +209,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             return
 
         with transaction() as t:
-            rendernode_rows = renderagent_rendernode.fetch(explicitTransaction=t)
+            rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
             for node_row in rendernode_rows:
                 if node_row.host in hosts:
                     onlineNode(node_row)
@@ -231,7 +231,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             return
 
         with transaction() as t:
-            rendernode_rows = renderagent_rendernode.fetch(explicitTransaction=t)
+            rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
             for node_row in rendernode_rows:
                 if node_row.host in hosts:
                     offlineNode(node_row)
@@ -259,7 +259,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         error = False
         notKilledList = list()
         with transaction() as t:
-            rendernode_rows = renderagent_rendernode.fetch(explicitTransaction=t)
+            rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
             for node_row in rendernode_rows:
                 if node_row.host in hosts:
                     offlineNode(node_row)
@@ -285,7 +285,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         job_id = int (item.text ())
         self.taskTableLabel.setText("Task List (job: " + item.text() + ")")
         try:
-            tasks = renderagent_rendertask.fetch ("where job_id = %d" % job_id)
+            tasks = hydra_rendertask.fetch ("where job_id = %d" % job_id)
             self.taskTable.setRowCount (len (tasks))
             for pos, task in enumerate (tasks):
                 #Calcuate time difference
@@ -419,7 +419,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         task_id = str(self.taskIDLineEdit.text())
         if task_id:
             with transaction() as t:
-                query = "select job_id from renderagent_rendertask where id = %s"
+                query = "select job_id from hydra_rendertask where id = %s"
                 t.cur.execute(query % task_id)
                 job_id = t.cur.fetchall()
 
@@ -520,7 +520,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         #Prevent rows from being sorted while table is populating
         self.renderNodeTable.setSortingEnabled(False)
 
-        rows = renderagent_rendernode.fetch(order="order by host")
+        rows = hydra_rendernode.fetch(order="order by host")
         self.renderNodeTable.setRowCount (len (rows))
         columns = [
             lambda o: TableWidgetItem_check(),
@@ -543,7 +543,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
     def updateJobTable (self, *args):
         self.jobTable.setSortingEnabled(False)
         try:
-            jobs = renderagent_job.fetch ()
+            jobs = hydra_job.fetch ()
             self.jobTable.setRowCount (len (jobs))
             for pos, job in enumerate (jobs):
                 ticket = pickle.loads(job.pickledTicket)
@@ -568,7 +568,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             labelFactory( 'startTime' ),
             labelFactory( 'endTime' ),
             labelFactory( 'exitCode' )]
-        setup( renderagent_rendertask.fetch (order = "order by id desc",
+        setup( hydra_rendertask.fetch (order = "order by id desc",
                                        limit = self.limitSpinBox.value ()),
                                        columns, self.taskGrid)
 
@@ -576,7 +576,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
 
         with transaction() as t:
             t.cur.execute ("""select count(status), status
-                                from renderagent_rendernode
+                                from hydra_rendernode
                                 group by status""")
             counts = t.cur.fetchall ()
         logger.debug (counts)
@@ -605,7 +605,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
 #------------------------------------------------------------------------# 
 
 def getSoftwareVersionText(sw_ver):
-    """Given the software_version attribute of a renderagent_rendernode row, returns
+    """Given the software_version attribute of a hydra_rendernode row, returns
     a string suitable for display purposes."""
 
     #Get RenderNodeMain version number if exists
@@ -628,16 +628,16 @@ def getSoftwareVersionText(sw_ver):
         return "None"
 
 def getThisNodeData():
-    """Gets the row corresponding to localhost in the renderagent_rendernode table.
+    """Gets the row corresponding to localhost in the hydra_rendernode table.
     Raises MySQLdb.Error"""
 
-    [thisNode] = renderagent_rendernode.fetch("where host = '%s'"
+    [thisNode] = hydra_rendernode.fetch("where host = '%s'"
                                         % Utils.myHostName())
     return thisNode
 
 def onlineNode(node):
     """Onlines the node.
-    Precondition: node refers to a row from the renderagent_rendernode table.
+    Precondition: node refers to a row from the hydra_rendernode table.
     Raises MySQLdb.Error"""
 
     if node.status == IDLE:
@@ -651,7 +651,7 @@ def onlineNode(node):
 
 def offlineNode(node):
     """Onlines the node.
-    Precondition: node refers to a row from the renderagent_rendernode table.
+    Precondition: node refers to a row from the hydra_rendernode table.
     Raises MySQLdb.Error"""
 
     if node.status == OFFLINE:
@@ -698,10 +698,10 @@ def setup(records, columns, grid):
             
 def prioritizeJob(job_id, priority):
     with transaction() as t:
-        t.cur.execute("""update renderagent_job
+        t.cur.execute("""update hydra_job
                         set priority = '%d'
                         where id = '%d'""" % (priority, job_id))
-        t.cur.execute("""update renderagent_rendertask
+        t.cur.execute("""update hydra_rendertask
                         set priority = '%d'
                         where job_id = '%d'""" % (priority, job_id))
 

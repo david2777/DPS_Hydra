@@ -6,9 +6,9 @@ import exceptions
 import os
 import datetime
 
-#RenderAgent
+#Hydra
 from Answers import TimeAnswer, EchoAnswer, CMDAnswer, RenderAnswer, KillCurrentJobAnswer
-from MySQLSetup import renderagent_rendertask
+from MySQLSetup import hydra_rendertask
 from RenderNodeMain import RenderTCPServer
 from Constants import RENDERLOGDIR
 
@@ -50,8 +50,8 @@ class RenderQuestion(Question):
         self.render_task_id = render_task_id
 
     def computeAnswer(self, server):
-        [render_tasks] = renderagent_rendertask.fetch("where ")
-        render_task = renderagent_rendertask.fetch()
+        [render_tasks] = hydra_rendertask.fetch("where ")
+        render_task = hydra_rendertask.fetch()
         render_task.host = os.getenv('COMPUTERNAME')
         if not os.path.isdir( RENDERLOGDIR ):
             os.makedirs( RENDERLOGDIR )
@@ -62,7 +62,7 @@ class RenderQuestion(Question):
         log = file(render_task.logFile, 'w')
         
         try:
-            log.write('renderagent log file %s on %s\n' % (render_task.logFile, render_task.host))
+            log.write('hydra log file %s on %s\n' % (render_task.logFile, render_task.host))
             log.write('Command: %s\n\n' % (render_task.command))
             log.flush()
             

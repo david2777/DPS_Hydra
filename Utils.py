@@ -4,7 +4,7 @@ import ConfigParser
 import os
 import itertools
 
-#RenderAgent
+#Hydra
 import Constants
 
 #Authors: David Gladstein and Aaron Cohn

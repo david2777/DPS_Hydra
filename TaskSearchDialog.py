@@ -2,14 +2,14 @@
 from PyQt4.QtGui import QDialog
 from PyQt4.QtCore import QObject, SIGNAL
 
-#RenderAgent
+#Hydra
 from UI_TaskSearchDialog import Ui_taskSearchDialog
 
 #Original Author: Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
 class TaskSearchDialog(QDialog, Ui_taskSearchDialog):
-    """A dialog box for running queries on renderagent_rendertask."""
+    """A dialog box for running queries on hydra_rendertask."""
 
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)

@@ -6,7 +6,7 @@ import os
 import shutil
 import sys
 
-#RenderAgent
+#Hydra
 from LoggingSetup import logger
 import Utils
 import Constants
@@ -147,14 +147,14 @@ class tupleObject:
         logger.debug ((query, values))
         transaction.cur.executemany (query, [values])
 
-class renderagent_rendernode (tupleObject): 
+class hydra_rendernode (tupleObject): 
     primaryKey = 'host'
 
-class renderagent_rendertask (tupleObject):
+class hydra_rendertask (tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
     
-class renderagent_job (tupleObject):
+class hydra_job (tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
 

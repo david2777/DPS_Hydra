@@ -5,7 +5,7 @@ import pickle
 import traceback
 import time
 
-#RenderAgent
+#Hydra
 import Constants
 from LoggingSetup import logger
 #Note that this imports Questions at the bottom for some reason
@@ -57,7 +57,7 @@ def runTheServer(serverObject):
     serverObject.serve_forever()
         
 class MyTCPHandler(SocketServer.StreamRequestHandler):
-    TCPserver = None #The RenderAgent server object, NOT the SocketServer.
+    TCPserver = None #The Hydra server object, NOT the SocketServer.
     def handle( self ):
         logger.info ("request")
         try:        

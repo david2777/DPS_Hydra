@@ -4,9 +4,9 @@ not strictly necessary to getting the jobs executed."""
 import pickle
 from datetime import datetime
 
-#RenderAgent
+#Hydra
 from LoggingSetup import logger
-from MySQLSetup import renderagent_job, renderagent_rendertask, READY, transaction
+from MySQLSetup import hydra_job, hydra_rendertask, READY, transaction
 
 #Original Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
@@ -26,7 +26,7 @@ class JobTicket:
         self.createTasks(job)
 
     def createJob( self ):
-        job = renderagent_job( pickledTicket = pickle.dumps( self ), 
+        job = hydra_job( pickledTicket = pickle.dumps( self ), 
                          priority = self.priority, 
                          requirements = self.capability_pattern,
                          createTime = datetime.now(),
@@ -76,7 +76,7 @@ class MayaTicket( JobTicket ):
         for start, end in zip( starts, ends ):
             command = self.renderCommand(start, end)
             logger.debug( command )
-            task = renderagent_rendertask( status = READY, 
+            task = hydra_rendertask( status = READY, 
                                      command = repr( command ),
                                      job_id = job.id, 
                                      priority = self.priority, 
@@ -111,7 +111,7 @@ class CMDTicket(JobTicket):
         return str (self.command)
         
     def createTasks(self, job):
-        task = renderagent_rendertask( status = READY,
+        task = hydra_rendertask( status = READY,
                                  command = repr( self.command ),
                                  job_id = job.id, 
                                  priority = self.priority,
