@@ -3,7 +3,7 @@ from sys import argv
 from socket import error as socketerror
 
 #Hydra
-from MySQLSetup import hydra_rendertask, transaction, KILLED, READY, STARTED
+from MySQLSetup import hydra_rendertask, transaction, KILLED, READY, STARTED, PAUSED
 from Connections import TCPConnection
 from Questions import KillCurrentJobQuestion
 from LoggingSetup import logger
@@ -88,7 +88,7 @@ def killTask(task_id):
     @return: True if there were no errors killing the task, else False."""
     
     [task] = hydra_rendertask.fetch("where id = '%d'" % task_id)
-    if task.status == READY:
+    if task.status == READY or task.status == PAUSED:
         task.status = KILLED
         with transaction() as t:
             task.update(t)

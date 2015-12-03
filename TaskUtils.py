@@ -5,7 +5,6 @@ import sys
 from MySQLdb import Error as sqlerror
 
 #Hydra
-#from tableHelpers import *                      #@UnusedWildImport
 from MySQLSetup import *                        #@UnusedWildImport
 from LoggingSetup import logger                 #@Reimport
 import Utils                                    #@Reimport

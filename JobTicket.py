@@ -26,25 +26,25 @@ class JobTicket:
         self.createTasks(job)
 
     def createJob( self ):
-        job = hydra_job( pickledTicket = pickle.dumps( self ), 
+        job = hydra_job( pickledTicket = pickle.dumps(self), 
                          priority = self.priority, 
                          requirements = self.capability_pattern,
                          createTime = datetime.now(),
                          owner = self.owner,
                          niceName = self.niceName)
+        
         with transaction() as t:
             job.insert(transaction=t)
             
         return job
 
-    def createTasks( self, job ):
+    def createTasks(self, job):
         raise NotImplemented
 
     def name (self):
         return 'unnamed generic'
 
-class MayaTicket( JobTicket ):
-
+class MayaTicket(JobTicket):
     def __init__( self, sceneFile, mayaProjectPath, startFrame, endFrame, 
                   batchSize, priority, owner, niceName, capability_pattern):
         print ('initializing', self)
@@ -88,15 +88,12 @@ class MayaTicket( JobTicket ):
 
 # these classes are selected by the submitter GUI
 class Maya2011 (MayaTicket):
-
     executable = r'c:\program files\autodesk\maya2011\bin\render.exe'
 
 class Maya2013 (MayaTicket):
-
     executable = r'c:\program files\autodesk\maya2013\bin\render.exe'
 
 class Maya2014 (MayaTicket):
-
     executable = r'c:\program files\autodesk\maya2014\bin\render.exe'
 
 class CMDTicket(JobTicket):

@@ -1,4 +1,11 @@
+-Overhaul some functions (like getting a row) with the way I've done it on TASC before
+
 -Multi-select for Task View
+    -Will require a lot of reworking of functions that modify tasks
+    
+-Make a Job Status
+    -Try to drive it via Task Statuses but without loading all tasks statuses on startup
+    -Maybe have SQL server do this?
 
 -Make some sort of job submitter
 

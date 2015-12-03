@@ -10,7 +10,7 @@ import Constants
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
-def myHostName( ):
+def myHostName():
     """This computer's host name in the RenderHost table"""
     #Open config file
     config = ConfigParser.RawConfigParser ()

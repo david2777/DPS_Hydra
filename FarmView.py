@@ -97,10 +97,15 @@ class FarmView( QMainWindow, Ui_FarmView ):
                         self.searchByTaskID)
         QObject.connect(self.testFramesButton, SIGNAL("clicked()"),
                         self.callTestFrameBox)
+        QObject.connect(self.pauseTaskButton, SIGNAL("clicked()"),
+                        self.pauseTaskButtonHandler)
                         
         self.jobTable.setColumnWidth(0, 60)         #Job ID
         self.jobTable.setColumnWidth(1, 60)         #Priority
         self.jobTable.sortItems(0, order = Qt.DescendingOrder)
+        
+        #Get the global column count for later
+        self.taskTableCols = self.taskTable.columnCount()
 
         #Partial applications for convenience
         self.sqlErrorBox = (
@@ -302,6 +307,25 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 self.taskTable.setItem(pos, 5, TableWidgetItem_dt(task.endTime))
                 self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(task.exitCode)))
+                
+                #Set Color via task.status, QColor(R,G,B)
+                #TODO: store this info like niceNames on statuses
+                if task.status == "R":
+                    colorVar = QColor(255,255,255) #White if Ready
+                elif task.status == "F":
+                    colorVar = QColor(200,240,200) #Light Green if Finished
+                elif task.status == "S":
+                    colorVar = QColor(200,220,240) #Light Blue if started
+                elif task.status == "U":
+                    colorVar = QColor(240,230,200) #Light Orange if Paused
+                elif task.status == "K":
+                    colorVar = QColor(240,200,200) #Light red if Killed
+                else:
+                    colorVar = QColor(220,90,90) #Dark red if else
+                #There has to be a more efficent way to do this...
+                for i in range(self.taskTableCols):
+                    self.taskTable.item(pos, i).setBackgroundColor(colorVar)
+                
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
 
@@ -328,6 +352,8 @@ class FarmView( QMainWindow, Ui_FarmView ):
         self.jobCellClickedHandler(row, 0)
 
     def pauseJobButtonHandler(self):
+        #TODO: Check for more states and give feedback to the user
+        #Ie. make it more like pauseTaskButtonHandler
         job_id, row = self.getJobIDAndRow()
         TaskUtils.changeStatusViaJobID(job_id, "U", ["R"])
         self.jobCellClickedHandler(row, 0)
@@ -390,7 +416,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 else:
                     self.jobCellClickedHandler(row, 0)
 
-    def killTaskButtonHandler (self):
+    def killTaskButtonHandler(self):
         task_id, row = self.getTaskIDAndRow()
         choice = yesNoBox(self, "Confirm", "Really kill task {:d}?".format(task_id))
         if choice == QMessageBox.Yes:
@@ -408,6 +434,17 @@ class FarmView( QMainWindow, Ui_FarmView ):
             except sqlerror as err:
                 logger.debug(str(err))
                 aboutBox(self, "SQL Error", str(err))
+                
+    def pauseTaskButtonHandler(self):
+        task_id = self.getTaskIDAndRow()[0]
+        row = self.getJobIDAndRow()[1]
+        [task] = hydra_rendertask.fetch("where id = '%d'" % task_id)
+        if task.status == "R":
+            TaskUtils.changeStatusViaTaskID(task_id, "U", ["R"])
+            logger.debug("Paused Task %d" % task_id)
+            self.jobCellClickedHandler(row, 0)
+        else:
+            logger.info("Could not pause task %d" % task_id)
 
     def searchByTaskID(self):
         """Given a task id, finds the job, selects it in the job table, and
@@ -612,6 +649,8 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 TaskUtils.changeStatusViaTaskID(taskOBJ.id, "R", ["U", "H"])
             logger.info("Test Tasks Started!")
             self.jobCellClickedHandler(row, 0)
+        else:
+            logger.info("No test tasks started.")
         
 #------------------------------------------------------------------------#                        
 #---------------------------EXTERNAL FUNCTIONS---------------------------#
