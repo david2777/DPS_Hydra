@@ -1,11 +1,21 @@
 -Overhaul some functions (like getting a row) with the way I've done it on TASC before
 
+-Overhaul Job Ticket setup
+     -Job should hold a base command, start frame, end frame, and Maya File
+     -Tasks should be run using these and get a dedicated frame number on creation
+
+-Overhaul FarmView commands
+     -Maybe too many buttons
+
+-Add filters to JobTable in FarmView
+
 -Multi-select for Task View
     -Will require a lot of reworking of functions that modify tasks
     
 -Make a Job Status
     -Try to drive it via Task Statuses but without loading all tasks statuses on startup
     -Maybe have SQL server do this?
+    -Maybe RenderNode + FarmView?
 
 -Make some sort of job submitter
 
