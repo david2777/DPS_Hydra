@@ -147,17 +147,26 @@ class tupleObject:
         logger.debug ((query, values))
         transaction.cur.executemany (query, [values])
 
-class hydra_rendernode (tupleObject): 
+class hydra_rendernode(tupleObject): 
     primaryKey = 'host'
 
-class hydra_rendertask (tupleObject):
+class hydra_rendertask(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
     
-class hydra_job (tupleObject):
+class hydra_job(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
-
+    
+class hydra_jobboard(tupleObject):
+    autoColumn = 'job_id'
+    primaryKey = 'job_id'
+    
+class hydra_taskboard(tupleObject):
+    autoColumn = 'task_id'
+    primaryKey = 'task_id'
+    
+    
 class transaction:
     def __init__(self):
         # open db connection

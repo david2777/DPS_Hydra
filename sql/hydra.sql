@@ -60,7 +60,32 @@ CREATE TABLE `hydra_job` (
   `owner` varchar(45) NOT NULL DEFAULT 'Unknown' COMMENT 'Person who submitted the job',
   `niceName` varchar(60) NOT NULL DEFAULT 'UnknownJobName' COMMENT 'A nice name for the job to be displayed in the job list view. SubmitterMain should default it to be the file name. ',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='Keeps a recored of all submited jobs, which contain one or more task';
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='Keeps a recored of all submited jobs, which contain one or more task';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `hydra_jobboard`
+--
+
+DROP TABLE IF EXISTS `hydra_jobboard`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hydra_jobboard` (
+  `job_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID for the job, Auto Increment by DB on  insertion of job, ',
+  `baseCMD` varchar(255) DEFAULT NULL COMMENT 'The base CMD, ie. $mayaPath -proj \\\\blah\\blahhh -x 1280 -y 720 etc.',
+  `startFrame` smallint(6) DEFAULT '1' COMMENT 'The start frame of the job',
+  `endFrame` smallint(6) DEFAULT '1' COMMENT 'The end frame of the job',
+  `byFrame` tinyint(4) DEFAULT '1',
+  `taskFile` varchar(60) DEFAULT NULL COMMENT 'The task file to be rendered ie. the Maya file or PS file or something',
+  `priority` tinyint(4) DEFAULT '50' COMMENT 'Priority of the job, higher priority jobs will be executed first',
+  `phase` tinyint(4) DEFAULT '0' COMMENT 'Job phase',
+  `job_status` char(1) DEFAULT 'U' COMMENT 'Status of the job, for more info on this see MySQLSetup.py',
+  `niceName` varchar(60) DEFAULT 'HydraJob' COMMENT 'Nice name of the job for display in FarmView',
+  `owner` varchar(45) DEFAULT 'HydraUser' COMMENT 'User name of the person who submitted the job',
+  `requirements` varchar(255) DEFAULT NULL COMMENT 'Requirements for the job ie. RedShift, Fusion, MentalRay, Power',
+  `creationTime` datetime DEFAULT NULL,
+  PRIMARY KEY (`job_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -117,7 +142,31 @@ CREATE TABLE `hydra_rendertask` (
   `endTime` datetime DEFAULT NULL COMMENT 'Time the task completed',
   `requirements` varchar(255) DEFAULT NULL COMMENT 'Requirements for the task',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COMMENT='Keeps a record of all render tasks (which are owned by jobs)';
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COMMENT='Keeps a record of all render tasks (which are owned by jobs)';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `hydra_taskboard`
+--
+
+DROP TABLE IF EXISTS `hydra_taskboard`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hydra_taskboard` (
+  `task_id` int(11) NOT NULL AUTO_INCREMENT,
+  `job_id` int(11) NOT NULL,
+  `command` varchar(1000) DEFAULT NULL,
+  `task_status` char(1) DEFAULT NULL,
+  `createTime` datetime DEFAULT NULL,
+  `startTime` datetime DEFAULT NULL,
+  `endTime` datetime DEFAULT NULL,
+  `host` varchar(80) DEFAULT NULL,
+  `exitCode` int(11) DEFAULT NULL,
+  `logFile` varchar(100) DEFAULT NULL,
+  `requirements` varchar(255) DEFAULT NULL,
+  `priority` tinyint(4) DEFAULT NULL,
+  PRIMARY KEY (`task_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -129,4 +178,4 @@ CREATE TABLE `hydra_rendertask` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-11-28 23:16:30
+-- Dump completed on 2015-12-04  0:01:10
