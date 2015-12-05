@@ -52,35 +52,6 @@ def killJob(job_id):
     
     return error
     
-def haltJob(job_id):
-    """Halts every task associated with job_id that have not finished. Kills jobs
-    that are currently running, marks them and those that were ready ask Halted.
-    @return: False if no errors while killing started tasks, else True"""
-    
-    #Mark all of the Ready tasks as Killed
-    TaskUtils.changeStatusViaJobID(job_id, "H", ["R"])
-    
-    #Get hostnames for tasks that were already started
-    tuples = None
-    with transaction() as t:
-        t.cur.execute("""select host from hydra_rendertask where job_id = '%d' and status = 'S'""" % job_id)
-        tuples = t.cur.fetchall()
-        
-    #Make flat list out of single-element tuples fetched from db
-    hosts = [t for (t,) in tuples]
-    
-    #Send a kill request to each host, note if any failures occurred
-    error = False
-    for host in hosts:
-        try:
-            error = error or not sendKillQuestion(host, "H")
-        except socketerror:
-            logger.debug("There was a problem communicating with {:s}"
-                         .format(host))
-            error = True
-    
-    return error
-    
     
 def killTask(task_id):
     """Kills the task with the specified id. If the task has been started, a 

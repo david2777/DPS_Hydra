@@ -159,12 +159,12 @@ class hydra_job(tupleObject):
     primaryKey = 'id'
     
 class hydra_jobboard(tupleObject):
-    autoColumn = 'job_id'
-    primaryKey = 'job_id'
+    autoColumn = 'id'
+    primaryKey = 'id'
     
 class hydra_taskboard(tupleObject):
-    autoColumn = 'task_id'
-    primaryKey = 'task_id'
+    autoColumn = 'id'
+    primaryKey = 'id'
     
     
 class transaction:

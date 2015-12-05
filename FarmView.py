@@ -1,7 +1,7 @@
 #Standard
 import sys
 from exceptions import NotImplementedError
-from datetime import datetime as dt
+import datetime
 import functools
 import re
 from socket import error as socketerror
@@ -10,28 +10,57 @@ from socket import error as socketerror
 from MySQLdb import Error as sqlerror
 
 #Qt
-from PyQt4.QtGui import *                       #@UnusedWildImport
-from PyQt4.QtCore import *                      #@UnusedWildImport
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 from UI_FarmView import Ui_FarmView
 from TaskSearchDialog import TaskSearchDialog
 
 #Hydra
-from MySQLSetup import *                        #@UnusedWildImport
-from LoggingSetup import logger                 #@Reimport
-import Utils                                    #@Reimport
+from MySQLSetup import *
+from LoggingSetup import logger
+import Utils
 from MessageBoxes import aboutBox, yesNoBox, intBox
-from JobKill import sendKillQuestion, killJob, killTask, resurrectTask, resurrectJob, haltJob
-import pickle
-import JobTicket                                # @UnusedImport
+from JobKill import sendKillQuestion, killJob, killTask, resurrectTask, resurrectJob
 import TaskUtils
 
 #Original Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
 class FarmView( QMainWindow, Ui_FarmView ):
-    def __init__( self ):
-        QMainWindow.__init__( self )
-        self.setupUi( self )
+    def __init__(self):
+        QMainWindow.__init__(self)
+        self.setupUi(self)
+        
+        #My UI Setup Functions
+        self.setupTables(self)
+        self.connectButtons(self)
+
+        #Enable this node buttons
+        self.thisNodeButtonsEnabled = True
+
+        #Partial applications for convenience
+        self.sqlErrorBox = (
+            functools.partial(aboutBox, parent=self, title="Error",
+                        msg="There was a problem while trying to fetch info"
+                        " from the database. Check the FarmView log file for"
+                        " more details about the error."))
+        self.noneCheckedBox = (
+            functools.partial(aboutBox, parent=self, title="None checked",
+                        msg= "No nodes have been selected. Use the check boxes"
+                        " to make a selection from the table."))
+                        
+        #And Hydra said "Let there be data"
+        self.doFetch()
+        #And there was data
+        #And Hydra saw the data
+        #And it was (hopefully) good
+        
+        
+    #---------------------------------------------------------------------#                        
+    #--------------------------UI SETUP FUNCTIONS-------------------------#
+    #---------------------------------------------------------------------# 
+    def setupTables(self, *args):
+        #TODO:Fix these
         # Column widths on the render node table
         self.renderNodeTable.setColumnWidth(0, 30)  # check boxes
         self.renderNodeTable.setColumnWidth(1, 200) # host
@@ -41,8 +70,13 @@ class FarmView( QMainWindow, Ui_FarmView ):
         self.renderNodeTable.setColumnWidth(5, 200) # capabilities
         self.renderNodeTable.setColumnWidth(6, 80)  # version
         self.renderNodeTable.setColumnWidth(7, 110) # heartbeat
+        
+        #Column widths on jobTable
+        self.jobTable.setColumnWidth(0, 60)         #Job ID
+        self.jobTable.setColumnWidth(1, 60)         #Status
+        self.jobTable.sortItems(0, order = Qt.DescendingOrder)
 
-        # Column widths on the task table
+        # Column widths on the taskTable
         self.taskTable.setColumnWidth(0, 70) #ID
         self.taskTable.setColumnWidth(1, 50) #Priority
         self.taskTable.setColumnWidth(2, 100) #Host
@@ -51,10 +85,11 @@ class FarmView( QMainWindow, Ui_FarmView ):
         self.taskTable.setColumnWidth(5, 120) #End Time
         self.taskTable.setColumnWidth(6, 60) #Duration
         self.taskTable.setColumnWidth(7, 50) #Code
-
-        # State variables for the This Node tab
-        self.thisNodeButtonsEnabled = True
-
+        
+        #Get the global column count for later
+        self.taskTableCols = self.taskTable.columnCount()
+        
+    def connectButtons(self, *args):
         # Connect buttons on the This Node tab with their actions
         QObject.connect(self.fetchButton, SIGNAL("clicked()"), self.doFetch)
         QObject.connect(self.onlineThisNodeButton, SIGNAL("clicked()"),
@@ -75,10 +110,6 @@ class FarmView( QMainWindow, Ui_FarmView ):
         # Connect buttons on the Job List tab with their actions
         QObject.connect(self.startJobButton, SIGNAL("clicked()"),
                         self.startJobButtonHandler)
-        QObject.connect(self.pauseJobButton, SIGNAL("clicked()"),
-                        self.pauseJobButtonHandler)
-        QObject.connect(self.haltJobButton, SIGNAL("clicked()"),
-                        self.haltJobButtonHandler)
         QObject.connect(self.jobTable, SIGNAL ("cellClicked(int,int)"),
                         self.jobCellClickedHandler)
         QObject.connect (self.killJobButton, SIGNAL ("clicked()"),
@@ -91,39 +122,94 @@ class FarmView( QMainWindow, Ui_FarmView ):
                         self.resurrectTaskButtonHandler)
         QObject.connect(self.resurrectJobButton, SIGNAL("clicked()"),
                         self.resurrectJobButtonHandler)
-        QObject.connect(self.prioritySetButton, SIGNAL("clicked()"),
-                        self.setPriorityButtonHandler)
         QObject.connect(self.taskIDLineEdit, SIGNAL("returnPressed()"),
                         self.searchByTaskID)
         QObject.connect(self.testFramesButton, SIGNAL("clicked()"),
                         self.callTestFrameBox)
-        QObject.connect(self.pauseTaskButton, SIGNAL("clicked()"),
-                        self.pauseTaskButtonHandler)
-                        
-        self.jobTable.setColumnWidth(0, 60)         #Job ID
-        self.jobTable.setColumnWidth(1, 60)         #Priority
-        self.jobTable.sortItems(0, order = Qt.DescendingOrder)
-        
-        #Get the global column count for later
-        self.taskTableCols = self.taskTable.columnCount()
 
-        #Partial applications for convenience
-        self.sqlErrorBox = (
-            functools.partial(aboutBox, parent=self, title="Error",
-                        msg="There was a problem while trying to fetch info"
-                        " from the database. Check the FarmView log file for"
-                        " more details about the error."))
-        self.noneCheckedBox = (
-            functools.partial(aboutBox, parent=self, title="None checked",
-                        msg= "No nodes have been selected. Use the check boxes"
-                        " to make a selection from the table."))
-                        
-        #let there be data
-        self.doFetch()
-        
     #---------------------------------------------------------------------#                        
     #---------------------------BUTTON HANDLERS---------------------------#
     #---------------------------------------------------------------------# 
+    def setTaskTableItem(self, row, col, item):
+        #TempFix
+        self.taskTable.setItem(row, col, TableWidgetItem(str(item)))
+        """
+        itemType = type(item)
+        if itemType == str:
+            self.taskTable.setItem(row, col, TableWidgetItem(item))
+        elif itemType == int:
+            self.taskTable.setItem(row, col, TableWidgetItem_int(item))
+        elif isinstance(item, datetime.datetime):
+            self.taskTable.setItem(row, col, TableWidgetItem_dt(item))
+        else:
+            self.taskTable.setItem(row, col, TableWidgetItem(""))
+        """
+            
+    def setJobTableItem(self, row, col, item):
+        #TempFix
+        self.jobTable.setItem(row, col, TableWidgetItem(str(item)))
+        """
+        itemType = type(item)
+        if itemType == str:
+            self.jobTable.setItem(row, col, TableWidgetItem(item))
+        elif itemType == int:
+            self.jobTable.setItem(row, col, TableWidgetItem_int(item))
+        elif isinstance(item, datetime.datetime):
+            self.jobTable.setItem(row, col, TableWidgetItem_dt(item))
+        else:
+            self.jobTable.setItem(row, col, TableWidgetItem(""))
+        """
+            
+    def updateJobTable(self):
+        #TODO: Check for filters, set proper tasks count (need in DB?)
+        self.jobTable.setSortingEnabled(False)
+        try:
+            jobs = hydra_jobboard.fetch()
+            self.jobTable.setRowCount(len(jobs))
+            for pos, job in enumerate(jobs):
+                self.setJobTableItem(pos, 0, str(job.id))
+                self.setJobTableItem(pos, 1, job.job_status)
+                self.setJobTableItem(pos, 2, job.priority)
+                self.setJobTableItem(pos, 3, job.owner)
+                self.setJobTableItem(pos, 4, "0/0")
+                self.setJobTableItem(pos, 5, job.niceName)
+        except sqlerror as err:
+            logger.debug(str(err))
+            aboutBox(self, "SQL error", str(err))
+        self.jobTable.setSortingEnabled(True)
+    
+    def updateTaskTable(self, job_id):
+        self.taskTableLabel.setText("Task List (job: " + str(job_id) + ")")
+        try:
+            tasks = hydra_taskboard.fetch("where job_id = %d" % job_id)
+            self.taskTable.setRowCount(len(tasks))
+            for pos, task in enumerate(tasks):
+                #Calcuate time difference
+                tdiff = None
+                if task.endTime:
+                    tdiff = task.endTime - task.startTime
+                elif task.startTime:
+                    tdiff = datetime.datetime.now().replace(microsecond=0) - task.startTime
+                #Populate the taskTable
+                self.setTaskTableItem(pos, 0, task.id)
+                self.setTaskTableItem(pos, 1, task.frame)
+                self.setTaskTableItem(pos, 2, task.host)
+                self.setTaskTableItem(pos, 3, niceNames[task.status])
+                self.setTaskTableItem(pos, 4, str(task.startTime))
+                self.setTaskTableItem(pos, 5, str(task.endTime))
+                self.setTaskTableItem(pos, 6, tdiff)
+                self.setTaskTableItem(pos, 7, task.exitCode)
+                #TODO:Colors!
+                #for i in range(self.taskTableCols):
+                #    self.taskTable.item(pos, i).setBackgroundColor(colorVar)
+        
+        except sqlerror as err:
+            aboutBox(self, "SQL Error", str(err))
+
+    def jobCellClickedHandler(self, row):
+        item = self.jobTable.item (row, 0)
+        job_id = int(item.text())
+        self.updateTaskTable(job_id)
 
     def onlineThisNodeButtonClicked(self):
         """Changes the local render node's status to online if it was offline,
@@ -282,53 +368,6 @@ class FarmView( QMainWindow, Ui_FarmView ):
                      "<br>" + str(notKilledList))
         self.doFetch()
 
-
-    def jobCellClickedHandler(self, row, column):
-        #Populate the task table widget
-        item = self.jobTable.item (row, 0)
-        job_id = int (item.text ())
-        self.taskTableLabel.setText("Task List (job: " + item.text() + ")")
-        try:
-            tasks = hydra_rendertask.fetch ("where job_id = %d" % job_id)
-            self.taskTable.setRowCount (len (tasks))
-            for pos, task in enumerate (tasks):
-                #Calcuate time difference
-                tdiff = None
-                if task.endTime:
-                    tdiff = task.endTime - task.startTime
-                elif task.startTime:
-                    tdiff = dt.now().replace(microsecond=0) - task.startTime
-                #Populate table
-                self.taskTable.setItem(pos, 0, TableWidgetItem_int(str(task.id)))
-                self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.priority)))
-                self.taskTable.setItem(pos, 2, TableWidgetItem(str(task.host)))
-                self.taskTable.setItem(pos, 3, TableWidgetItem(str(niceNames[task.status])))
-                self.taskTable.setItem(pos, 4, TableWidgetItem_dt(task.startTime))
-                self.taskTable.setItem(pos, 5, TableWidgetItem_dt(task.endTime))
-                self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
-                self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(task.exitCode)))
-                
-                #Set Color via task.status, QColor(R,G,B)
-                #TODO: store this info like niceNames on statuses
-                if task.status == "R":
-                    colorVar = QColor(255,255,255) #White if Ready
-                elif task.status == "F":
-                    colorVar = QColor(200,240,200) #Light Green if Finished
-                elif task.status == "S":
-                    colorVar = QColor(200,220,240) #Light Blue if started
-                elif task.status == "U":
-                    colorVar = QColor(240,230,200) #Light Orange if Paused
-                elif task.status == "K":
-                    colorVar = QColor(240,200,200) #Light red if Killed
-                else:
-                    colorVar = QColor(220,90,90) #Dark red if else
-                #There has to be a more efficent way to do this...
-                for i in range(self.taskTableCols):
-                    self.taskTable.item(pos, i).setBackgroundColor(colorVar)
-                
-        except sqlerror as err:
-            aboutBox(self, "SQL Error", str(err))
-
     def advancedSearchButtonClicked(self):
         results = TaskSearchDialog.create()
         print results
@@ -344,38 +383,18 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 logger.debug(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                self.jobCellClickedHandler(row, 0)
+                self.jobCellClickedHandler(row)
 
     def startJobButtonHandler(self):
         job_id, row = self.getJobIDAndRow()
         TaskUtils.changeStatusViaJobID(job_id, "R", ["U", "H"])
-        self.jobCellClickedHandler(row, 0)
-
-    def pauseJobButtonHandler(self):
-        #TODO: Check for more states and give feedback to the user
-        #Ie. make it more like pauseTaskButtonHandler
-        job_id, row = self.getJobIDAndRow()
-        TaskUtils.changeStatusViaJobID(job_id, "U", ["R"])
-        self.jobCellClickedHandler(row, 0)
-
-    def haltJobButtonHandler(self):
-        #Not the most efficent, kills the job then changes the status to halted.
-        job_id, row = self.getJobIDAndRow()
-        choice = yesNoBox(self, "Confirm", "Really halt job {:d}?".format(job_id))
-        if choice == QMessageBox.Yes:
-            try:
-                if JobHalt.haltJob(job_id):
-                    aboutBox(self, "Error", "Some nodes couldn't kill " + "their tasks.")
-            except sqlerror as err:
-                logger.debug(str(err))
-                aboutBox(self, "SQL Error", str(err))
-        self.jobCellClickedHandler(row, 0)
+        self.jobCellClickedHandler(row)
 
 
     def setPriorityButtonHandler (self):
         job_id, row = self.getJobIDAndRow()
         prioritizeJob (job_id, self.prioritySpinBox.value ())
-        self.jobCellClickedHandler(row, 0)
+        self.jobCellClickedHandler(row)
         self.updateJobTable ([])
 
     def resurrectTaskButtonHandler(self):
@@ -395,7 +414,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
                     logger.debug(msg)
                     aboutBox(self, "Error", msg)
                 else:
-                    self.jobCellClickedHandler(row, 0)
+                    self.jobCellClickedHandler(row)
 
     def resurrectJobButtonHandler(self):
         job_id, row = self.getJobIDAndRow()
@@ -414,7 +433,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
                     logger.debug(msg)
                     aboutBox(self, "Error", msg)
                 else:
-                    self.jobCellClickedHandler(row, 0)
+                    self.jobCellClickedHandler(row)
 
     def killTaskButtonHandler(self):
         task_id, row = self.getTaskIDAndRow()
@@ -435,16 +454,6 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 logger.debug(str(err))
                 aboutBox(self, "SQL Error", str(err))
                 
-    def pauseTaskButtonHandler(self):
-        task_id = self.getTaskIDAndRow()[0]
-        row = self.getJobIDAndRow()[1]
-        [task] = hydra_rendertask.fetch("where id = '%d'" % task_id)
-        if task.status == "R":
-            TaskUtils.changeStatusViaTaskID(task_id, "U", ["R"])
-            logger.debug("Paused Task %d" % task_id)
-            self.jobCellClickedHandler(row, 0)
-        else:
-            logger.info("Could not pause task %d" % task_id)
 
     def searchByTaskID(self):
         """Given a task id, finds the job, selects it in the job table, and
@@ -455,7 +464,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         task_id = str(self.taskIDLineEdit.text())
         if task_id:
             with transaction() as t:
-                query = "select job_id from hydra_rendertask where id = %s"
+                query = "select job_id from hydra_taskboard where id = %s"
                 t.cur.execute(query % task_id)
                 job_id = t.cur.fetchall()
 
@@ -470,16 +479,12 @@ class FarmView( QMainWindow, Ui_FarmView ):
 
                 #Select the row and trigger the update for the task list
                 self.jobTable.setCurrentItem(item)
-                self.jobCellClickedHandler(item.row(), item.column())
+                self.jobCellClickedHandler(item.row())
                 [item] = self.taskTable.findItems(str(task_id), Qt.MatchExactly)
                 self.taskTable.setCurrentItem(item)
         else:
             aboutBox(self, "Error", "No task ID was entered.")
-            return
-
-    #---------------------------------------------------------------------#                        
-    #--------------------------INTERNAL FUNCTIONS-------------------------#
-    #---------------------------------------------------------------------#             
+            return           
     
     def doFetch( self ):
         """Aggregate method for updating all of the widgets."""
@@ -576,25 +581,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
 
         self.renderNodeTable.setSortingEnabled(True)
 
-    def updateJobTable (self, *args):
-        self.jobTable.setSortingEnabled(False)
-        try:
-            jobs = hydra_job.fetch ()
-            self.jobTable.setRowCount (len (jobs))
-            for pos, job in enumerate (jobs):
-                ticket = pickle.loads(job.pickledTicket)
-                print ticket
-                self.jobTable.setItem (pos, 0, TableWidgetItem_int(str(job.id)))
-                self.jobTable.setItem (pos, 1, TableWidgetItem_int(str(job.priority)))
-                self.jobTable.setItem (pos, 2, QTableWidgetItem(str(job.owner)))
-                self.jobTable.setItem (pos, 3, QTableWidgetItem(job.niceName))
-        except sqlerror as err:
-            logger.debug(str(err))
-            aboutBox(self, "SQL error", str(err))
-        self.jobTable.setSortingEnabled(True)
-
     def updateRenderTaskGrid(self):
-
         columns = [
             labelFactory( 'id' ),
             labelFactory( 'status' ),
@@ -604,7 +591,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             labelFactory( 'startTime' ),
             labelFactory( 'endTime' ),
             labelFactory( 'exitCode' )]
-        setup( hydra_rendertask.fetch (order = "order by id desc",
+        setup( hydra_taskboard.fetch (order = "order by id desc",
                                        limit = self.limitSpinBox.value ()),
                                        columns, self.taskGrid)
 
@@ -618,7 +605,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         logger.debug (counts)
         countString = ", ".join (["%d %s" % (count, niceNames[status])
                                   for (count, status) in counts])
-        time = dt.now().strftime ("%H:%M")
+        time = datetime.datetime.now().strftime ("%H:%M")
         msg = "%s as of %s" % (countString, time)
         self.statusLabel.setText (msg)
         
@@ -644,11 +631,11 @@ class FarmView( QMainWindow, Ui_FarmView ):
         reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
         if reply[1] == True:
             logger.info("Starting %d test frames on job_id %d" % (reply[0], job_id))
-            tasks = hydra_rendertask.fetch ("where job_id = %d" % job_id)
+            tasks = hydra_taskboard.fetch ("where job_id = %d" % job_id)
             for taskOBJ in tasks[0:reply[0]]:
                 TaskUtils.changeStatusViaTaskID(taskOBJ.id, "R", ["U", "H"])
             logger.info("Test Tasks Started!")
-            self.jobCellClickedHandler(row, 0)
+            self.jobCellClickedHandler(row)
         else:
             logger.info("No test tasks started.")
         
@@ -750,10 +737,10 @@ def setup(records, columns, grid):
             
 def prioritizeJob(job_id, priority):
     with transaction() as t:
-        t.cur.execute("""update hydra_job
+        t.cur.execute("""update hydra_jobboard
                         set priority = '%d'
                         where id = '%d'""" % (priority, job_id))
-        t.cur.execute("""update hydra_rendertask
+        t.cur.execute("""update hydra_taskboard
                         set priority = '%d'
                         where job_id = '%d'""" % (priority, job_id))
                         
@@ -854,7 +841,7 @@ class TableWidgetItem_int(QTableWidgetItem):
         return int(self.text()) < int(other.text())
 
 class TableWidgetItem_dt(TableWidgetItem):
-    """A QTableWidgetItem which holds datetime data and sorts it properly."""
+    """A QTableWidgetItem which holds datetime.datetime data and sorts it properly."""
 
     def __init__(self, dtValue):
         QTableWidgetItem.__init__(self, str(dtValue))

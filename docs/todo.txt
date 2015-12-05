@@ -1,10 +1,14 @@
--Overhaul some functions (like getting a row) with the way I've done it on TASC before
+-Keep implementing new boards into farm View
+    -Update button handlers 
+    -Figure out why table helpers don't like anything other than strings
 
--Overhaul Job Ticket setup
+-[In Progress]Overhaul some functions (like getting a row) with the way I've done it on TASC before
+
+-[Done]Overhaul Job Ticket setup
      -Job should hold a base command, start frame, end frame, and Maya File
      -Tasks should be run using these and get a dedicated frame number on creation
 
--Overhaul FarmView commands
+-[In Progress]Overhaul FarmView commands
      -Maybe too many buttons
 
 -Add filters to JobTable in FarmView
