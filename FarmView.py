@@ -146,12 +146,13 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 jobs = hydra_jobboard.fetch()
             self.jobTable.setRowCount(len(jobs))
             for pos, job in enumerate(jobs):
+                taskString  = "%d/%d" % (job.taskDone, job.totalTask)
                 self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
                 self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
                 self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
                 self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(job.priority)))
                 self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
-                self.jobTable.setItem(pos, 4, TableWidgetItem(str("-1/-1")))
+                self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
                 self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
         except sqlerror as err:
             logger.debug(str(err))
@@ -187,6 +188,8 @@ class FarmView( QMainWindow, Ui_FarmView ):
     def jobCellClickedHandler(self, row):
         item = self.jobTable.item(row, 0)
         job_id = int(item.text())
+        taskCount, taskDone = TaskUtils.updateJobTaskCount(job_id)
+        self.jobTable.setItem(row, 4, TableWidgetItem("%d/%d" % (taskDone, taskCount)))
         self.updateTaskTable(job_id)
 
     def onlineThisNodeButtonClicked(self):
