@@ -151,7 +151,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
                 self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(job.priority)))
                 self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
-                self.jobTable.setItem(pos, 4, TableWidgetItem(str("0/0")))
+                self.jobTable.setItem(pos, 4, TableWidgetItem(str("-1/-1")))
                 self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
         except sqlerror as err:
             logger.debug(str(err))
@@ -185,7 +185,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             aboutBox(self, "SQL Error", str(err))
 
     def jobCellClickedHandler(self, row):
-        item = self.jobTable.item (row, 0)
+        item = self.jobTable.item(row, 0)
         job_id = int(item.text())
         self.updateTaskTable(job_id)
 

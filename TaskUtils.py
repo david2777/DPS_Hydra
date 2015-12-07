@@ -5,9 +5,9 @@ import sys
 from MySQLdb import Error as sqlerror
 
 #Hydra
-from MySQLSetup import *                        #@UnusedWildImport
-from LoggingSetup import logger                 #@Reimport
-import Utils                                    #@Reimport
+from MySQLSetup import *
+from LoggingSetup import logger
+import Utils
 
 
 def changeStatusViaJobID(job_id, new_status, old_status_list=[]):
@@ -19,11 +19,11 @@ def changeStatusViaJobID(job_id, new_status, old_status_list=[]):
         command = command + """ and status = '%s'""" % old_status_list[0]
         for status in old_status_list[1:]:
             command = command + """ or status = '%s'""" % status
-    
+
     with transaction() as t:
         t.cur.execute(command)
-        
-        
+
+
 def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
     if type(old_status_list) is not list:
         logger.error("Bad Old Status List in TaskUtils!")
@@ -33,10 +33,10 @@ def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
         command = command + """ and status = '%s'""" % old_status_list[0]
         for status in old_status_list[1:]:
             command = command + """ or status = '%s'""" % status
-    
+
     with transaction() as t:
         t.cur.execute(command)
-        
+
 def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
     with transaction () as t:
         if taskID:
@@ -55,3 +55,14 @@ def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
             host.task_id = None
             host.status = newHostStatus
             host.update (t)
+
+def updateJobTaskCount(job_id, tasks = None):
+    if tasks == None:
+        tasks = hydra_taskboard.fetch("where job_id = %d" % job_id)
+    taskCount = len(tasks)
+    taskDone = 0
+    for task in tasks:
+        if task.status == "F":
+            taskDone += 1
+    #TODO: Update DB, change Job Status
+    return taskCount, taskDone
