@@ -74,17 +74,19 @@ class FarmView( QMainWindow, Ui_FarmView ):
         #Column widths on jobTable
         self.jobTable.setColumnWidth(0, 60)         #Job ID
         self.jobTable.setColumnWidth(1, 60)         #Status
+        self.jobTable.setColumnWidth(2, 60)         #Priority
+        self.jobTable.setColumnWidth(4, 60)         #Tasks
         self.jobTable.sortItems(0, order = Qt.DescendingOrder)
 
         # Column widths on the taskTable
-        self.taskTable.setColumnWidth(0, 70) #ID
-        self.taskTable.setColumnWidth(1, 50) #Priority
-        self.taskTable.setColumnWidth(2, 100) #Host
-        self.taskTable.setColumnWidth(3, 100) #Status
-        self.taskTable.setColumnWidth(4, 120) #Start Time
-        self.taskTable.setColumnWidth(5, 120) #End Time
-        self.taskTable.setColumnWidth(6, 60) #Duration
-        self.taskTable.setColumnWidth(7, 50) #Code
+        self.taskTable.setColumnWidth(0, 60)        #ID
+        self.taskTable.setColumnWidth(1, 60)        #Frame
+        self.taskTable.setColumnWidth(2, 100)       #Host
+        self.taskTable.setColumnWidth(3, 60)       #Status
+        self.taskTable.setColumnWidth(4, 120)       #Start Time
+        self.taskTable.setColumnWidth(5, 120)       #End Time
+        self.taskTable.setColumnWidth(6, 120)        #Duration
+        self.taskTable.setColumnWidth(7, 120)        #Code
 
         #Get the global column count for later
         self.taskTableCols = self.taskTable.columnCount()
