@@ -1,6 +1,6 @@
--Keep implementing new boards into farm View
-    -Update button handlers 
-    -Figure out why table helpers don't like anything other than strings
+-[In Progress]Keep implementing new boards into farm View
+    -Update button handlers
+    -[Done]Figure out why table helpers don't like anything other than strings
 
 -[In Progress]Overhaul some functions (like getting a row) with the way I've done it on TASC before
 
@@ -11,15 +11,14 @@
 -[In Progress]Overhaul FarmView commands
      -Maybe too many buttons
 
--Add filters to JobTable in FarmView
+-[In Progress]Add filters to JobTable in FarmView
 
--Multi-select for Task View
+-[Maybe]Multi-select for Task View
     -Will require a lot of reworking of functions that modify tasks
-    
--Make a Job Status
-    -Try to drive it via Task Statuses but without loading all tasks statuses on startup
-    -Maybe have SQL server do this?
-    -Maybe RenderNode + FarmView?
+
+-[In Progress]Make a Job Status
+    -Done on demand via Farmview when loading shot data for specific shots
+    -Mostly should be done by RenderNodemain when it changes status in DB
 
 -Make some sort of job submitter
 
