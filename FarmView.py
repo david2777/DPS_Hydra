@@ -38,6 +38,9 @@ class FarmView( QMainWindow, Ui_FarmView ):
         #Enable this node buttons
         self.thisNodeButtonsEnabled = True
 
+        #Get user
+        self.username = getDbInfo()[2]
+
         #Partial applications for convenience
         self.sqlErrorBox = (
             functools.partial(aboutBox, parent=self, title="Error",
@@ -137,7 +140,10 @@ class FarmView( QMainWindow, Ui_FarmView ):
         #TODO: Check for filters, set proper tasks count (need in DB?)
         self.jobTable.setSortingEnabled(False)
         try:
-            jobs = hydra_jobboard.fetch()
+            if self.myFilterCheckbox.isChecked():
+                jobs = hydra_jobboard.fetch("where owner = '%s'" % self.username)
+            else:
+                jobs = hydra_jobboard.fetch()
             self.jobTable.setRowCount(len(jobs))
             for pos, job in enumerate(jobs):
                 self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
