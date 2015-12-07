@@ -30,7 +30,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
-        
+
         #My UI Setup Functions
         self.setupTables(self)
         self.connectButtons(self)
@@ -48,17 +48,17 @@ class FarmView( QMainWindow, Ui_FarmView ):
             functools.partial(aboutBox, parent=self, title="None checked",
                         msg= "No nodes have been selected. Use the check boxes"
                         " to make a selection from the table."))
-                        
+
         #And Hydra said "Let there be data"
         self.doFetch()
         #And there was data
         #And Hydra saw the data
         #And it was (hopefully) good
-        
-        
-    #---------------------------------------------------------------------#                        
+
+
+    #---------------------------------------------------------------------#
     #--------------------------UI SETUP FUNCTIONS-------------------------#
-    #---------------------------------------------------------------------# 
+    #---------------------------------------------------------------------#
     def setupTables(self, *args):
         #TODO:Fix these
         # Column widths on the render node table
@@ -70,7 +70,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         self.renderNodeTable.setColumnWidth(5, 200) # capabilities
         self.renderNodeTable.setColumnWidth(6, 80)  # version
         self.renderNodeTable.setColumnWidth(7, 110) # heartbeat
-        
+
         #Column widths on jobTable
         self.jobTable.setColumnWidth(0, 60)         #Job ID
         self.jobTable.setColumnWidth(1, 60)         #Status
@@ -85,10 +85,10 @@ class FarmView( QMainWindow, Ui_FarmView ):
         self.taskTable.setColumnWidth(5, 120) #End Time
         self.taskTable.setColumnWidth(6, 60) #Duration
         self.taskTable.setColumnWidth(7, 50) #Code
-        
+
         #Get the global column count for later
         self.taskTableCols = self.taskTable.columnCount()
-        
+
     def connectButtons(self, *args):
         # Connect buttons on the This Node tab with their actions
         QObject.connect(self.fetchButton, SIGNAL("clicked()"), self.doFetch)
@@ -127,39 +127,13 @@ class FarmView( QMainWindow, Ui_FarmView ):
         QObject.connect(self.testFramesButton, SIGNAL("clicked()"),
                         self.callTestFrameBox)
 
-    #---------------------------------------------------------------------#                        
+    #---------------------------------------------------------------------#
     #---------------------------BUTTON HANDLERS---------------------------#
-    #---------------------------------------------------------------------# 
+    #---------------------------------------------------------------------#
     def setTaskTableItem(self, row, col, item):
         #TempFix
-        self.taskTable.setItem(row, col, TableWidgetItem(str(item)))
-        """
-        itemType = type(item)
-        if itemType == str:
-            self.taskTable.setItem(row, col, TableWidgetItem(item))
-        elif itemType == int:
-            self.taskTable.setItem(row, col, TableWidgetItem_int(item))
-        elif isinstance(item, datetime.datetime):
-            self.taskTable.setItem(row, col, TableWidgetItem_dt(item))
-        else:
-            self.taskTable.setItem(row, col, TableWidgetItem(""))
-        """
-            
-    def setJobTableItem(self, row, col, item):
-        #TempFix
-        self.jobTable.setItem(row, col, TableWidgetItem(str(item)))
-        """
-        itemType = type(item)
-        if itemType == str:
-            self.jobTable.setItem(row, col, TableWidgetItem(item))
-        elif itemType == int:
-            self.jobTable.setItem(row, col, TableWidgetItem_int(item))
-        elif isinstance(item, datetime.datetime):
-            self.jobTable.setItem(row, col, TableWidgetItem_dt(item))
-        else:
-            self.jobTable.setItem(row, col, TableWidgetItem(""))
-        """
-            
+        pass
+
     def updateJobTable(self):
         #TODO: Check for filters, set proper tasks count (need in DB?)
         self.jobTable.setSortingEnabled(False)
@@ -167,17 +141,17 @@ class FarmView( QMainWindow, Ui_FarmView ):
             jobs = hydra_jobboard.fetch()
             self.jobTable.setRowCount(len(jobs))
             for pos, job in enumerate(jobs):
-                self.setJobTableItem(pos, 0, str(job.id))
-                self.setJobTableItem(pos, 1, job.job_status)
-                self.setJobTableItem(pos, 2, job.priority)
-                self.setJobTableItem(pos, 3, job.owner)
-                self.setJobTableItem(pos, 4, "0/0")
-                self.setJobTableItem(pos, 5, job.niceName)
+                self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
+                self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
+                self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(job.priority)))
+                self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
+                self.jobTable.setItem(pos, 4, TableWidgetItem(str("0/0")))
+                self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
         self.jobTable.setSortingEnabled(True)
-    
+
     def updateTaskTable(self, job_id):
         self.taskTableLabel.setText("Task List (job: " + str(job_id) + ")")
         try:
@@ -191,18 +165,18 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 elif task.startTime:
                     tdiff = datetime.datetime.now().replace(microsecond=0) - task.startTime
                 #Populate the taskTable
-                self.setTaskTableItem(pos, 0, task.id)
-                self.setTaskTableItem(pos, 1, task.frame)
-                self.setTaskTableItem(pos, 2, task.host)
-                self.setTaskTableItem(pos, 3, niceNames[task.status])
-                self.setTaskTableItem(pos, 4, str(task.startTime))
-                self.setTaskTableItem(pos, 5, str(task.endTime))
-                self.setTaskTableItem(pos, 6, tdiff)
-                self.setTaskTableItem(pos, 7, task.exitCode)
+                self.taskTable.setItem(pos, 0, TableWidgetItem_int(str(task.id)))
+                self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.frame)))
+                self.taskTable.setItem(pos, 2, TableWidgetItem(str(task.host)))
+                self.taskTable.setItem(pos, 3, TableWidgetItem(str(niceNames[task.status])))
+                self.taskTable.setItem(pos, 4, TableWidgetItem_dt(str(task.startTime)))
+                self.taskTable.setItem(pos, 5, TableWidgetItem_dt(str(task.endTime)))
+                self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
+                self.taskTable.setItem(pos, 7, TableWidgetItem_int(str(task.exitCode)))
                 #TODO:Colors!
                 #for i in range(self.taskTableCols):
                 #    self.taskTable.item(pos, i).setBackgroundColor(colorVar)
-        
+
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
 
@@ -453,7 +427,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             except sqlerror as err:
                 logger.debug(str(err))
                 aboutBox(self, "SQL Error", str(err))
-                
+
 
     def searchByTaskID(self):
         """Given a task id, finds the job, selects it in the job table, and
@@ -484,8 +458,8 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 self.taskTable.setCurrentItem(item)
         else:
             aboutBox(self, "Error", "No task ID was entered.")
-            return           
-    
+            return
+
     def doFetch( self ):
         """Aggregate method for updating all of the widgets."""
 
@@ -608,7 +582,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         time = datetime.datetime.now().strftime ("%H:%M")
         msg = "%s as of %s" % (countString, time)
         self.statusLabel.setText (msg)
-        
+
     def getJobIDAndRow(self):
         item = self.jobTable.currentItem()
         if item and item.isSelected():
@@ -625,7 +599,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             row = self.taskTable.currentRow ()
             task_id = int(self.taskTable.item(row, 0).text())
         return task_id, row
-        
+
     def callTestFrameBox(self):
         job_id, row = self.getJobIDAndRow()
         reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
@@ -638,10 +612,10 @@ class FarmView( QMainWindow, Ui_FarmView ):
             self.jobCellClickedHandler(row)
         else:
             logger.info("No test tasks started.")
-        
-#------------------------------------------------------------------------#                        
+
+#------------------------------------------------------------------------#
 #---------------------------EXTERNAL FUNCTIONS---------------------------#
-#------------------------------------------------------------------------# 
+#------------------------------------------------------------------------#
 
 def getSoftwareVersionText(sw_ver):
     """Given the software_version attribute of a hydra_rendernode row, returns
@@ -734,7 +708,7 @@ def setup(records, columns, grid):
                 grid.removeItem( item )
                 item.widget().hide()
             grid.addWidget(attr.dataWidget( record ),row + 1, column,)
-            
+
 def prioritizeJob(job_id, priority):
     with transaction() as t:
         t.cur.execute("""update hydra_jobboard
@@ -743,11 +717,11 @@ def prioritizeJob(job_id, priority):
         t.cur.execute("""update hydra_taskboard
                         set priority = '%d'
                         where job_id = '%d'""" % (priority, job_id))
-                        
 
-#------------------------------------------------------------------------#                        
+
+#------------------------------------------------------------------------#
 #-------------------------------UI CLASSES-------------------------------#
-#------------------------------------------------------------------------# 
+#------------------------------------------------------------------------#
 
 class widgetFactory():
     """A widget building class intended to be subclassed for building particular
@@ -811,20 +785,17 @@ class getOffButton(widgetFactory):
         return w
 
     def doGetOff (self, record):
-
         logger.debug('clobber %s', record.host)
 
-class TableWidgetItem (QTableWidgetItem):
-
-    def setIntoTable (self, table, row, column):
-        table.setItem (row, column, self)
-
 class WidgetForTable:
-
-    def setIntoTable (self, table, row, column):
+    def setIntoTable(self, table, row, column):
         table.setCellWidget (row, column, self)
 
-class LabelForTable (QLabel, WidgetForTable): pass
+class LabelForTable(QLabel, WidgetForTable): pass
+
+class TableWidgetItem(QTableWidgetItem):
+    def setIntoTable(self, table, row, column):
+        table.setItem(row, column, self)
 
 class TableWidgetItem_check(TableWidgetItem):
     def __init__(self):
@@ -833,7 +804,6 @@ class TableWidgetItem_check(TableWidgetItem):
 
 class TableWidgetItem_int(QTableWidgetItem):
     """A QTableWidgetItem which holds integer data and sorts it properly."""
-
     def __init__(self, stringValue):
         QTableWidgetItem.__init__(self, stringValue)
 
@@ -842,7 +812,6 @@ class TableWidgetItem_int(QTableWidgetItem):
 
 class TableWidgetItem_dt(TableWidgetItem):
     """A QTableWidgetItem which holds datetime.datetime data and sorts it properly."""
-
     def __init__(self, dtValue):
         QTableWidgetItem.__init__(self, str(dtValue))
         self.dtValue = dtValue
@@ -854,10 +823,10 @@ class TableWidgetItem_dt(TableWidgetItem):
             return True
         else:
             return False
-            
-#------------------------------------------------------------------------#                        
+
+#------------------------------------------------------------------------#
 #----------------------------------MAIN----------------------------------#
-#------------------------------------------------------------------------# 
+#------------------------------------------------------------------------#
 
 if __name__ == '__main__':
     app = QApplication( sys.argv )
