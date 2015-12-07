@@ -130,9 +130,6 @@ class FarmView( QMainWindow, Ui_FarmView ):
     #---------------------------------------------------------------------#
     #---------------------------BUTTON HANDLERS---------------------------#
     #---------------------------------------------------------------------#
-    def setTaskTableItem(self, row, col, item):
-        #TempFix
-        pass
 
     def updateJobTable(self):
         #TODO: Check for filters, set proper tasks count (need in DB?)
@@ -143,6 +140,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             for pos, job in enumerate(jobs):
                 self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
                 self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
+                self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
                 self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(job.priority)))
                 self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
                 self.jobTable.setItem(pos, 4, TableWidgetItem(str("0/0")))
@@ -169,13 +167,11 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.frame)))
                 self.taskTable.setItem(pos, 2, TableWidgetItem(str(task.host)))
                 self.taskTable.setItem(pos, 3, TableWidgetItem(str(niceNames[task.status])))
+                self.taskTable.item(pos, 3).setBackgroundColor(niceColors[task.status])
                 self.taskTable.setItem(pos, 4, TableWidgetItem_dt(str(task.startTime)))
                 self.taskTable.setItem(pos, 5, TableWidgetItem_dt(str(task.endTime)))
                 self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 7, TableWidgetItem_int(str(task.exitCode)))
-                #TODO:Colors!
-                #for i in range(self.taskTableCols):
-                #    self.taskTable.item(pos, i).setBackgroundColor(colorVar)
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))

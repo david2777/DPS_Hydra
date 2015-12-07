@@ -11,12 +11,14 @@ from LoggingSetup import logger
 import Utils
 import Constants
 
+#QT
+from PyQt4.QtGui import QColor
+
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
 #Statuses for jobs/tasks
 PAUSED = 'U'                #Job was paused (let running jobs finish)
-HALTED = 'H'                #Job was halted (all running jobs killed)
 ERROR = 'E'                 #Job returned a non-zero exit code
 READY = 'R'                 #Ready to be run by a render node
 FINISHED = 'F'              #Job complete
@@ -32,7 +34,6 @@ PENDING = 'P'               #Offline after current job is complete
 STARTED = 'S'               #Working on a job
 
 niceNames = {PAUSED: 'Paused',
-            HALTED: 'Halted',
             READY: 'Ready',
             FINISHED: 'Finished',
             KILLED: 'Killed',
@@ -41,8 +42,15 @@ niceNames = {PAUSED: 'Paused',
             OFFLINE: 'Offline',
             PENDING: 'Pending',
             STARTED: 'Started',
-            ERROR: 'Error'
-             }
+            ERROR: 'Error'}
+
+niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
+            READY: QColor(255,255,255),         #White
+            FINISHED: QColor(200,240,200),      #Light Green
+            KILLED: QColor(240,200,200),        #Light Red
+            CRASHED: QColor(220,90,90),         #Dark Red
+            STARTED: QColor(200,220,240),       #Light Blue
+            ERROR: QColor(220,90,90)}
 
 SETTINGS = Constants.SETTINGS
 
@@ -61,7 +69,7 @@ def getDbInfo():
         cfgFile = os.path.join (os.path.dirname (sys.argv[0]), os.path.basename (SETTINGS))
         logger.debug ('copy %s' % cfgFile)
         shutil.copyfile (cfgFile, SETTINGS)
-        
+
     config.read(SETTINGS)
 
     # get server & db names
@@ -70,7 +78,7 @@ def getDbInfo():
     #Get Username and Password
     username = config.get(section="database", option="username")
     password = config.get(section="database", option="password")
-    
+
     return host, db, username, password
 
 db_host, db_name, db_username, db_password = getDbInfo()
@@ -89,7 +97,7 @@ class tupleObject:
         self.__dict__['__dirty__'] = set ()
         for k, v in kwargs.iteritems ():
             self.__dict__[k] = v
-    
+
     def __setattr__ (self, k, v):
         self.__dict__[k] = v
         if Utils.nonFlanged (k):
@@ -117,7 +125,7 @@ class tupleObject:
 
     def attributes (self):
         return filter (Utils.nonFlanged, self.__dict__.keys ())
-                       
+
     def insert (self, transaction):
         names = self.attributes ()
         values = [getattr (self, name)
@@ -131,12 +139,12 @@ class tupleObject:
             transaction.cur.execute ("select last_insert_id()")
             [id] = transaction.cur.fetchone ()
             self.__dict__[self.autoColumn] = id
-        
+
     def update (self, transaction):
         names = list(self.__dirty__)
         if not names:
             return
-        
+
         values = ([getattr (self, name)
                   for name in names]
                      +
@@ -147,33 +155,33 @@ class tupleObject:
         logger.debug ((query, values))
         transaction.cur.executemany (query, [values])
 
-class hydra_rendernode(tupleObject): 
+class hydra_rendernode(tupleObject):
     primaryKey = 'host'
 
 class hydra_rendertask(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
-    
+
 class hydra_job(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
-    
+
 class hydra_jobboard(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
-    
+
 class hydra_taskboard(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
-    
-    
+
+
 class transaction:
     def __init__(self):
         # open db connection
         self.db = MySQLdb.connect (db_host, user=db_username, passwd = db_password, db=db_name)
         self.cur = self.db.cursor ()
         self.cur.execute ("set autocommit = 1")
-        
+
     def __enter__ (self):
         logger.debug ("enter transaction %s", self)
         self.cur.execute ("start transaction")
