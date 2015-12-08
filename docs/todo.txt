@@ -3,6 +3,7 @@
     -[Done]Figure out why table helpers don't like anything other than strings
     -Organize FarmView button handlers
     -Add NodeUtils for messing with nodes
+    -Need to be able to see reqs in FarmView
 
 -[In Progress]Overhaul some functions (like getting a row) with the way I've done it on TASC before
 
