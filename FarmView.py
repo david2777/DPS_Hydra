@@ -127,7 +127,9 @@ class FarmView( QMainWindow, Ui_FarmView ):
                         self.searchByTaskID)
         QObject.connect(self.testFramesButton, SIGNAL("clicked()"),
                         self.callTestFrameBox)
-                        
+        QObject.connect(self.doNothingJobButton, SIGNAL("clicked()"),
+                        self.testCall)
+
         #Connect buttons in taskTable view
         QObject.connect(self.startTaskButton, SIGNAL("clicked()"),
                         self.startTaskButtonHandler)
@@ -135,6 +137,9 @@ class FarmView( QMainWindow, Ui_FarmView ):
     #---------------------------------------------------------------------#
     #-------------------------JOB BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
+
+    def testCall(self):
+        pass
 
     def updateJobTable(self):
         #TODO: Check for filters, set proper tasks count (need in DB?)
@@ -158,11 +163,42 @@ class FarmView( QMainWindow, Ui_FarmView ):
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
         self.jobTable.setSortingEnabled(True)
-        
+
+    def jobTableHandler(self):
+        rows = self.jobTable.selectionModel().selectedRows()
+        return [item.row() for item in rows]
+
+    def startJobButtonHandler(self):
+        rows = self.jobTableHandler()
+        for row in rows:
+            job_id = int(self.jobTable.item(row, 0).text())
+            JobUtils.startJob(job_id)
+        self.doFetch()
+        self.jobCellClickedHandler(rows[-1])
+
+    def killJobButtonHandler(self):
+        rows = self.jobTableHandler()
+        choice = yesNoBox(self, "Confirm", "Really kill the selected jobs?")
+        if choice == QMessageBox.Yes:
+            try:
+                for row in rows:
+                    job_id = int(self.jobTable.item(row, 0).text())
+                    no_errors = True
+                    if JobUtils.killJob(job_id):
+                        no_errors = False
+            except sqlerror as err:
+                logger.debug(str(err))
+                aboutBox(self, "SQL Error", str(err))
+            finally:
+                if no_errors ==  False:
+                    aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
+                self.doFetch()
+                self.jobCellClickedHandler(rows[-1])
+
     #---------------------------------------------------------------------#
     #------------------------TASK BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
-        
+
     def updateTaskTable(self, job_id):
         self.taskTableLabel.setText("Task List (job: " + str(job_id) + ")")
         try:
@@ -195,22 +231,22 @@ class FarmView( QMainWindow, Ui_FarmView ):
         taskCount, taskDone = JobUtils.updateJobTaskCount(job_id)
         self.jobTable.setItem(row, 4, TableWidgetItem("%d/%d" % (taskDone, taskCount)))
         self.updateTaskTable(job_id)
-        
+
     def reloadTaskTable(self):
         row = self.jobTable.selectionModel().selectedRows()[0].row()
         self.jobCellClickedHandler(row)
-            
+
     def taskTableHandler(self):
         rows = self.taskTable.selectionModel().selectedRows()
         return [item.row() for item in rows]
-        
+
     def startTaskButtonHandler(self):
         rows = self.taskTableHandler()
         for row in rows:
             task_id = int(self.taskTable.item(row, 0).text())
             TaskUtils.startTask(task_id)
         self.reloadTaskTable()
-        
+
     def killTaskButtonHandler(self):
         rows = self.taskTableHandler()
         choice = yesNoBox(self, "Confirm", "Really kill selected tasks?")
@@ -230,11 +266,11 @@ class FarmView( QMainWindow, Ui_FarmView ):
                     logger.debug(str(err))
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
-    
+
     #---------------------------------------------------------------------#
     #------------------------NODE BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
-            
+
     def onlineThisNodeButtonClicked(self):
         """Changes the local render node's status to online if it was offline,
         goes back to started if it was pending offline."""
@@ -401,24 +437,6 @@ class FarmView( QMainWindow, Ui_FarmView ):
     def advancedSearchButtonClicked(self):
         results = TaskSearchDialog.create()
         print results
-
-    def killJobButtonHandler(self):
-        job_id, row = self.getJobIDAndRow()
-        choice = yesNoBox(self, "Confirm", "Really kill job {:d}?".format(job_id))
-        if choice == QMessageBox.Yes:
-            try:
-                if JobUtils.killJob(job_id):
-                    aboutBox(self, "Error", "Some nodes couldn't kill " + "their tasks.")
-            except sqlerror as err:
-                logger.debug(str(err))
-                aboutBox(self, "SQL Error", str(err))
-            finally:
-                self.jobCellClickedHandler(row)
-
-    def startJobButtonHandler(self):
-        job_id, row = self.getJobIDAndRow()
-        JobUtils.changeStatusViaJobID(job_id, "R", ["U", "H"])
-        self.jobCellClickedHandler(row)
 
 
     def setPriorityButtonHandler (self):

@@ -43,32 +43,31 @@ def updateJobTaskCount(job_id, tasks = None):
         job.update(t)
 
     return taskCount, taskDone
-    
+
+
+def startJob(job_id):
+    """Start job if it is paused, ressurect task if it is killed/errored."""
+    tasks = hydra_taskboard.fetch("where job_id = '%d'" % job_id)
+    for task in tasks:
+        TaskUtils.startTask(task.id)
+    with transaction() as t:
+        [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+        job.job_status = "S"
+        job.update(t)
+
 def killJob(job_id):
-    """Kills every task associated with job_id. Killed tasks have status code 
-    'K'. If a task was already started, an a kill request is sent to the host 
+    """Kills every task associated with job_id. Killed tasks have status code
+    'K'. If a task was already started, an a kill request is sent to the host
     running it.
     @return: False if no errors while killing started tasks, else True"""
-    #Mark all of the Ready tasks as Killed
-    changeStatusViaJobID(job_id, "K", ["R", "U", "H"])
-    
-    #Get hostnames for tasks that were already started
-    tuples = None # @UnusedVariable
+    tasks =  hydra_taskboard.fetch("where job_id = '%d'" % job_id)
+    no_errors = True
+    for task in tasks:
+        response = TaskUtils.killTask(task.id)
+        if response == False:
+            no_errors = False
     with transaction() as t:
-        t.cur.execute("""select host from hydra_taskboard 
-                        where job_id = '%d' and status = 'S'""" % job_id)
-        tuples = t.cur.fetchall()
-        
-    #Make flat list out of single-element tuples fetched from db
-    hosts = [t for (t,) in tuples]
-    
-    #Send a kill request to each host, note if any failures occurred
-    error = False
-    for host in hosts:
-        try:
-            error = error or not TaskUtils.sendKillQuestion(host)
-        except socketerror:
-            logger.debug("There was a problem communicating with {:s}"
-                         .format(host))
-            error = True
-    return error
+        [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+        job.job_status = "K"
+        job.update(t)
+    return no_errors

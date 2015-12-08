@@ -37,7 +37,7 @@ class TCPConnection( Connection ):
         """Constructor. Supply a hostname to connect to another computer."""
         self.hostname = hostname
         self.port = port
-    
+
     def getAnswer( self, question ):
         """Send the question to a remote server and get an answer back"""
         #Create a TCP socket
@@ -45,7 +45,9 @@ class TCPConnection( Connection ):
         try:
             #Connect to the server
             logger.info( 'connect to %s %s', self.hostname, self.port )
-            sock.connect( ( self.hostname, self.port ) )
+            if self.hostname == None:
+                return None
+            sock.connect((self.hostname, self.port))
             #Convert the question to ASCII
             questionBytes = pickle.dumps( question )
             #Send the question
@@ -57,8 +59,8 @@ class TCPConnection( Connection ):
             answerBytes = sock.recv( Constants.MANYBYTES )
             #Convert the response to an object
             answer = pickle.loads( answerBytes )
- 
+
         finally:
             sock.close( )
-        
+
         return answer
