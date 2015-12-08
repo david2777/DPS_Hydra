@@ -26,14 +26,14 @@ import JobUtils
 #Original Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
-class FarmView( QMainWindow, Ui_FarmView ):
+class FarmView(QMainWindow, Ui_FarmView):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
         #My UI Setup Functions
-        self.setupTables(self)
-        self.connectButtons(self)
+        self.setupTables()
+        self.connectButtons()
 
         #Enable this node buttons
         self.thisNodeButtonsEnabled = True
@@ -62,8 +62,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
     #---------------------------------------------------------------------#
     #--------------------------UI SETUP FUNCTIONS-------------------------#
     #---------------------------------------------------------------------#
-    def setupTables(self, *args):
-        #TODO:Fix these
+    def setupTables(self):
         # Column widths on the render node table
         self.renderNodeTable.setColumnWidth(0, 30)  # check boxes
         self.renderNodeTable.setColumnWidth(1, 200) # host
@@ -94,7 +93,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         #Get the global column count for later
         self.taskTableCols = self.taskTable.columnCount()
 
-    def connectButtons(self, *args):
+    def connectButtons(self):
         #Connect buttons in This Node tab
         QObject.connect(self.fetchButton, SIGNAL("clicked()"), self.doFetch)
         QObject.connect(self.onlineThisNodeButton, SIGNAL("clicked()"),
@@ -173,7 +172,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
             JobUtils.startJob(job_id)
-        self.doFetch()
+        self.updateJobTable()
         self.jobCellClickedHandler(rows[-1])
 
     def killJobButtonHandler(self):
@@ -192,8 +191,15 @@ class FarmView( QMainWindow, Ui_FarmView ):
             finally:
                 if no_errors ==  False:
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
-                self.doFetch()
+                self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
+
+    def setPriorityButtonHandler(self):
+        rows = self.jobTableHandler()
+        for row in rows:
+            job_id = int(self.jobTable.item(row, 0).text())
+            prioritizeJob (job_id, self.prioritySpinBox.value())
+        self.updateJobTable()
 
     #---------------------------------------------------------------------#
     #------------------------TASK BUTTON HANDLERS-------------------------#
@@ -247,6 +253,29 @@ class FarmView( QMainWindow, Ui_FarmView ):
             TaskUtils.startTask(task_id)
         self.reloadTaskTable()
 
+    def callTestFrameBox(self):
+        try:
+            row = self.jobTableHandler()[0]
+            reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
+            if reply[1] == True:
+                job_id = int(self.jobTable.item(row, 0).text())
+                logger.info("Starting %d test frames on job_id %d" % (reply[0], job_id))
+                tasks = hydra_taskboard.fetch ("where job_id = %d" % job_id)
+                for task in tasks[0:reply[0]]:
+                    TaskUtils.startTask(task.id)
+                logger.info("Test Tasks Started!")
+                with transaction() as t:
+                    [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+                    job.job_status = "S"
+                    job.update(t)
+                self.updateJobTable()
+                self.jobCellClickedHandler(row)
+                self.jobTable.setCurrentCell(row, 0)
+            else:
+                logger.info("No test tasks started.")
+        except IndexError:
+            aboutBox(self, "Error", "Make a slection in the job table to continue...")
+
     def killTaskButtonHandler(self):
         rows = self.taskTableHandler()
         choice = yesNoBox(self, "Confirm", "Really kill selected tasks?")
@@ -266,6 +295,41 @@ class FarmView( QMainWindow, Ui_FarmView ):
                     logger.debug(str(err))
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
+
+    def advancedSearchButtonClicked(self):
+        results = TaskSearchDialog.create()
+        print results
+
+    def searchByTaskID(self):
+        """Given a task id, finds the job, selects it in the job table, and
+        displays the tasks for that job, including the one searched for. Does
+        nothing if task id doesn't exist."""
+
+        #Retrieve job id by task id in the database
+        task_id = str(self.taskIDLineEdit.text())
+        if task_id:
+            with transaction() as t:
+                query = "select job_id from hydra_taskboard where id = %s"
+                t.cur.execute(query % task_id)
+                job_id = t.cur.fetchall()
+
+                if not job_id:
+                    aboutBox(self, "Error", "The given task ID does not "
+                             "correspond to an existing job.")
+                    return
+
+                #Find item with matching job id in the table
+                ((job_id,),) = job_id # unpack -- TODO: fix this hack?
+                [item] = self.jobTable.findItems(str(job_id), Qt.MatchExactly)
+
+                #Select the row and trigger the update for the task list
+                self.jobTable.setCurrentItem(item)
+                self.jobCellClickedHandler(item.row())
+                [item] = self.taskTable.findItems(str(task_id), Qt.MatchExactly)
+                self.taskTable.setCurrentItem(item)
+        else:
+            aboutBox(self, "Error", "No task ID was entered.")
+            return
 
     #---------------------------------------------------------------------#
     #------------------------NODE BUTTON HANDLERS-------------------------#
@@ -434,52 +498,12 @@ class FarmView( QMainWindow, Ui_FarmView ):
                      """
         self.doFetch()
 
-    def advancedSearchButtonClicked(self):
-        results = TaskSearchDialog.create()
-        print results
+    #---------------------------------------------------------------------#
+    #--------------------------UPDATE HANDLERS----------------------------#
+    #---------------------------------------------------------------------#
 
-
-    def setPriorityButtonHandler (self):
-        job_id, row = self.getJobIDAndRow()
-        prioritizeJob (job_id, self.prioritySpinBox.value ())
-        self.jobCellClickedHandler(row)
-        self.updateJobTable ([])
-
-
-    def searchByTaskID(self):
-        """Given a task id, finds the job, selects it in the job table, and
-        displays the tasks for that job, including the one searched for. Does
-        nothing if task id doesn't exist."""
-
-        #Retrieve job id by task id in the database
-        task_id = str(self.taskIDLineEdit.text())
-        if task_id:
-            with transaction() as t:
-                query = "select job_id from hydra_taskboard where id = %s"
-                t.cur.execute(query % task_id)
-                job_id = t.cur.fetchall()
-
-                if not job_id:
-                    aboutBox(self, "Error", "The given task ID does not "
-                             "correspond to an existing job.")
-                    return
-
-                #Find item with matching job id in the table
-                ((job_id,),) = job_id # unpack -- TODO: fix this hack?
-                [item] = self.jobTable.findItems(str(job_id), Qt.MatchExactly)
-
-                #Select the row and trigger the update for the task list
-                self.jobTable.setCurrentItem(item)
-                self.jobCellClickedHandler(item.row())
-                [item] = self.taskTable.findItems(str(task_id), Qt.MatchExactly)
-                self.taskTable.setCurrentItem(item)
-        else:
-            aboutBox(self, "Error", "No task ID was entered.")
-            return
-
-    def doFetch( self ):
+    def doFetch(self):
         """Aggregate method for updating all of the widgets."""
-
         try:
             self.updateThisNodeInfo()
             self.updateRenderNodeTable()
@@ -493,7 +517,6 @@ class FarmView( QMainWindow, Ui_FarmView ):
     def updateThisNodeInfo(self):
         """Updates widgets on the "This Node" tab with the most recent
         information available."""
-
         #If the buttons are disabled, don't bother
         if not self.thisNodeButtonsEnabled:
             return
@@ -511,8 +534,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             self.nodeNameLabel.setText(thisNode.host)
             self.nodeStatusLabel.setText(niceNames[thisNode.status])
             self.updateTaskIDLabel(thisNode.task_id)
-            self.nodeVersionLabel.setText(
-                        getSoftwareVersionText(thisNode.software_version))
+            self.nodeVersionLabel.setText(getSoftwareVersionText(thisNode.software_version))
             self.updateMinPriorityLabel(thisNode.minPriority)
             self.updateCapabilitiesLabel(thisNode.capabilities)
 
@@ -524,27 +546,19 @@ class FarmView( QMainWindow, Ui_FarmView ):
                 "registered if you wish to see this node's information.")
             self.setThisNodeButtonsEnabled(False)
 
-    def setThisNodeButtonsEnabled(self, choice):
-        """Enables or disables buttons on This Node tab"""
-        self.onlineThisNodeButton.setEnabled(choice)
-        self.offlineThisNodeButton.setEnabled(choice)
-        self.getOffThisNodeButton.setEnabled(choice)
-        self.thisNodeButtonsEnabled = choice
-
     def updateTaskIDLabel(self, task_id):
         if task_id:
             self.taskIDLabel.setText(str(task_id))
         else:
             self.taskIDLabel.setText("None")
 
-    def updateMinPriorityLabel (self, minPriority):
+    def updateMinPriorityLabel(self, minPriority):
         self.minPriorityLabel.setText (str (minPriority))
 
-    def updateCapabilitiesLabel (self, capabilities):
+    def updateCapabilitiesLabel(self, capabilities):
         self.capabilitiesLabel.setText (capabilities)
 
     def updateRenderNodeTable(self):
-
         #Clear the table (note: this is done to avoid duplication of items)
         self.renderNodeTable.clearContents()
         self.renderNodeTable.setRowCount(0)
@@ -600,35 +614,12 @@ class FarmView( QMainWindow, Ui_FarmView ):
         msg = "%s as of %s" % (countString, time)
         self.statusLabel.setText (msg)
 
-    def getJobIDAndRow(self):
-        item = self.jobTable.currentItem()
-        if item and item.isSelected():
-            row = self.jobTable.currentRow()
-            job_id = int(self.jobTable.item(row, 0).text())
-        else:
-            aboutBox(self, "Select a job!", "Please select a job to contine....")
-            raise Exception("No job selected.")
-        return job_id, row
-
-    def getTaskIDAndRow(self):
-        item = self.taskTable.currentItem()
-        if item and item.isSelected():
-            row = self.taskTable.currentRow()
-            task_id = int(self.taskTable.item(row, 0).text())
-        return task_id, row
-
-    def callTestFrameBox(self):
-        job_id, row = self.getJobIDAndRow()
-        reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
-        if reply[1] == True:
-            logger.info("Starting %d test frames on job_id %d" % (reply[0], job_id))
-            tasks = hydra_taskboard.fetch ("where job_id = %d" % job_id)
-            for taskOBJ in tasks[0:reply[0]]:
-                TaskUtils.changeStatusViaTaskID(taskOBJ.id, "R", ["U", "H"])
-            logger.info("Test Tasks Started!")
-            self.jobCellClickedHandler(row)
-        else:
-            logger.info("No test tasks started.")
+    def setThisNodeButtonsEnabled(self, choice):
+        """Enables or disables buttons on This Node tab"""
+        self.onlineThisNodeButton.setEnabled(choice)
+        self.offlineThisNodeButton.setEnabled(choice)
+        self.getOffThisNodeButton.setEnabled(choice)
+        self.thisNodeButtonsEnabled = choice
 
 #------------------------------------------------------------------------#
 #---------------------------EXTERNAL FUNCTIONS---------------------------#
