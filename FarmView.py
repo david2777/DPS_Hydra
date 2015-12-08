@@ -128,6 +128,9 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.callTestFrameBox)
         QObject.connect(self.doNothingJobButton, SIGNAL("clicked()"),
                         self.testCall)
+        #TODO:Figure out why this doesn't work
+        QObject.connect(self.myFilterCheckbox, SIGNAL("stateChanged()"),
+                        self.doFetch)
 
         #Connect buttons in taskTable view
         QObject.connect(self.startTaskButton, SIGNAL("clicked()"),
@@ -174,6 +177,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             JobUtils.startJob(job_id)
         self.updateJobTable()
         self.jobCellClickedHandler(rows[-1])
+        self.jobTable.setCurrentCell(rows[-1], 0)
 
     def killJobButtonHandler(self):
         rows = self.jobTableHandler()
@@ -200,6 +204,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             job_id = int(self.jobTable.item(row, 0).text())
             prioritizeJob (job_id, self.prioritySpinBox.value())
         self.updateJobTable()
+        self.jobTable.setCurrentCell(rows[-1], 0)
 
     #---------------------------------------------------------------------#
     #------------------------TASK BUTTON HANDLERS-------------------------#
