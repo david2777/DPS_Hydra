@@ -8,7 +8,7 @@ import datetime
 
 #Hydra
 from Answers import TimeAnswer, EchoAnswer, CMDAnswer, RenderAnswer, KillCurrentJobAnswer
-from MySQLSetup import hydra_rendertask
+from MySQLSetup import hydra_taskboard
 from RenderNodeMain import RenderTCPServer
 from Constants import RENDERLOGDIR
 
@@ -50,8 +50,8 @@ class RenderQuestion(Question):
         self.render_task_id = render_task_id
 
     def computeAnswer(self, server):
-        [render_tasks] = hydra_rendertask.fetch("where ")
-        render_task = hydra_rendertask.fetch()
+        [render_tasks] = hydra_taskboard.fetch("where ")
+        render_task = hydra_taskboard.fetch()
         render_task.host = os.getenv('COMPUTERNAME')
         if not os.path.isdir( RENDERLOGDIR ):
             os.makedirs( RENDERLOGDIR )

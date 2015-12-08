@@ -69,7 +69,7 @@ class RenderTCPServer(TCPServer):
         queryString += " and '%s' like requirements" % thisNode.capabilities
 
         with transaction() as t:
-            render_tasks = hydra_rendertask.fetch (queryString, limit=1, explicitTransaction=t)
+            render_tasks = hydra_taskboard.fetch (queryString, limit=1, explicitTransaction=t)
             if not render_tasks:
                 return
             render_task = render_tasks[0]

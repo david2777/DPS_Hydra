@@ -158,14 +158,6 @@ class tupleObject:
 class hydra_rendernode(tupleObject):
     primaryKey = 'host'
 
-class hydra_rendertask(tupleObject):
-    autoColumn = 'id'
-    primaryKey = 'id'
-
-class hydra_job(tupleObject):
-    autoColumn = 'id'
-    primaryKey = 'id'
-
 class hydra_jobboard(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
