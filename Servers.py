@@ -71,6 +71,3 @@ class MyTCPHandler(SocketServer.StreamRequestHandler):
             self.wfile.write( answerBytes )
         except:
             logger.error("""Exception caught: %s""", traceback.format_exc())
-
-import Questions #This import is necessary for unpickling questions and was moved to the bottom negate a circular import problem
-Questions

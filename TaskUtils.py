@@ -7,7 +7,8 @@ from MySQLdb import Error as sqlerror
 #Hydra
 from MySQLSetup import *
 from LoggingSetup import logger
-import JobKill
+from Questions import KillCurrentTaskQuestion
+from Connections import TCPConnection
 import Utils
 
 def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
@@ -62,6 +63,16 @@ def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
             host.status = newHostStatus
             host.update(t)
             
+def sendKillQuestion(renderhost, newStatus="K"):
+    """Tries to kill the current task running on the renderhost. Returns True if successful, otherwise False"""
+    logger.debug ('kill job on %s' % renderhost)
+    connection = TCPConnection(hostname=renderhost)
+    answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
+    logger.debug("child killed: %s" % answer.childKilled)
+    if not answer.childKilled:
+        logger.debug("%r tried to kill its job but failed for some reason." % renderhost)
+    return answer.childKilled
+            
 def killTask(task_id):
     """Kills the task with the specified id. If the task has been started, a 
     kill request is sent to the node running it.
@@ -73,8 +84,10 @@ def killTask(task_id):
             task.update(t)
         #If we reach this point: transaction successful, no exception raised
         return True
-    elif task.status == STARTED:
-        killed = JobKill.sendKillQuestion(renderhost = task.host)
+    elif task.status == "S":
+        killed = sendKillQuestion(renderhost = task.host)
         #If we reach this point: TCPconnection successful, no exception raised
         return killed
+    elif task.status == "K":
+        return True
     return False

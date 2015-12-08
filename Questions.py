@@ -78,7 +78,7 @@ class RenderQuestion(Question):
             render_task.save( )
             log.close( )
 
-class KillCurrentJobQuestion (Question):
+class KillCurrentTaskQuestion(Question):
     """A Question for killing a job on a RenderTCPServer"""
     def __init__(self, statusAfterDeath):
         self.statusAfterDeath = statusAfterDeath

@@ -1,5 +1,6 @@
 #Standard
 import sys
+from socket import error as socketerror
 
 #3rd party
 from MySQLdb import Error as sqlerror
@@ -8,6 +9,7 @@ from MySQLdb import Error as sqlerror
 from MySQLSetup import *
 from LoggingSetup import logger
 import Utils
+import TaskUtils
 
 def changeStatusViaJobID(job_id, new_status, old_status_list=[]):
     if type(old_status_list) is not list:
@@ -41,3 +43,32 @@ def updateJobTaskCount(job_id, tasks = None):
         job.update(t)
 
     return taskCount, taskDone
+    
+def killJob(job_id):
+    """Kills every task associated with job_id. Killed tasks have status code 
+    'K'. If a task was already started, an a kill request is sent to the host 
+    running it.
+    @return: False if no errors while killing started tasks, else True"""
+    #Mark all of the Ready tasks as Killed
+    changeStatusViaJobID(job_id, "K", ["R", "U", "H"])
+    
+    #Get hostnames for tasks that were already started
+    tuples = None # @UnusedVariable
+    with transaction() as t:
+        t.cur.execute("""select host from hydra_taskboard 
+                        where job_id = '%d' and status = 'S'""" % job_id)
+        tuples = t.cur.fetchall()
+        
+    #Make flat list out of single-element tuples fetched from db
+    hosts = [t for (t,) in tuples]
+    
+    #Send a kill request to each host, note if any failures occurred
+    error = False
+    for host in hosts:
+        try:
+            error = error or not TaskUtils.sendKillQuestion(host)
+        except socketerror:
+            logger.debug("There was a problem communicating with {:s}"
+                         .format(host))
+            error = True
+    return error

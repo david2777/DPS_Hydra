@@ -20,7 +20,6 @@ from MySQLSetup import *
 from LoggingSetup import logger
 import Utils
 from MessageBoxes import aboutBox, yesNoBox, intBox
-from JobKill import sendKillQuestion, killJob
 import TaskUtils
 import JobUtils
 
@@ -290,6 +289,8 @@ class FarmView( QMainWindow, Ui_FarmView ):
 
         if thisNode:
             offlineNode(thisNode)
+            #TODO: FIX ME!
+            """
             if thisNode.task_id:
                 try:
                     #todo: use JobKill for getOff instead of doing it manually
@@ -306,6 +307,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
                              " running, or it has become unresponsive.")
             else:
                 aboutBox(self, "Offline", "No job was running. Node offlined.")
+                """
         self.doFetch()
 
     def onlineRenderNodesButtonClicked(self):
@@ -378,6 +380,8 @@ class FarmView( QMainWindow, Ui_FarmView ):
             for node_row in rendernode_rows:
                 if node_row.host in hosts:
                     offlineNode(node_row)
+                    #TODO: FIX ME!
+                    """
                     try:
                         killed = sendKillQuestion(node_row.host, READY)
                         error = error or not killed
@@ -391,6 +395,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
             aboutBox(self, "Error", "The following nodes could not be stopped"
                      " for some reason. Look in FarmView.log for more details."
                      "<br>" + str(notKilledList))
+                     """
         self.doFetch()
 
     def advancedSearchButtonClicked(self):
@@ -402,7 +407,7 @@ class FarmView( QMainWindow, Ui_FarmView ):
         choice = yesNoBox(self, "Confirm", "Really kill job {:d}?".format(job_id))
         if choice == QMessageBox.Yes:
             try:
-                if killJob(job_id):
+                if JobUtils.killJob(job_id):
                     aboutBox(self, "Error", "Some nodes couldn't kill " + "their tasks.")
             except sqlerror as err:
                 logger.debug(str(err))
