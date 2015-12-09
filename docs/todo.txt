@@ -1,7 +1,7 @@
 -[In Progress]Keep implementing new boards into farm View
     -Update button handlers
     -[Done]Figure out why table helpers don't like anything other than strings
-    -Organize FarmView button handlers
+    -[In Progress]Organize FarmView button handlers
     -Add NodeUtils for messing with nodes
     -Need to be able to see reqs in FarmView
 

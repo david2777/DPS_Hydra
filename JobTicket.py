@@ -144,15 +144,15 @@ if __name__ == "__main__":
         baseCMD = r"$Maya/bin/render.exe -proj \\test\test"
         mayaFile = r"\\test\test\test.ma"
         startFrame = 101
-        endFrame = 175
+        endFrame = 110
         priority = 55
         jobStatus = "U"
         niceName = "TEST JOB"
         owner = "dduvoisin"
-        compatabilityPattern = ""
+        compatabilityPattern = "Redshift, Maya2015, SOUP"
         
-        uberPhase01 = UberJobTicket(baseCMD, startFrame, endFrame, 10, mayaFile,
-        priority, 1, jobStatus, niceName + "_PHASE_01", owner, compatabilityPattern)
+        uberPhase01 = UberJobTicket(baseCMD, startFrame, endFrame, 1, mayaFile,
+        priority, 1, jobStatus, niceName + "_PHASE_02", owner, compatabilityPattern)
         uberPhase01.doSubmit()
         
     raw_input("DONE...")

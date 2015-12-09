@@ -23,8 +23,7 @@ from MessageBoxes import aboutBox, yesNoBox, intBox
 import TaskUtils
 import JobUtils
 
-#Original Authors: David Gladstein and Aaron Cohn
-#Taken from Cogswell's Project Hydra
+#Parts taken from Cogswell's Project Hydra by David Gladstein and Aaron Cohn
 
 class FarmView(QMainWindow, Ui_FarmView):
     def __init__(self):
@@ -84,11 +83,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskTable.setColumnWidth(0, 60)        #ID
         self.taskTable.setColumnWidth(1, 60)        #Frame
         self.taskTable.setColumnWidth(2, 100)       #Host
-        self.taskTable.setColumnWidth(3, 60)       #Status
+        self.taskTable.setColumnWidth(3, 60)        #Status
         self.taskTable.setColumnWidth(4, 120)       #Start Time
         self.taskTable.setColumnWidth(5, 120)       #End Time
-        self.taskTable.setColumnWidth(6, 120)        #Duration
-        self.taskTable.setColumnWidth(7, 120)        #Code
+        self.taskTable.setColumnWidth(6, 120)       #Duration
+        self.taskTable.setColumnWidth(7, 120)       #Code
 
         #Get the global column count for later
         self.taskTableCols = self.taskTable.columnCount()
@@ -232,6 +231,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 5, TableWidgetItem_dt(str(task.endTime)))
                 self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 7, TableWidgetItem_int(str(task.exitCode)))
+                self.taskTable.setItem(pos, 8, TableWidgetItem_int(str(task.requirements)))
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
@@ -375,7 +375,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.doFetch()
 
     def getOffThisNodeButtonClicked(self):
-        """Offlines the node and sends a message to the render node server
+        #TODO: TEST THIS FUNCTION
+        """***UNTESTED***Offlines the node and sends a message to the render node server
         running on localhost to kill its current task (task will be
         resubmitted)"""
         thisNode = None
@@ -388,32 +389,31 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         choice = yesNoBox(self, "Confirm", "All progress on the current job"
                           " will be lost. Are you sure you want to stop it?")
+                          
         if choice != QMessageBox.Yes:
             aboutBox(self, "Abort", "No action taken.")
-            return
-
-        if thisNode:
-            offlineNode(thisNode)
-            #TODO: FIX ME!
-            """
-            if thisNode.task_id:
-                try:
-                    #todo: use JobKill for getOff instead of doing it manually
-                    killed = sendKillQuestion(renderhost = "localhost", newStatus = READY)
-                    if not killed:
-                        logger.debug("There was a problem killing the task.")
-                        aboutBox(self, "Error", "There was a problem killing the task.")
-                    else:
-                        aboutBox(self, "Success", "Job was successfully stopped. Node offlined.")
-                except socketerror:
-                    logger.debug(socketerror.message)
-                    aboutBox(self, "Error", "There was a problem communicating"
-                             " with the render node software. Either it's not"
-                             " running, or it has become unresponsive.")
-            else:
-                aboutBox(self, "Offline", "No job was running. Node offlined.")
-                """
-        self.doFetch()
+        
+        else:
+            if thisNode:
+                offlineNode(thisNode)
+                if thisNode.task_id:
+                    task_id = thisNode.task_id
+                    try:
+                        response = TaskUtils.killTask(task_id)
+                        TaskUtils.startTask(task_id)
+                        if not response:
+                            logger.debug("Problem killing task durring GetOff")
+                            aboutBox(self, "Error", "There was a problem killing the task during GetOff!")
+                        else:
+                            aboutBox(self, "Success", "Job was reset, node offlined.")
+                    except socketerror:
+                        logger.debug(socketerror.message)
+                        aboutBox(self, "Error", "There was a problem communicating"
+                                 " with the render node software. Either it's not"
+                                 " running, or it has become unresponsive.")
+                else:
+                    aboutBox(self, "Success", "No job was found on node, node offlined")
+                self.doFetch()
 
     def onlineRenderNodesButtonClicked(self):
         """For all nodes with boxes checked in the render nodes table, changes
@@ -460,7 +460,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.doFetch()
 
     def getOffRenderNodesButtonClicked(self):
-        """For all nodes with boxes checked in the render nodes table, changes
+        #TODO:TEST FUNCTION!
+        """***UNTESTED***For all nodes with boxes checked in the render nodes table, changes
         status to offline if idle, or pending if started, and attempts to kill
         any task that is running on each node."""
 
@@ -482,25 +483,27 @@ class FarmView(QMainWindow, Ui_FarmView):
         notKilledList = list()
         with transaction() as t:
             rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
-            for node_row in rendernode_rows:
-                if node_row.host in hosts:
-                    offlineNode(node_row)
-                    #TODO: FIX ME!
-                    """
-                    try:
-                        killed = sendKillQuestion(node_row.host, READY)
-                        error = error or not killed
-                    except socketerror as err:
-                        logger.debug(str(err) + '\n'
-                                     + "Error while trying to contact "
-                                     + node_row.host)
-                        notKilledList.append(node_row.host)
-                        error = True
-        if error:
-            aboutBox(self, "Error", "The following nodes could not be stopped"
-                     " for some reason. Look in FarmView.log for more details."
-                     "<br>" + str(notKilledList))
-                     """
+            for thisNode in rendernode_rows:
+                if thisNode.host in hosts:
+                    offlineNode(thisNode)
+                    if thisNode.task_id:
+                        task_id = thisNode.task_id
+                        try:
+                            response = TaskUtils.killTask(task_id)
+                            TaskUtils.startTask(task_id)
+                            if not response:
+                                logger.debug("Problem killing task durring GetOff")
+                                aboutBox(self, "Error", "There was a problem killing the task during GetOff!")
+                            else:
+                                aboutBox(self, "Success", "Job was reset, node offlined.")
+                        except socketerror:
+                            logger.debug(socketerror.message)
+                            aboutBox(self, "Error", "There was a problem communicating"
+                                     " with the render node software. Either it's not"
+                                     " running, or it has become unresponsive.")
+                    else:
+                        aboutBox(self, "Success", "No job was found on node, node offlined")
+        
         self.doFetch()
 
     #---------------------------------------------------------------------#

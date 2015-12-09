@@ -619,6 +619,11 @@
                 <string>Exit Code</string>
                </property>
               </column>
+              <column>
+               <property name="text">
+                <string>Reqs</string>
+               </property>
+              </column>
              </widget>
             </item>
             <item row="3" column="0" colspan="2">
@@ -708,8 +713,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1250</width>
-             <height>576</height>
+             <width>63</width>
+             <height>52</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
