@@ -56,7 +56,7 @@ def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
             task.status = newTaskStatus
             task.startTime = None
             task.endTime = None
-            task.update (t)
+            task.update(t)
         if host:
             [host] = hydra_rendernode.fetch("where host = '%s'" % host)
             host.task_id = None

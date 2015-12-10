@@ -55,7 +55,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.doFetch()
         #And there was data
         #And Hydra saw the data
-        #And it was (hopefully) good
+        #And it was(hopefully) good
 
 
     #---------------------------------------------------------------------#
@@ -115,7 +115,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.startJobButtonHandler)
         QObject.connect(self.jobTable, SIGNAL ("cellClicked(int,int)"),
                         self.jobCellClickedHandler)
-        QObject.connect (self.killJobButton, SIGNAL ("clicked()"),
+        QObject.connect(self.killJobButton, SIGNAL ("clicked()"),
                         self.killJobButtonHandler)
         QObject.connect(self.killTaskButton, SIGNAL ("clicked()"),
                         self.killTaskButtonHandler)
@@ -143,7 +143,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         pass
 
     def updateJobTable(self):
-        #TODO: Check for filters, set proper tasks count (need in DB?)
+        #TODO: Check for filters, set proper tasks count(need in DB?)
         self.jobTable.setSortingEnabled(False)
         try:
             if self.myFilterCheckbox.isChecked():
@@ -201,7 +201,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         rows = self.jobTableHandler()
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
-            prioritizeJob (job_id, self.prioritySpinBox.value())
+            prioritizeJob(job_id, self.prioritySpinBox.value())
         self.updateJobTable()
         self.jobTable.setCurrentCell(rows[-1], 0)
 
@@ -210,7 +210,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
 
     def updateTaskTable(self, job_id):
-        self.taskTableLabel.setText("Task List (job: " + str(job_id) + ")")
+        self.taskTableLabel.setText("Task List(job: " + str(job_id) + ")")
         try:
             tasks = hydra_taskboard.fetch("where job_id = %d" % job_id)
             self.taskTable.setRowCount(len(tasks))
@@ -377,7 +377,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def getOffThisNodeButtonClicked(self):
         #TODO: TEST THIS FUNCTION
         """***UNTESTED***Offlines the node and sends a message to the render node server
-        running on localhost to kill its current task (task will be
+        running on localhost to kill its current task(task will be
         resubmitted)"""
         thisNode = None
         try:
@@ -561,13 +561,13 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.taskIDLabel.setText("None")
 
     def updateMinPriorityLabel(self, minPriority):
-        self.minPriorityLabel.setText (str (minPriority))
+        self.minPriorityLabel.setText(str(minPriority))
 
     def updateCapabilitiesLabel(self, capabilities):
-        self.capabilitiesLabel.setText (capabilities)
+        self.capabilitiesLabel.setText(capabilities)
 
     def updateRenderNodeTable(self):
-        #Clear the table (note: this is done to avoid duplication of items)
+        #Clear the table(note: this is done to avoid duplication of items)
         self.renderNodeTable.clearContents()
         self.renderNodeTable.setRowCount(0)
 
@@ -575,7 +575,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.setSortingEnabled(False)
 
         rows = hydra_rendernode.fetch(order="order by host")
-        self.renderNodeTable.setRowCount (len (rows))
+        self.renderNodeTable.setRowCount(len(rows))
         columns = [
             lambda o: TableWidgetItem_check(),
             lambda o: TableWidgetItem(str(o.host)),
@@ -587,9 +587,9 @@ class FarmView(QMainWindow, Ui_FarmView):
                                 getSoftwareVersionText(o.software_version)),
             lambda o: TableWidgetItem_dt(o.pulse),
             ]
-        for (rowIndex, row) in enumerate (rows):
-            for (columnIndex, columnFun) in enumerate (columns):
-                columnFun (row).setIntoTable (self.renderNodeTable,
+        for(rowIndex, row) in enumerate(rows):
+            for(columnIndex, columnFun) in enumerate(columns):
+                columnFun(row).setIntoTable(self.renderNodeTable,
                                               rowIndex, columnIndex)
 
         self.renderNodeTable.setSortingEnabled(True)
@@ -604,7 +604,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             labelFactory( 'startTime' ),
             labelFactory( 'endTime' ),
             labelFactory( 'exitCode' )]
-        setup( hydra_taskboard.fetch (order = "order by id desc",
+        setup( hydra_taskboard.fetch(order = "order by id desc",
                                        limit = self.limitSpinBox.value ()),
                                        columns, self.taskGrid)
 
@@ -615,12 +615,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                                 from hydra_rendernode
                                 group by status""")
             counts = t.cur.fetchall ()
-        logger.debug (counts)
+        logger.debug(counts)
         countString = ", ".join (["%d %s" % (count, niceNames[status])
-                                  for (count, status) in counts])
+                                  for(count, status) in counts])
         time = datetime.datetime.now().strftime ("%H:%M")
         msg = "%s as of %s" % (countString, time)
-        self.statusLabel.setText (msg)
+        self.statusLabel.setText(msg)
 
     def setThisNodeButtonsEnabled(self, choice):
         """Enables or disables buttons on This Node tab"""
@@ -709,7 +709,7 @@ def setup(records, columns, grid):
     """Populate a data grid. "colums" is a list of widget factory objects."""
 
     # build the header row
-    for (column, attr) in enumerate( columns ):
+    for(column, attr) in enumerate( columns ):
         item = grid.itemAtPosition( 0, column )
         if item:
             grid.removeItem( item )
@@ -717,8 +717,8 @@ def setup(records, columns, grid):
         grid.addWidget( attr.headerWidget(), 0, column )
 
     # build the data rows
-    for (row, record) in enumerate( records ):
-        for (column, attr) in enumerate( columns ):
+    for(row, record) in enumerate( records ):
+        for(column, attr) in enumerate( columns ):
             item = grid.itemAtPosition( row + 1, column )
             if item:
                 grid.removeItem( item )
@@ -783,7 +783,7 @@ class versionLabelFactory(widgetFactory):
     """Builds a label specially for the software_version column in the render
     node table, trimming out non-essential information in the process."""
 
-    def dataWidget (self, record ):
+    def dataWidget(self, record ):
         sw_version_text = getSoftwareVersionText(self.data(record))
         return QLabel(sw_version_text)
 
@@ -795,17 +795,17 @@ class getOffButton(widgetFactory):
         w = QPushButton( self.name )
         #The click handler is the doGetOff method, but with the record
         #Argument already supplied. it's called a "partial application".
-        handler = functools.partial (self.doGetOff, record=record)
+        handler = functools.partial(self.doGetOff, record=record)
 
-        QObject.connect (w, SIGNAL("clicked()"), handler)
+        QObject.connect(w, SIGNAL("clicked()"), handler)
         return w
 
-    def doGetOff (self, record):
+    def doGetOff(self, record):
         logger.debug('clobber %s', record.host)
 
 class WidgetForTable:
     def setIntoTable(self, table, row, column):
-        table.setCellWidget (row, column, self)
+        table.setCellWidget(row, column, self)
 
 class LabelForTable(QLabel, WidgetForTable): pass
 
