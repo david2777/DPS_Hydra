@@ -26,8 +26,8 @@ if argv[0]:
 else:
     appname = "interpreter_output"
 
-if not os.path.isdir (BASELOGDIR):
-    os.makedirs (BASELOGDIR)
+if not os.path.isdir(BASELOGDIR):
+    os.makedirs(BASELOGDIR)
 
 #Set the log file path to BASELOGDIR\appname.txt
 logfileName = os.path.join( BASELOGDIR, appname + '.txt')

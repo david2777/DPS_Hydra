@@ -18,7 +18,7 @@ from PyQt4.QtGui import QColor
 #Taken from Cogswell's Project Hydra
 
 #Statuses for jobs/tasks
-PAUSED = 'U'                #Job was paused (let running jobs finish)
+PAUSED = 'U'                #Job was paused(let running jobs finish)
 ERROR = 'E'                 #Job returned a non-zero exit code
 READY = 'R'                 #Ready to be run by a render node
 FINISHED = 'F'              #Job complete
@@ -58,21 +58,21 @@ def getDbInfo():
     # open config file
     config = ConfigParser.RawConfigParser()
     # creat a copy if it doesn't exist
-    if not os.path.exists (SETTINGS):
-        folder = os.path.dirname (SETTINGS)
-        logger.debug ('check for folder %s' % folder)
-        if os.path.exists (folder):
-            logger.debug ('exists')
+    if not os.path.exists(SETTINGS):
+        folder = os.path.dirname(SETTINGS)
+        logger.debug('check for folder %s' % folder)
+        if os.path.exists(folder):
+            logger.debug('exists')
         else:
-            logger.debug ('make %s' % folder)
-            os.mkdir (folder)
-        cfgFile = os.path.join (os.path.dirname (sys.argv[0]), os.path.basename (SETTINGS))
-        logger.debug ('copy %s' % cfgFile)
-        shutil.copyfile (cfgFile, SETTINGS)
+            logger.debug('make %s' % folder)
+            os.mkdir(folder)
+        cfgFile = os.path.join(os.path.dirname(sys.argv[0]), os.path.basename(SETTINGS))
+        logger.debug('copy %s' % cfgFile)
+        shutil.copyfile(cfgFile, SETTINGS)
 
     config.read(SETTINGS)
 
-    # get server & db names
+    #Get server & db names
     host = config.get(section="database", option="host")
     db = config.get(section="database", option="db")
     #Get Username and Password
@@ -88,72 +88,72 @@ class AUTOINCREMENT:
 
 class tupleObject:
     @classmethod
-    def tableName (cls):
+    def tableName(cls):
         return cls.__name__
 
     autoColumn = None
 
-    def __init__ (self, **kwargs):
+    def __init__(self, **kwargs):
         self.__dict__['__dirty__'] = set ()
         for k, v in kwargs.iteritems ():
             self.__dict__[k] = v
 
-    def __setattr__ (self, k, v):
+    def __setattr__(self, k, v):
         self.__dict__[k] = v
-        if Utils.nonFlanged (k):
-            self.__dirty__.add (k)
+        if Utils.nonFlanged(k):
+            self.__dirty__.add(k)
             logger.debug (('dirty', k, v))
 
     @classmethod
-    def fetch (cls, whereClause = "", order = None, limit = None,
+    def fetch(cls, whereClause = "", order = None, limit = None,
                explicitTransaction=None):
         orderClause = "" if order is None else " " + order + " "
         limitClause = "" if limit is None else " limit %d " % limit
         select = "select * from %s %s %s %s" % (cls.tableName (), whereClause, orderClause, limitClause)
-        logger.debug (select)
+        logger.debug(select)
 
-        def doFetch (t):
-            t.cur.execute (select)
+        def doFetch(t):
+            t.cur.execute(select)
             names = [desc[0] for desc in t.cur.description]
-            return [cls (**dict (zip (names, tuple)))
+            return [cls (**dict(zip(names, tuple)))
                     for tuple in t.cur.fetchall ()]
         if explicitTransaction:
-            return doFetch (explicitTransaction)
+            return doFetch(explicitTransaction)
         else:
             with transaction() as t:
-                return doFetch (t)
+                return doFetch(t)
 
-    def attributes (self):
-        return filter (Utils.nonFlanged, self.__dict__.keys ())
+    def attributes(self):
+        return filter(Utils.nonFlanged, self.__dict__.keys ())
 
-    def insert (self, transaction):
+    def insert(self, transaction):
         names = self.attributes ()
-        values = [getattr (self, name)
+        values = [getattr(self, name)
                   for name in names]
-        nameString = ", ".join (names)
-        valueString = ", ".join (len(names) * ["%s"])
+        nameString = ", ".join(names)
+        valueString = ", ".join(len(names) * ["%s"])
         query = "insert into %s (%s) values (%s)" % (self.tableName (), nameString, valueString)
-        logger.debug (query)
-        transaction.cur.executemany (query, [values])
+        logger.debug(query)
+        transaction.cur.executemany(query, [values])
         if self.autoColumn:
             transaction.cur.execute ("select last_insert_id()")
             [id] = transaction.cur.fetchone ()
             self.__dict__[self.autoColumn] = id
 
-    def update (self, transaction):
+    def update(self, transaction):
         names = list(self.__dirty__)
         if not names:
             return
 
-        values = ([getattr (self, name)
+        values = ([getattr(self, name)
                   for name in names]
                      +
-                  [getattr (self, self.primaryKey)])
+                  [getattr(self, self.primaryKey)])
         assignments = ", ".join(["%s = %%s" % name
                                  for name in names])
         query = "update %s set %s where %s = %%s" % (self.tableName (), assignments, self.primaryKey)
         logger.debug ((query, values))
-        transaction.cur.executemany (query, [values])
+        transaction.cur.executemany(query, [values])
 
 class hydra_rendernode(tupleObject):
     primaryKey = 'host'
@@ -170,16 +170,16 @@ class hydra_taskboard(tupleObject):
 class transaction:
     def __init__(self):
         # open db connection
-        self.db = MySQLdb.connect (db_host, user=db_username, passwd = db_password, db=db_name)
+        self.db = MySQLdb.connect(db_host, user=db_username, passwd = db_password, db=db_name)
         self.cur = self.db.cursor ()
         self.cur.execute ("set autocommit = 1")
 
-    def __enter__ (self):
+    def __enter__(self):
         logger.debug ("enter transaction %s", self)
         self.cur.execute ("start transaction")
         return self
 
-    def __exit__ (self, errorType, value, traceback):
+    def __exit__(self, errorType, value, traceback):
         if errorType is None:
             logger.debug ("commit %s", self)
             self.cur.execute ("commit")

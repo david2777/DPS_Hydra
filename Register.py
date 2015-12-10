@@ -12,7 +12,7 @@ from MySQLSetup import hydra_rendernode, OFFLINE, transaction
 from LoggingSetup import logger
 
 config = ConfigParser.RawConfigParser ()
-config.read (Constants.SETTINGS)
+config.read(Constants.SETTINGS)
 
 me = Utils.myHostName()
 minJobPriority = config.get(section="rendernode", option="minJobPriority")

@@ -19,7 +19,7 @@ import TaskUtils
 class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):
         #Check for another instance of RenderNodeMain.exe
-        nInstances = len (filter (lambda line: 'RenderNodeMain' in line,
+        nInstances = len(filter(lambda line: 'RenderNodeMain' in line,
                                   subprocess.check_output ('tasklist').split('\n')))
         logger.info ("%d RenderNodeMain instances running." % nInstances)
         if nInstances > 1:
@@ -69,7 +69,7 @@ class RenderTCPServer(TCPServer):
         queryString += " and '%s' like requirements" % thisNode.capabilities
 
         with transaction() as t:
-            render_tasks = hydra_taskboard.fetch (queryString, limit=1, explicitTransaction=t)
+            render_tasks = hydra_taskboard.fetch(queryString, limit=1, explicitTransaction=t)
             if not render_tasks:
                 return
             render_task = render_tasks[0]
@@ -169,14 +169,14 @@ def heartbeat(interval = 5):
                     "set pulse = NOW() "
                     "where host = '%s'" % host)
         except Exception, e:
-            logger.error (traceback.format_exc (e))
+            logger.error(traceback.format_exc(e))
         time.sleep(interval)
 
 def main():
     logger.info ('starting in %s', os.getcwd())
     logger.info ('arglist %s', sys.argv)
     socketServer = RenderTCPServer()
-    socketServer.createIdleLoop (5, socketServer.processRenderTasks )
+    socketServer.createIdleLoop(5, socketServer.processRenderTasks )
     pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
     pulseThread.start()
 
