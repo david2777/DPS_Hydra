@@ -2,8 +2,10 @@
     -Update button handlers
     -[Done]Figure out why table helpers don't like anything other than strings
     -[In Progress]Organize FarmView button handlers
-    -Add NodeUtils for messing with nodes
-    -Need to be able to see reqs in FarmView
+    -[Done]Add NodeUtils for messing with nodes
+    -[Done]Need to be able to see reqs in FarmView
+
+-[Testing]Scheduler for onlineing and offlineing nodes
 
 -[In Progress]Overhaul some functions (like getting a row) with the way I've done it on TASC before
 
