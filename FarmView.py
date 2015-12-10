@@ -18,10 +18,11 @@ from TaskSearchDialog import TaskSearchDialog
 #Hydra
 from MySQLSetup import *
 from LoggingSetup import logger
-import Utils
 from MessageBoxes import aboutBox, yesNoBox, intBox
+import Utils
 import TaskUtils
 import JobUtils
+import NodeUtils
 
 #Parts taken from Cogswell's Project Hydra by David Gladstein and Aaron Cohn
 
@@ -201,7 +202,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         rows = self.jobTableHandler()
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
-            prioritizeJob(job_id, self.prioritySpinBox.value())
+            JobUtils.prioritizeJob(job_id, self.prioritySpinBox.value())
         self.updateJobTable()
         self.jobTable.setCurrentCell(rows[-1], 0)
 
@@ -346,14 +347,14 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Get most current info from the database
         thisNode = None
         try:
-            thisNode = getThisNodeData()
+            thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.debug(str(err))
             self.sqlErrorBox()
             return
 
         if thisNode:
-            onlineNode(thisNode)
+            NodeUtils.onlineNode(thisNode)
 
         self.doFetch()
 
@@ -363,14 +364,14 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Get the most current info from the database
         thisNode = None
         try:
-            thisNode = getThisNodeData()
+            thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.debug(str(err))
             self.sqlErrorBox()
             return
 
         if thisNode:
-            offlineNode(thisNode)
+            NodeUtils.offlineNode(thisNode)
 
         self.doFetch()
 
@@ -381,7 +382,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         resubmitted)"""
         thisNode = None
         try:
-            thisNode = getThisNodeData()
+            thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.debug(str(err))
             self.sqlErrorBox()
@@ -395,7 +396,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         
         else:
             if thisNode:
-                offlineNode(thisNode)
+                NodeUtils.offlineNode(thisNode)
                 if thisNode.task_id:
                     task_id = thisNode.task_id
                     try:
@@ -434,7 +435,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
             for node_row in rendernode_rows:
                 if node_row.host in hosts:
-                    onlineNode(node_row)
+                    NodeUtils.onlineNode(node_row)
         self.doFetch()
 
     def offlineRenderNodesButtonClicked(self):
@@ -456,7 +457,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
             for node_row in rendernode_rows:
                 if node_row.host in hosts:
-                    offlineNode(node_row)
+                    NodeUtils.offlineNode(node_row)
         self.doFetch()
 
     def getOffRenderNodesButtonClicked(self):
@@ -485,7 +486,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
             for thisNode in rendernode_rows:
                 if thisNode.host in hosts:
-                    offlineNode(thisNode)
+                    NodeUtils.offlineNode(thisNode)
                     if thisNode.task_id:
                         task_id = thisNode.task_id
                         try:
@@ -532,7 +533,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Get the most current info from the database
         thisNode = None
         try:
-            thisNode = getThisNodeData()
+            thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.debug(str(err))
             self.sqlErrorBox()
@@ -596,16 +597,16 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def updateRenderTaskGrid(self):
         columns = [
-            labelFactory( 'id' ),
-            labelFactory( 'status' ),
-            lineEditFactory( 'logFile' ),
-            labelFactory( 'host' ),
-            labelFactory( 'command' ),
-            labelFactory( 'startTime' ),
-            labelFactory( 'endTime' ),
-            labelFactory( 'exitCode' )]
-        setup( hydra_taskboard.fetch(order = "order by id desc",
-                                       limit = self.limitSpinBox.value ()),
+            labelFactory('id'),
+            labelFactory('status'),
+            lineEditFactory('logFile'),
+            labelFactory('host'),
+            labelFactory('command'),
+            labelFactory('startTime'),
+            labelFactory('endTime'),
+            labelFactory('exitCode')]
+        setup(hydra_taskboard.fetch(order = "order by id desc",
+                                       limit = self.limitSpinBox.value()),
                                        columns, self.taskGrid)
 
     def updateStatusBar(self):
@@ -656,42 +657,6 @@ def getSoftwareVersionText(sw_ver):
     else:
         return "None"
 
-def getThisNodeData():
-    """Gets the row corresponding to localhost in the hydra_rendernode table.
-    Raises MySQLdb.Error"""
-
-    [thisNode] = hydra_rendernode.fetch("where host = '%s'"
-                                        % Utils.myHostName())
-    return thisNode
-
-def onlineNode(node):
-    """Onlines the node.
-    Precondition: node refers to a row from the hydra_rendernode table.
-    Raises MySQLdb.Error"""
-
-    if node.status == IDLE:
-        return
-    elif node.status == OFFLINE:
-        node.status = IDLE
-    elif node.status == PENDING and node.task_id:
-        node.status = STARTED
-    with transaction() as t:
-        node.update(t)
-
-def offlineNode(node):
-    """Onlines the node.
-    Precondition: node refers to a row from the hydra_rendernode table.
-    Raises MySQLdb.Error"""
-
-    if node.status == OFFLINE:
-            return
-    elif node.task_id:
-        node.status = PENDING
-    else:
-        node.status = OFFLINE
-    with transaction() as t:
-            node.update(t)
-
 def getCheckedItems(table, itemColumn, checkBoxColumn):
     """Given a table with a column of check boxes in it, returns a list of
     the items in itemColumn which have a checked box in the same row."""
@@ -707,32 +672,22 @@ def getCheckedItems(table, itemColumn, checkBoxColumn):
 
 def setup(records, columns, grid):
     """Populate a data grid. "colums" is a list of widget factory objects."""
-
-    # build the header row
-    for(column, attr) in enumerate( columns ):
-        item = grid.itemAtPosition( 0, column )
+    #Build the header row
+    for(column, attr) in enumerate(columns):
+        item = grid.itemAtPosition(0, column)
         if item:
-            grid.removeItem( item )
+            grid.removeItem(item)
             item.widget().hide()
-        grid.addWidget( attr.headerWidget(), 0, column )
+        grid.addWidget(attr.headerWidget(), 0, column)
 
-    # build the data rows
-    for(row, record) in enumerate( records ):
-        for(column, attr) in enumerate( columns ):
-            item = grid.itemAtPosition( row + 1, column )
+    #Build the data rows
+    for(row, record) in enumerate(records):
+        for(column, attr) in enumerate(columns):
+            item = grid.itemAtPosition(row + 1, column)
             if item:
-                grid.removeItem( item )
+                grid.removeItem(item)
                 item.widget().hide()
-            grid.addWidget(attr.dataWidget( record ),row + 1, column,)
-
-def prioritizeJob(job_id, priority):
-    with transaction() as t:
-        t.cur.execute("""update hydra_jobboard
-                        set priority = '%d'
-                        where id = '%d'""" % (priority, job_id))
-        t.cur.execute("""update hydra_taskboard
-                        set priority = '%d'
-                        where job_id = '%d'""" % (priority, job_id))
+            grid.addWidget(attr.dataWidget(record),row + 1, column,)
 
 
 #------------------------------------------------------------------------#
@@ -766,24 +721,24 @@ class labelFactory(widgetFactory):
     """A label widget factory. The object's name is the name of a database
     column."""
 
-    def dataWidget( self, record ):
-        return QLabel( self.data( record ) )
+    def dataWidget(self, record):
+        return QLabel(self.data(record))
 
 class lineEditFactory(widgetFactory):
     """like labelFactory, but makes a read-only text field instead of a
     label."""
 
-    def dataWidget( self, record ):
-        w = QLineEdit( )
-        w.setText( self.data( record ) )
-        w.setReadOnly( True )
+    def dataWidget(self, record):
+        w = QLineEdit()
+        w.setText(self.data(record))
+        w.setReadOnly(True)
         return w
 
 class versionLabelFactory(widgetFactory):
     """Builds a label specially for the software_version column in the render
     node table, trimming out non-essential information in the process."""
 
-    def dataWidget(self, record ):
+    def dataWidget(self, record):
         sw_version_text = getSoftwareVersionText(self.data(record))
         return QLabel(sw_version_text)
 
@@ -791,8 +746,8 @@ class getOffButton(widgetFactory):
     """As above, but makes a specialized button to implement the GetOff
     function."""
 
-    def dataWidget ( self, record ):
-        w = QPushButton( self.name )
+    def dataWidget (self, record):
+        w = QPushButton(self.name)
         #The click handler is the doGetOff method, but with the record
         #Argument already supplied. it's called a "partial application".
         handler = functools.partial(self.doGetOff, record=record)
@@ -845,9 +800,9 @@ class TableWidgetItem_dt(TableWidgetItem):
 #------------------------------------------------------------------------#
 
 if __name__ == '__main__':
-    app = QApplication( sys.argv )
-    window = FarmView( )
+    app = QApplication(sys.argv)
+    window = FarmView()
 
-    window.show( )
-    retcode = app.exec_( )
-    sys.exit( retcode )
+    window.show()
+    retcode = app.exec_()
+    sys.exit(retcode)

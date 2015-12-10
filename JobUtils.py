@@ -71,3 +71,12 @@ def killJob(job_id):
         job.job_status = "K"
         job.update(t)
     return no_errors
+    
+def prioritizeJob(job_id, priority):
+    with transaction() as t:
+        t.cur.execute("""update hydra_jobboard
+                        set priority = '%d'
+                        where id = '%d'""" % (priority, job_id))
+        t.cur.execute("""update hydra_taskboard
+                        set priority = '%d'
+                        where job_id = '%d'""" % (priority, job_id))
