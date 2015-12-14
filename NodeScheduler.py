@@ -4,33 +4,40 @@ import threading
 #TODO:Fix all of this
 
 isStarted = 0
+startTime = datetime.datetime(2015, 11, 13, 18, 30, 00)
+endTime = datetime.datetime(2015, 12, 13, 20, 00, 00)
 
 def mainLoop():
-    startTime = datetime.time(23, 59, 00)   #Need to set this for testing
-    endTime = datetime.time(23, 58, 15)     #Need to set this for testing
-    
-    #Run the loop on the interval set above
-    #TODO:Better way to do this?
-    threading.Timer(interval, mainLoop).start()
-    
-    now = datetime.datetime.now().time().replace(microsecond = 0)
-    print "Current time:\t\t" + str(now)
-    
+    #Need these in global so that they don't get reset every time the loop runs
     global isStarted
+    global startTime 
+    global endTime
+    
+    now = datetime.datetime.now().replace(microsecond = 0)
+    print "Current time:\t\t" + str(now)
             
     if isStarted == 0:
         print "Waiting for start @:\t" + str(startTime) + "\n"
         if startTime <= now:
             isStarted = 1
+            newDate = now.date() + datetime.timedelta(days = 1)
+            newTime = startTime.time()
+            startTime = datetime.datetime.combine(newDate, newTime)
             print "\n\nTriggering Startup Event\n\n"
             
     elif isStarted == 1:
         print "Waiting for end @:\t" + str(endTime) + "\n"
         if endTime <= now:
+            newDate = now.date() + datetime.timedelta(days = 1)
+            newTime = endTime.time()
+            endTime = datetime.datetime.combine(newDate, newTime)
             isStarted = 0
             print "\n\nTriggering Shutdown Event\n\n"
-
-if __name__ == "__main__":
-    interval = 5.0    #5 seconds for testing
+    
+    
+    interval = 5.0      #5 seconds for testing        
     mainThread = threading.Timer(interval, mainLoop)
     mainThread.start()
+
+if __name__ == "__main__":
+    mainLoop()
