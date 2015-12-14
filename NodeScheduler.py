@@ -1,11 +1,11 @@
+#Standard
 import datetime
 import threading
 
-#TODO:Fix all of this
-
-isStarted = 0
-startTime = datetime.datetime(2015, 11, 13, 18, 30, 00)
-endTime = datetime.datetime(2015, 12, 13, 20, 00, 00)
+#Hydra
+from LoggingSetup import logger
+import NodeUtils
+import NodeSchedules
 
 def mainLoop():
     #Need these in global so that they don't get reset every time the loop runs
@@ -38,6 +38,35 @@ def mainLoop():
     interval = 5.0      #5 seconds for testing        
     mainThread = threading.Timer(interval, mainLoop)
     mainThread.start()
+    
+def getSchedule(nodeOBJ):
+    if nodeOBJ.status == "I":
+        isStarted = 1
+    else:
+        isStarted = 0
+        
+    nodeTimes = NodeSchedules.ScheduleDict[nodeOBJ.schedule]
+    if nodeTimes[0] != None:
+        nodeSch = []
+        nowDate = datetime.datetime.now().date()
+        for time in nodeTimes:
+            nodeSch.append(datetime.datetime.combine(nowDate, time))
+        
+        if nodeSch[1] <= datetime.datetime.now():
+            logger.debug("End time has passed, incrementing")
+            for i in range(2):
+                nodeSch[i] = nodeSch[i] + datetime.timedelta(days = 1)
+        
+    else:
+        nodeSch = nodeTimes
+        
+    return nodeSch[0], nodeSch[1], isStarted
+
 
 if __name__ == "__main__":
-    mainLoop()
+    isStarted = 0
+    startTime, endTime, isStarted = getSchedule(NodeUtils.getThisNodeData())
+    if startTime != None:
+        mainLoop()
+    else:
+        logger.info("Node schedule set to 0, in manual control mode.")

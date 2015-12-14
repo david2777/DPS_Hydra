@@ -67,7 +67,7 @@ CREATE TABLE `hydra_jobboard` (
   `taskDone` int(6) DEFAULT '0',
   `totalTask` int(6) DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -85,6 +85,7 @@ CREATE TABLE `hydra_rendernode` (
   `software_version` varchar(255) DEFAULT NULL COMMENT 'The version of the RenderNodeMain.exe currently running on this node',
   `capabilities` varchar(255) DEFAULT '' COMMENT 'The render nodes current capabilites in alphabetical order. (ie VRay, RenderMan, SOuP)',
   `pulse` datetime DEFAULT NULL COMMENT 'The last time RenderNodeMain.exe was known to be running, if ever',
+  `schedule` int(11) DEFAULT '0',
   PRIMARY KEY (`host`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Describes all of the RenderNodes. Made in MySQL Workbench. ';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -111,7 +112,7 @@ CREATE TABLE `hydra_taskboard` (
   `priority` int(4) DEFAULT NULL,
   `frame` int(6) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -123,4 +124,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-12-07 22:59:32
+-- Dump completed on 2015-12-13 23:29:37
