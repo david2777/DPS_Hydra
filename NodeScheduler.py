@@ -40,7 +40,7 @@ def mainLoop():
     mainThread.start()
     
 def getSchedule(nodeOBJ):
-    if nodeOBJ.status == "I":
+    if nodeOBJ.status == "I" or nodeOBJ.status == "S":
         isStarted = 1
     else:
         isStarted = 0
