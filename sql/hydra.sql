@@ -52,6 +52,7 @@ DROP TABLE IF EXISTS `hydra_jobboard`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hydra_jobboard` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID for the job, Auto Increment by DB on  insertion of job, ',
+  `execName` varchar(20) DEFAULT NULL,
   `baseCMD` varchar(255) DEFAULT NULL COMMENT 'The base CMD, ie. $mayaPath -proj \\\\blah\\blahhh -x 1280 -y 720 etc.',
   `startFrame` int(6) DEFAULT '1' COMMENT 'The start frame of the job',
   `endFrame` int(6) DEFAULT '1' COMMENT 'The end frame of the job',
@@ -67,7 +68,7 @@ CREATE TABLE `hydra_jobboard` (
   `taskDone` int(6) DEFAULT '0',
   `totalTask` int(6) DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -112,7 +113,7 @@ CREATE TABLE `hydra_taskboard` (
   `priority` int(4) DEFAULT NULL,
   `frame` int(6) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=137 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -124,4 +125,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-12-13 23:29:37
+-- Dump completed on 2015-12-15 23:56:07
