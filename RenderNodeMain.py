@@ -1,5 +1,5 @@
 #Standard
-import os                           #@UnusedImport
+import os
 import sys
 import time
 import threading
@@ -8,12 +8,12 @@ import traceback
 import subprocess
 
 #Hydra
-from Constants import *             #@UnusedWildImport
 from Servers import TCPServer
-from LoggingSetup import logger     #@UnusedImport
-import Utils                        #@UnusedImport
-from Answers import RenderAnswer    #Unused?
-from MySQLSetup import *            #@UnusedWildImport
+from LoggingSetup import logger
+from Answers import RenderAnswer
+from MySQLSetup import * 
+import Constants
+import Utils
 import TaskUtils
 
 class RenderTCPServer(TCPServer):
@@ -29,23 +29,23 @@ class RenderTCPServer(TCPServer):
         if nInstances == 0 and not sys.argv[0].endswith('.py'):
             logger.error("Can't find running RenderNodeMain.")
             sys.exit(1)
-
+            
         TCPServer.__init__(self, *arglist, **kwargs)
         self.childProcess = None
         self.childKilled = False
-        self.statusAfterDeath = None #Must be a status from MySQLSetup
+        self.statusAfterDeath = None
 
-        #Clean up in case we had an unexpected termination last time around
+        #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
-
         if thisNode.task_id:
             if thisNode.status == PENDING or thisNode.status == OFFLINE:
                 newStatus = OFFLINE
             else:
                 newStatus = IDLE
-            taskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED, host=thisNode.host, newHostStatus=newStatus)
+            taskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED,
+                              host=thisNode.host, newHostStatus=newStatus)
 
-        #Update current software version if necessary
+        #Update current software version on the DB if necessary
         current_version = sys.argv[0]
         if thisNode.software_version != current_version:
             thisNode.software_version = current_version
@@ -53,10 +53,12 @@ class RenderTCPServer(TCPServer):
                 thisNode.update(t)
 
     def processRenderTasks(self):
+        """The loop that looks for jobs on the DB and runs them if the node meets
+        the job's requirements (Priority & Capabilities)"""
         [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
         logger.info("""Host: %r
          Status: %r
-         Capabilities %r""", thisNode.host, thisNode.status, thisNode.capabilities)
+         Capabilities %r""", thisNode.host, niceNames[thisNode.status], thisNode.capabilities)
 
         #If this node is not idle, don't try to find a new job
         if thisNode.status != IDLE:
@@ -65,6 +67,7 @@ class RenderTCPServer(TCPServer):
         #Otherwise, get a job that's:
         #-Ready to be run and
         #-Has a high enough priority level for this particular node and
+        #-Is able to meet to jobs required capabilities
         queryString = ("where status = '%s' and priority >= %s" % (READY, thisNode.minPriority))
         queryString += " and '%s' like requirements" % thisNode.capabilities
 
@@ -74,10 +77,11 @@ class RenderTCPServer(TCPServer):
                 return
             render_task = render_tasks[0]
 
-            #Create log for this task and update task entry in the database
-            if not os.path.isdir(RENDERLOGDIR):
-                os.makedirs(RENDERLOGDIR)
-            render_task.logFile = os.path.join(RENDERLOGDIR, '%010d.log.txt' % render_task.id )
+            #Create log for this task and update task entry in the DB
+            if not os.path.isdir(Constants.RENDERLOGDIR):
+                os.makedirs(Constants.RENDERLOGDIR)
+            render_task.logFile = os.path.join(Constants.RENDERLOGDIR,
+                                '%010d.log.txt' % render_task.id )
             render_task.status = STARTED
             render_task.host = thisNode.host
             thisNode.status = STARTED
@@ -86,17 +90,19 @@ class RenderTCPServer(TCPServer):
             render_task.update(t)
             thisNode.update(t)
 
-        logger.debug ('working on render task %s', render_task.id)
+        logger.debug ('Starting render task %s', render_task.id)
         log = file(render_task.logFile, 'w')
 
         try:
-            log.write('hydra log file %s on %s\n' % (render_task.logFile, render_task.host))
+            log.write('Hydra log file %s on %s\n' % (render_task.logFile, render_task.host))
             log.write('RenderNodeMain is %s\n' % sys.argv)
             log.write('Command: %s\n\n' % (render_task.command))
             Utils.flushOut(log)
 
             #Run the job and keep track of the process
-            self.childProcess = subprocess.Popen(eval( render_task.command ), stdout = log, stderr = subprocess.STDOUT )
+            self.childProcess = subprocess.Popen(render_task.command,
+                                                stdout = log,
+                                                stderr = subprocess.STDOUT)
             logger.debug('started PID %s to do task %s',
                           self.childProcess.pid, render_task.id)
 
@@ -107,13 +113,13 @@ class RenderTCPServer(TCPServer):
             return RenderAnswer()
 
         except Exception, e:
-            traceback.print_exc( e, log )
+            traceback.print_exc(e, log)
             raise
 
         finally:
             #Get the latest info about this render node
             with transaction() as t:
-                [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName(), explicitTransaction=t)
+                [thisNode] = hydra_rendernode.fetch("where host = '%s'" % Utils.myHostName(), explicitTransaction=t)
 
                 #Check if job was killed, update the job board accordingly
                 if self.childKilled:
@@ -132,7 +138,7 @@ class RenderTCPServer(TCPServer):
                     #Get the datetime
                     render_task.endTime = datetime.datetime.now()
 
-                #Return to 'IDLE' IFF current status is 'STARTED'
+                #Return to 'IDLE' IF current status is 'STARTED'
                 if thisNode.status == STARTED:
                     logger.debug("status: %r", thisNode.status)
                     thisNode.status = IDLE
@@ -147,18 +153,17 @@ class RenderTCPServer(TCPServer):
             log.close()
             #Discard info about the previous child process
             self.childProcess = None
-            logger.debug ('done with render task %s', render_task.id)
+            logger.debug ('Done with render task %s', render_task.id)
 
     def killCurrentJob(self, statusAfterDeath):
         """Kills the render node's current job if it's running one."""
-        logger.debug("killing %r", self.childProcess)
-        print "Status after death should be: {0:s}".format(statusAfterDeath)
+        logger.debug("Killing %r", self.childProcess)
         if self.childProcess:
             self.childProcess.kill()
             self.childKilled = True
             self.statusAfterDeath = statusAfterDeath
         else:
-            logger.debug("no process was running.")
+            logger.debug("No process was running.")
 
 def heartbeat(interval = 5):
     host = Utils.myHostName()
@@ -176,7 +181,7 @@ def main():
     logger.info ('starting in %s', os.getcwd())
     logger.info ('arglist %s', sys.argv)
     socketServer = RenderTCPServer()
-    socketServer.createIdleLoop(5, socketServer.processRenderTasks )
+    socketServer.createIdleLoop(5, socketServer.processRenderTasks)
     pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
     pulseThread.start()
 

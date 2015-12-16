@@ -4,6 +4,7 @@ from datetime import datetime
 #Hydra
 from LoggingSetup import logger
 from MySQLSetup import hydra_jobboard, hydra_taskboard, transaction
+from Constants import EXECUTEABLES
 
 """
 Contains a class with functions for submitting a job to the DB.
@@ -12,7 +13,7 @@ Also has a main function for generating test data.
 
 class UberJobTicket:
     """A Ticket Class for submitting jobs and their subtasks."""
-    def __init__(self, baseCMD, startFrame, endFrame, byFrame, taskFile, priority,
+    def __init__(self, execName, baseCMD, startFrame, endFrame, byFrame, taskFile, priority,
                 phase, jobStatus, niceName, owner, compatabilityPattern):
         #Let's verify the data we just got from the user
         if len(baseCMD) > 255:
@@ -39,6 +40,7 @@ class UberJobTicket:
             raise Exception("compatabilityPattern out of range! compatabilityPattern must be less than 255 characters!")
         
         #Looks good, let's setup our class variables
+        self.execName = execName        #VARCHAR(20)
         self.baseCMD = baseCMD          #VARCHAR(255)
         self.startFrame = startFrame    #SMALLINT   ie.(0-65535)
         self.endFrame = endFrame        #SMALLINT   ie.(0-65535)
@@ -55,12 +57,14 @@ class UberJobTicket:
     def commandBuilder(self, startFrame, endFrame):
         """Returns a command as a list for sending to subprocess.call on RenderNode"""
         #Using -mr:v 5 to get a more verbose log, render should still use correct engine
-        return [self.baseCMD, '-mr:v', '5', '-s', str(startFrame), '-e', str(endFrame), self.taskFile]    
+        return " ".join([EXECUTEABLES[self.execName], self.baseCMD, '-mr:v', '5', '-s',
+                str(startFrame), '-e', str(endFrame), self.taskFile])
     
     def createJob(self):
         """Function for building and inserting a job.
         Returns the job so we can use the ID for the tasks""" 
-        job = hydra_jobboard(baseCMD = self.baseCMD,
+        job = hydra_jobboard(execName = self.execName,
+                            baseCMD = self.baseCMD,
                             startFrame = self.startFrame,
                             endFrame = self.endFrame,
                             byFrame = self.byFrame,
@@ -87,7 +91,7 @@ class UberJobTicket:
         for frame in frameList:
             command = self.commandBuilder(frame, frame)
             logger.debug(command)
-            task = hydra_taskboard(command = repr(command),
+            task = hydra_taskboard(command = command,
                                   job_id = self.job_id,
                                   status = self.jobStatus,
                                   priority = self.priority,
@@ -114,7 +118,7 @@ class UberJobTicket:
         ***UNTESTED***"""
         command = [self.baseCMD]
         logger.debug(command)
-        task = hydra_taskboard(command = repr(command),
+        task = hydra_taskboard(command = command,
                               job_id = self.job_id,
                               status = self.jobStatus,
                               priority = self.priority,
@@ -141,18 +145,21 @@ class UberJobTicket:
 if __name__ == "__main__":
     prompt = raw_input("Create test Job? ").lower()
     if prompt == "yes" or prompt == "y":
-        baseCMD = r"$Maya/bin/render.exe -proj \\test\test"
-        mayaFile = r"\\test\test\test.ma"
+        baseCMD = r"-proj F:/Projects/Fruits"
+        mayaFile = r"F:/Projects/Fruits/scenes/orangeSliceTest.ma"
         startFrame = 101
-        endFrame = 110
-        priority = 55
-        jobStatus = "U"
-        niceName = "TEST JOB"
+        endFrame = 115
+        priority = 50
+        niceName = "orangeSliceTest"
         owner = "dduvoisin"
-        compatabilityPattern = "Redshift, Maya2015, SOUP"
+        compatabilityPattern = "Redshift, Maya2014"
         
-        uberPhase01 = UberJobTicket(baseCMD, startFrame, endFrame, 1, mayaFile,
-        priority, 1, jobStatus, niceName + "_PHASE_02", owner, compatabilityPattern)
+        uberPhase01 = UberJobTicket("maya2014Render", baseCMD, startFrame, endFrame, 10, mayaFile,
+        priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityPattern)
         uberPhase01.doSubmit()
+        
+        #uberPhase02 = UberJobTicket("maya2014Render", baseCMD, proj, startFrame, endFrame, 1, mayaFile,
+        #priority, 2, "U", niceName + "_PHASE_02", owner, compatabilityPattern)
+        #uberPhase02.doSubmit()
         
     raw_input("DONE...")

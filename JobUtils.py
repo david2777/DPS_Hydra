@@ -31,15 +31,39 @@ def updateJobTaskCount(job_id, tasks = None):
         tasks = hydra_taskboard.fetch("where job_id = %d" % job_id)
     taskCount = len(tasks)
     taskDone = 0
+    error = 0
+    started = 0
+    ready = 0
     for task in tasks:
         if task.status == "F":
             taskDone += 1
+        elif task.status == "E" or task.status == "C":
+            error = 1
+        elif task.status == "S":
+            started = 1
+        elif task.status == "R":
+            ready = 1
+    #If there is an error on any, mark job as error
+    #Else, If total done == total tasks, mark job as done
+    #Else, If there are any tasks started, mark job as started
+    #Else, If there are any tasks marked as ready, mark job as ready 
+    #Else, mark as paused (I think that covers all of our bases)
+    if error == 1:
+        jobStatus = "E"
+    elif taskDone == taskCount:
+        jobStatus = "F"
+    elif started == 1:
+        jobStatus = "S"
+    elif ready == 1:
+        jobStatus = "R"
+    else:
+        jobStatus = "U"
+    
     with transaction() as t:
         [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
         job.taskDone = taskDone
         job.totalTask = taskCount
-        if taskDone == taskCount:
-            job.job_status =  "F"
+        job.job_status = jobStatus
         job.update(t)
 
     return taskCount, taskDone

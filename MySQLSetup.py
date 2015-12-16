@@ -42,7 +42,8 @@ niceNames = {PAUSED: 'Paused',
             OFFLINE: 'Offline',
             PENDING: 'Pending',
             STARTED: 'Started',
-            ERROR: 'Error'}
+            ERROR: 'Error',
+            }
 
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
             READY: QColor(255,255,255),         #White
@@ -50,7 +51,8 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
             KILLED: QColor(240,200,200),        #Light Red
             CRASHED: QColor(220,90,90),         #Dark Red
             STARTED: QColor(200,220,240),       #Light Blue
-            ERROR: QColor(220,90,90)}
+            ERROR: QColor(220,90,90),
+            }
 
 SETTINGS = Constants.SETTINGS
 
