@@ -49,6 +49,7 @@ def resetTask(task_id, newStatus = "U"):
         task.host = None
         task.startTime = None
         task.endTime = None
+        task.logFile = None
         task.exitCode = None
         
         task.update(t)

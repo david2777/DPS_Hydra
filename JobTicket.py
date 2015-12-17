@@ -14,7 +14,7 @@ Also has a main function for generating test data.
 class UberJobTicket:
     """A Ticket Class for submitting jobs and their subtasks."""
     def __init__(self, execName, baseCMD, startFrame, endFrame, byFrame, taskFile, priority,
-                phase, jobStatus, niceName, owner, compatabilityPattern):
+                phase, jobStatus, niceName, owner, compatabilityList):
         #Let's verify the data we just got from the user
         if len(baseCMD) > 255:
             raise Exception("baseCMD too long! baseCMD must be less than 255 characters!")
@@ -36,8 +36,6 @@ class UberJobTicket:
             raise Exception("NiceName out of range! NiceName must be less than 60 characters!")
         if len(owner) > 45:
             raise Exception("Owner out of range! Owner must be less than 45 characters!")
-        if len(compatabilityPattern) > 255:
-            raise Exception("compatabilityPattern out of range! compatabilityPattern must be less than 255 characters!")
         
         #Looks good, let's setup our class variables
         self.execName = execName        #VARCHAR(20)
@@ -51,7 +49,7 @@ class UberJobTicket:
         self.jobStatus = jobStatus      #CHAR(1)
         self.niceName = niceName        #VARCHAR(60)
         self.owner = owner              #VARCHAR(45)
-        self.compatabilityPattern = compatabilityPattern    #VARCHAR(255)
+        self.compatabilityPattern = self.compatabilityBuilder(compatabilityList)    #VARCHAR(255)
         self.createTime = datetime.now()
         
     def commandBuilder(self, startFrame, endFrame):
@@ -59,6 +57,11 @@ class UberJobTicket:
         #Using -mr:v 5 to get a more verbose log, render should still use correct engine
         return " ".join([EXECUTEABLES[self.execName], self.baseCMD, '-mr:v', '5', '-s',
                 str(startFrame), '-e', str(endFrame), self.taskFile])
+                
+    def compatabilityBuilder(self, compatabilityList):
+        """Sorts compatabilityList and joins it with "%"s"""
+        compStr = "%".join(sorted(compatabilityList))
+        return "%" + compStr + "%"
     
     def createJob(self):
         """Function for building and inserting a job.
@@ -152,14 +155,14 @@ if __name__ == "__main__":
         priority = 50
         niceName = "orangeSliceTest"
         owner = "dduvoisin"
-        compatabilityPattern = "Redshift, Maya2014"
+        compatabilityList = ["SOUP", "Maya2015", "Substance"]
         
         uberPhase01 = UberJobTicket("maya2014Render", baseCMD, startFrame, endFrame, 10, mayaFile,
-        priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityPattern)
+        priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityList)
         uberPhase01.doSubmit()
         
         #uberPhase02 = UberJobTicket("maya2014Render", baseCMD, proj, startFrame, endFrame, 1, mayaFile,
-        #priority, 2, "U", niceName + "_PHASE_02", owner, compatabilityPattern)
+        #priority, 2, "U", niceName + "_PHASE_02", owner, compatabilityList)
         #uberPhase02.doSubmit()
         
     raw_input("DONE...")
