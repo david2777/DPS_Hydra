@@ -135,6 +135,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Connect buttons in taskTable view
         QObject.connect(self.startTaskButton, SIGNAL("clicked()"),
                         self.startTaskButtonHandler)
+        QObject.connect(self.resetTaskButton, SIGNAL("clicked()"),
+                        self.resetTaskButtonHandler)
 
     #---------------------------------------------------------------------#
     #-------------------------JOB BUTTON HANDLERS-------------------------#
@@ -271,6 +273,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         for row in rows:
             task_id = int(self.taskTable.item(row, 0).text())
             TaskUtils.startTask(task_id)
+        self.reloadTaskTable()
+        
+    def resetTaskButtonHandler(self):
+        rows = self.taskTableHandler()
+        for row in rows:
+            task_id = int(self.taskTable.item(row, 0).text())
+            TaskUtils.resetTask(task_id, "U")
         self.reloadTaskTable()
 
     def callTestFrameBox(self):

@@ -36,13 +36,22 @@ def startTask(task_id):
             logger.info("Setting paused Task %d to Ready" % task_id)
             task.status = "R"
         else:
-            logger.info("Restarting Task %d" % task_id)
-            task.status = 'R'
-            task.host = None
-            task.startTime = None
-            task.endTime = None
+            resetTask(task_id, "R")
 
         task.update(t)
+        
+def resetTask(task_id, newStatus = "U"):
+    """Resets a task and puts it back on the job board with a new status."""
+    with transaction() as t:
+        [task] = hydra_taskboard.fetch("where id = '%d'" % task_id)
+        logger.info("Reseting Task %d" % task_id)
+        task.status = newStatus
+        task.host = None
+        task.startTime = None
+        task.endTime = None
+        
+        task.update(t)
+        
 
 def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
     with transaction() as t:

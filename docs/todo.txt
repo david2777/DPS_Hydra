@@ -7,8 +7,8 @@
 
 -[Testing]Scheduler for onlineing and offlineing nodes
 
--[Doneish]Overhaul capabilities
-    -They need to be in the same order every time for the DB to pick it up
+-[Not Done]Overhaul capabilities
+    -May need to rework the way jobs are selected
 
 -[In Progress]Overhaul some functions (like getting a row) with the way I've done it on TASC before
 
