@@ -52,6 +52,10 @@ class UberJobTicket:
         self.compatabilityPattern = self.compatabilityBuilder(compatabilityList)    #VARCHAR(255)
         self.createTime = datetime.now()
         
+        #Check this after we run it through the builder function
+        if len(self.compatabilityPattern) > 255:
+            raise Exception("compatabilityPattern out of range! Must be less than 255 characters after conversion!")
+        
     def commandBuilder(self, startFrame, endFrame):
         """Returns a command as a list for sending to subprocess.call on RenderNode"""
         #Using -mr:v 5 to get a more verbose log, render should still use correct engine
