@@ -4,7 +4,7 @@
     -[In Progress]Organize FarmView button handlers
     -[Done]Add NodeUtils for messing with nodes
     -[Done]Need to be able to see reqs in FarmView
-    -Add button for viewing logs
+    -[Done]Add button for viewing logs
 
 -[Testing]Scheduler for onlineing and offlineing nodes
 

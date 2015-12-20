@@ -641,6 +641,27 @@
                <string>Subtask Options</string>
               </property>
               <layout class="QGridLayout" name="gridLayout_9">
+               <item row="3" column="1">
+                <widget class="QPushButton" name="editTaskButton">
+                 <property name="text">
+                  <string>Edit...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="0">
+                <widget class="QPushButton" name="loadLogButton">
+                 <property name="text">
+                  <string>Load Log File</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="1">
+                <widget class="QPushButton" name="killTaskButton">
+                 <property name="text">
+                  <string>Kill</string>
+                 </property>
+                </widget>
+               </item>
                <item row="2" column="0">
                 <widget class="QPushButton" name="startTaskButton">
                  <property name="text">
@@ -648,24 +669,17 @@
                  </property>
                 </widget>
                </item>
-               <item row="3" column="2">
+               <item row="3" column="3">
                 <widget class="QPushButton" name="resetTaskButton">
                  <property name="text">
                   <string>Reset Task</string>
                  </property>
                 </widget>
                </item>
-               <item row="2" column="2">
-                <widget class="QPushButton" name="killTaskButton">
+               <item row="2" column="3">
+                <widget class="QPushButton" name="doNothingTaskButton">
                  <property name="text">
-                  <string>Kill</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QPushButton" name="editTaskButton">
-                 <property name="text">
-                  <string>Edit...</string>
+                  <string>Do Nothing</string>
                  </property>
                 </widget>
                </item>
@@ -716,8 +730,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1250</width>
-             <height>576</height>
+             <width>63</width>
+             <height>52</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">

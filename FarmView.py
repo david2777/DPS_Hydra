@@ -1,5 +1,6 @@
 #Standard
 import sys
+import webbrowser
 from exceptions import NotImplementedError
 import datetime
 import functools
@@ -139,6 +140,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.startTaskButtonHandler)
         QObject.connect(self.resetTaskButton, SIGNAL("clicked()"),
                         self.resetTaskButtonHandler)
+        QObject.connect(self.loadLogButton, SIGNAL("clicked()"),
+                        self.loadLogButtonHandler)
 
     #---------------------------------------------------------------------#
     #-------------------------JOB BUTTON HANDLERS-------------------------#
@@ -222,7 +225,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             try:
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    tasks = hydra_taskboard.fetch("where job_id = %d" % job_id)
+                    tasks = hydra_taskboard.fetch("where job_id = '%d'" % job_id)
                     for task in tasks:
                         TaskUtils.resetTask(task.id, "U")
             except sqlerror as err:
@@ -350,7 +353,21 @@ class FarmView(QMainWindow, Ui_FarmView):
                     logger.debug(str(err))
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
-
+        
+    def loadLogButtonHandler(self):
+        rows = self.taskTableHandler()
+        if len(rows) > 1:
+            choice = yesNoBox(self, "Open logs?", "Note, this will open a text editor for EACH task selected. Continue?")
+            if choice == QMessageBox.Yes:
+                for row in rows:
+                    task_id = int(self.taskTable.item(row, 0).text())
+                    [taskOBJ] = hydra_taskboard.fetch("where id = '%d'" % task_id)
+                    loadLog(taskOBJ)
+        else:
+            task_id = int(self.taskTable.item(rows[0], 0).text())
+            [taskOBJ] = hydra_taskboard.fetch("where id = '%d'" % task_id)
+            loadLog(taskOBJ)
+            
     def advancedSearchButtonClicked(self):
         results = TaskSearchDialog.create()
         print results
@@ -648,15 +665,21 @@ class FarmView(QMainWindow, Ui_FarmView):
         columns = [
             labelFactory('id'),
             labelFactory('status'),
-            lineEditFactory('logFile'),
+            buttonFactory('logFile', loadLog),
             labelFactory('host'),
             labelFactory('command'),
             labelFactory('startTime'),
             labelFactory('endTime'),
             labelFactory('exitCode')]
-        setup(hydra_taskboard.fetch(order = "order by id desc",
-                                       limit = self.limitSpinBox.value()),
-                                       columns, self.taskGrid)
+        records = (hydra_taskboard.fetch(order = "order by id desc",
+        limit = self.limitSpinBox.value()))
+        
+        for task in records:
+            if task.logFile:
+                task.logFile = task.logFile.replace("C:", "\\\\" + task.host)
+        
+        setup(records, columns, self.taskGrid)
+          
 
     def updateStatusBar(self):
 
@@ -737,6 +760,10 @@ def setup(records, columns, grid):
                 grid.removeItem(item)
                 item.widget().hide()
             grid.addWidget(attr.dataWidget(record),row + 1, column,)
+            
+def loadLog(record):
+    logger.debug("Opening Log File @ %s" % str(record.logFile))
+    webbrowser.open(record.logFile)
 
 
 #------------------------------------------------------------------------#
@@ -747,9 +774,10 @@ class widgetFactory():
     """A widget building class intended to be subclassed for building particular
     types of widgets. 'name' must be the name of a database column."""
 
-    def __init__(self, name):
+    def __init__(self, name, intention = None):
         self.name = name
-
+        self.intention = intention
+        
     def headerWidget(self):
         """Makes a label for the header row of the display."""
 
@@ -782,6 +810,21 @@ class lineEditFactory(widgetFactory):
         w.setText(self.data(record))
         w.setReadOnly(True)
         return w
+        
+class buttonFactory(widgetFactory):
+    def dataWidget(self, record):
+        b = QPushButton(self.name)
+        if self.intention == None:
+            QObject.connect(b, SIGNAL("clicked()"), self.doNothing)
+        
+        else:
+            handler = functools.partial(self.intention, record)
+            QObject.connect(b, SIGNAL("clicked()"), handler)
+        
+        return b
+    
+    def doNothing(self):
+        pass
 
 class versionLabelFactory(widgetFactory):
     """Builds a label specially for the software_version column in the render
