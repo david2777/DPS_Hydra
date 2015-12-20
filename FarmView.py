@@ -128,6 +128,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.callTestFrameBox)
         QObject.connect(self.doNothingJobButton, SIGNAL("clicked()"),
                         self.testCall)
+        QObject.connect(self.resetJobButton, SIGNAL("clicked()"),
+                        self.resetJobButtonHandler)
         #TODO:Figure out why this doesn't work
         QObject.connect(self.myFilterCheckbox, SIGNAL("stateChanged()"),
                         self.doFetch)
@@ -202,7 +204,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
                     no_errors = True
-                    if JobUtils.killJob(job_id):
+                    if not JobUtils.killJob(job_id):
                         no_errors = False
             except sqlerror as err:
                 logger.debug(str(err))
@@ -210,6 +212,23 @@ class FarmView(QMainWindow, Ui_FarmView):
             finally:
                 if no_errors ==  False:
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
+                self.updateJobTable()
+                self.jobCellClickedHandler(rows[-1])
+                
+    def resetJobButtonHandler(self):
+        rows = self.jobTableHandler()
+        choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
+        if choice == QMessageBox.Yes:
+            try:
+                for row in rows:
+                    job_id = int(self.jobTable.item(row, 0).text())
+                    tasks = hydra_taskboard.fetch("where job_id = %d" % job_id)
+                    for task in tasks:
+                        TaskUtils.resetTask(task.id, "U")
+            except sqlerror as err:
+                logger.debug(str(err))
+                aboutBox(self, "SQL Error", str(err))
+            finally:
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
 
@@ -238,6 +257,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 elif task.startTime:
                     tdiff = datetime.datetime.now().replace(microsecond=0) - task.startTime
                 #Populate the taskTable
+                #Remove first and last "%", replace with ", "
+                reqsString = str(task.requirements)[1:-1].replace("%", ", ")
                 self.taskTable.setItem(pos, 0, TableWidgetItem_int(str(task.id)))
                 self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.frame)))
                 self.taskTable.setItem(pos, 2, TableWidgetItem(str(task.host)))
@@ -247,7 +268,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 5, TableWidgetItem_dt(str(task.endTime)))
                 self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 7, TableWidgetItem_int(str(task.exitCode)))
-                self.taskTable.setItem(pos, 8, TableWidgetItem_int(str(task.requirements)))
+                self.taskTable.setItem(pos, 8, TableWidgetItem_int(reqsString))
+                
+            #Update taskCount
+            row = self.jobTable.selectionModel().selectedRows()[0].row()
+            taskCount, taskDone = JobUtils.updateJobTaskCount(job_id, tasks)
+            self.jobTable.setItem(row, 4, TableWidgetItem("%d/%d" % (taskDone, taskCount)))
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
@@ -255,8 +281,6 @@ class FarmView(QMainWindow, Ui_FarmView):
     def jobCellClickedHandler(self, row):
         item = self.jobTable.item(row, 0)
         job_id = int(item.text())
-        taskCount, taskDone = JobUtils.updateJobTaskCount(job_id)
-        self.jobTable.setItem(row, 4, TableWidgetItem("%d/%d" % (taskDone, taskCount)))
         self.updateTaskTable(job_id)
         self.updateJobRow(row)
 
@@ -277,10 +301,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         
     def resetTaskButtonHandler(self):
         rows = self.taskTableHandler()
-        for row in rows:
-            task_id = int(self.taskTable.item(row, 0).text())
-            TaskUtils.resetTask(task_id, "U")
-        self.reloadTaskTable()
+        choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
+        if choice == QMessageBox.Yes:
+            for row in rows:
+                task_id = int(self.taskTable.item(row, 0).text())
+                TaskUtils.resetTask(task_id, "U")
+            self.reloadTaskTable()
 
     def callTestFrameBox(self):
         try:

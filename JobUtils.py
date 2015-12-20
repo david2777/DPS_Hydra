@@ -32,6 +32,7 @@ def updateJobTaskCount(job_id, tasks = None):
     taskCount = len(tasks)
     taskDone = 0
     error = 0
+    killed = 0
     started = 0
     ready = 0
     for task in tasks:
@@ -43,8 +44,11 @@ def updateJobTaskCount(job_id, tasks = None):
             started = 1
         elif task.status == "R":
             ready = 1
+        elif task.status == "K":
+            killed = 1
     #If there is an error on any, mark job as error
     #Else, If total done == total tasks, mark job as done
+    #Else, If there are any killed tasks, mark job as killed
     #Else, If there are any tasks started, mark job as started
     #Else, If there are any tasks marked as ready, mark job as ready 
     #Else, mark as paused (I think that covers all of our bases)
@@ -52,6 +56,8 @@ def updateJobTaskCount(job_id, tasks = None):
         jobStatus = "E"
     elif taskDone == taskCount:
         jobStatus = "F"
+    elif killed == 1:
+        jobStatus = "K"
     elif started == 1:
         jobStatus = "S"
     elif ready == 1:

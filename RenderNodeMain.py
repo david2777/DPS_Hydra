@@ -14,6 +14,7 @@ from Answers import RenderAnswer
 from MySQLSetup import * 
 import Constants
 import Utils
+import JobUtils
 import TaskUtils
 
 class RenderTCPServer(TCPServer):
@@ -153,6 +154,8 @@ class RenderTCPServer(TCPServer):
             log.close()
             #Discard info about the previous child process
             self.childProcess = None
+            #Update taskCount
+            JobUtils.updateJobTaskCount(render_task.job_id)
             logger.debug ('Done with render task %s', render_task.id)
 
     def killCurrentJob(self, statusAfterDeath):

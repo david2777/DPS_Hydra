@@ -287,6 +287,7 @@ class Ui_FarmView(object):
         self.taskTable.setHorizontalHeaderItem(7, item)
         item = QtGui.QTableWidgetItem()
         self.taskTable.setHorizontalHeaderItem(8, item)
+        self.taskTable.horizontalHeader().setStretchLastSection(True)
         self.taskTable.verticalHeader().setVisible(False)
         self.gridLayout_taskList.addWidget(self.taskTable, 2, 0, 1, 4)
         self.groupBox_subTaskOptions = QtGui.QGroupBox(self.layoutWidget_3)
