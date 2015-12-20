@@ -1,12 +1,12 @@
 -[In Progress]Keep implementing new boards into farm View
-    -Update button handlers
+    -[Mostly Done]Update button handlers
     -[Done]Figure out why table helpers don't like anything other than strings
     -[In Progress]Organize FarmView button handlers
     -[Done]Add NodeUtils for messing with nodes
     -[Done]Need to be able to see reqs in FarmView
     -[Done]Add button for viewing logs
 
--[Testing]Scheduler for onlineing and offlineing nodes
+-[Probably Working Ish?]Scheduler for onlineing and offlineing nodes
 
 -[Doneish?]Overhaul capabilities
     -Reqs and Capabilities MUST be in alphabetical order and reqs MUST have "%"
@@ -24,7 +24,7 @@
 
 -[In Progress]Add filters to JobTable in FarmView
 
--[Maybe]Multi-select for Task View
+-[Done]Multi-select for Task View
     -Will require a lot of reworking of functions that modify tasks
 
 -[In Progress]Make a Job Status
