@@ -17,5 +17,9 @@ def yesNoBox(parent=None, title="", msg=""):
         defaultButton=QMessageBox.Yes)
         
 def intBox(parent = None, title="", msg="", default = 0):
-    """TEST"""
+    """Makes a box for getting ints"""
     return(QInputDialog.getInt(parent, title, msg, default))
+    
+def strBox(parent = None, title="", msg=""):
+    """Makes a box for getting strings"""
+    return(QInputDialog.getText(parent, title, msg))

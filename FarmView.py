@@ -1,6 +1,7 @@
 #Standard
 import sys
 import os
+import fnmatch
 import webbrowser
 from exceptions import NotImplementedError
 import datetime
@@ -20,7 +21,7 @@ from TaskSearchDialog import TaskSearchDialog
 #Hydra
 from MySQLSetup import *
 from LoggingSetup import logger
-from MessageBoxes import aboutBox, yesNoBox, intBox
+from MessageBoxes import aboutBox, yesNoBox, intBox, strBox
 import Utils
 import TaskUtils
 import JobUtils
@@ -112,6 +113,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.offlineRenderNodesButtonClicked)
         QObject.connect(self.getOffRenderNodesButton, SIGNAL("clicked()"),
                         self.getOffRenderNodesButtonClicked)
+        QObject.connect(self.selectAllNodesButton, SIGNAL("clicked()"),
+                        self.selectAllNodesButtonHandler)
+        QObject.connect(self.selectNoneNodesButton, SIGNAL("clicked()"),
+                        self.selectNoneNodesButtonHandler)
+        QObject.connect(self.selectByHostButton, SIGNAL("clicked()"),
+                        self.selectByHostButtonHandler)
 
         #Connect buttons in jobList view
         QObject.connect(self.startJobButton, SIGNAL("clicked()"),
@@ -132,7 +139,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.pauseJobButtonHandler)
         QObject.connect(self.resetJobButton, SIGNAL("clicked()"),
                         self.resetJobButtonHandler)
-        #TODO:Figure out why this doesn't work
         QObject.connect(self.myFilterCheckbox, SIGNAL("stateChanged(int)"),
                         self.doFetch)
 
@@ -337,7 +343,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             row = self.jobTableHandler()[0]
             reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
-            if reply[1] == True:
+            if reply[1]:
                 job_id = int(self.jobTable.item(row, 0).text())
                 logger.info("Starting %d test frames on job_id %d" % (reply[0], job_id))
                 tasks = hydra_taskboard.fetch ("where job_id = %d" % job_id)
@@ -614,7 +620,30 @@ class FarmView(QMainWindow, Ui_FarmView):
                         aboutBox(self, "Success", "No job was found on node, node offlined")
         
         self.doFetch()
-
+    
+    def selectAllNodesButtonHandler(self):
+        rows = self.renderNodeTable.rowCount()
+        for rowIndex in range(0, rows):
+            item = self.renderNodeTable.item(rowIndex, 0)
+            item.setCheckState(Qt.Checked)
+            
+    def selectNoneNodesButtonHandler(self):
+        rows = self.renderNodeTable.rowCount()
+        for rowIndex in range(0, rows):
+            item = self.renderNodeTable.item(rowIndex, 0)
+            item.setCheckState(Qt.Unchecked)
+            
+    def selectByHostButtonHandler(self):
+        reply = strBox(self, "Select By Host Name", "Host (using * as wildcard):")
+        if reply[1]:
+            searchString = str(reply[0])
+            rows = self.renderNodeTable.rowCount()
+            for rowIndex in range(0, rows):
+                item = str(self.renderNodeTable.item(rowIndex, 1).text())
+                if fnmatch.fnmatch(item, searchString):
+                    self.renderNodeTable.item(rowIndex, 0).setCheckState(Qt.Checked)
+                    logger.debug("Selecting %s matched with %s" % (item, searchString))
+                
     #---------------------------------------------------------------------#
     #--------------------------UPDATE HANDLERS----------------------------#
     #---------------------------------------------------------------------#
