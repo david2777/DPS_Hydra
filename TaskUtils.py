@@ -85,24 +85,26 @@ def sendKillQuestion(renderhost, newStatus="K"):
     answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
     if answer == None:
         return None
-    logger.debug("child killed: %s" % answer.childKilled)
+    logger.debug("Child killed: %s" % answer.childKilled)
     if not answer.childKilled:
         logger.debug("%r tried to kill its job but failed for some reason." % renderhost)
     return answer.childKilled
 
-def killTask(task_id):
+def killTask(task_id, newStatus = "K"):
     """Kills the task with the specified id. If the task has been started, a
     kill request is sent to the node running it.
     @return: True if there were no errors killing the task, else False."""
     [task] = hydra_taskboard.fetch("where id = '%d'" % task_id)
-    if task.status == "R" or task.status == "U":
-        task.status = "K"
+    if task.status == newStatus:
+        return True
+    elif task.status == "R" or task.status == "U":
+        task.status = newStatus
         with transaction() as t:
             task.update(t)
         #If we reach this point: transaction successful, no exception raised
         return True
     elif task.status == "S":
-        killed = sendKillQuestion(renderhost = task.host)
+        killed = sendKillQuestion(task.host, newStatus)
         #If we reach this point: TCPconnection successful, no exception raised
         return killed
     elif task.status == "K" or task.status == "F":

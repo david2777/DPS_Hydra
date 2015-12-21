@@ -341,26 +341,6 @@
             <property name="horizontalSpacing">
              <number>6</number>
             </property>
-            <item row="0" column="1" colspan="4">
-             <spacer name="horizontalSpacer_jobList">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="jobTableLabel">
-              <property name="text">
-               <string>Job List:</string>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="0" colspan="5">
              <widget class="QTableWidget" name="jobTable">
               <property name="layoutDirection">
@@ -428,6 +408,26 @@
               </column>
              </widget>
             </item>
+            <item row="0" column="1" colspan="4">
+             <spacer name="horizontalSpacer_jobList">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="jobTableLabel">
+              <property name="text">
+               <string>Job List:</string>
+              </property>
+             </widget>
+            </item>
             <item row="2" column="0" colspan="5">
              <widget class="QGroupBox" name="groupBox_jobOptions">
               <property name="minimumSize">
@@ -440,7 +440,27 @@
                <string>Job Options</string>
               </property>
               <layout class="QGridLayout" name="gridLayout_7">
-               <item row="1" column="7">
+               <item row="2" column="9">
+                <widget class="QCheckBox" name="myFilterCheckbox">
+                 <property name="text">
+                  <string>Filter My Jobs</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="5">
+                <widget class="QPushButton" name="filterJobButton">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string>Filters...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="0">
                 <widget class="QPushButton" name="testFramesButton">
                  <property name="text">
                   <string>Start Test Frames...</string>
@@ -462,7 +482,7 @@
                   <string notr="true"/>
                  </property>
                  <property name="text">
-                  <string>Start</string>
+                  <string>Start Job</string>
                  </property>
                  <property name="checkable">
                   <bool>false</bool>
@@ -472,37 +492,30 @@
                  </property>
                 </widget>
                </item>
-               <item row="2" column="7">
-                <widget class="QCheckBox" name="myFilterCheckbox">
+               <item row="1" column="1">
+                <widget class="QPushButton" name="pauseJobButton">
                  <property name="text">
-                  <string>Filter My Jobs</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
+                  <string>Pause Job</string>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="5">
+               <item row="1" column="9">
                 <widget class="QPushButton" name="resetJobButton">
                  <property name="text">
-                  <string>Reset</string>
+                  <string>Reset Job</string>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="3">
-                <widget class="QPushButton" name="killJobButton">
-                 <property name="text">
-                  <string>Kill</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
+               <item row="2" column="1">
                 <widget class="QPushButton" name="editJobButton">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
                  <property name="styleSheet">
                   <string notr="true"/>
                  </property>
                  <property name="text">
-                  <string>Edit...</string>
+                  <string>Edit Job...</string>
                  </property>
                  <property name="checkable">
                   <bool>false</bool>
@@ -515,17 +528,10 @@
                  </property>
                 </widget>
                </item>
-               <item row="2" column="3">
-                <widget class="QPushButton" name="filterJobButton">
+               <item row="1" column="5">
+                <widget class="QPushButton" name="killJobButton">
                  <property name="text">
-                  <string>Filters...</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="5">
-                <widget class="QPushButton" name="doNothingJobButton">
-                 <property name="text">
-                  <string>Do Nothing</string>
+                  <string>Kill Job</string>
                  </property>
                 </widget>
                </item>
@@ -641,13 +647,6 @@
                <string>Subtask Options</string>
               </property>
               <layout class="QGridLayout" name="gridLayout_9">
-               <item row="3" column="1">
-                <widget class="QPushButton" name="editTaskButton">
-                 <property name="text">
-                  <string>Edit...</string>
-                 </property>
-                </widget>
-               </item>
                <item row="3" column="0">
                 <widget class="QPushButton" name="loadLogButton">
                  <property name="text">
@@ -655,31 +654,41 @@
                  </property>
                 </widget>
                </item>
-               <item row="2" column="1">
-                <widget class="QPushButton" name="killTaskButton">
-                 <property name="text">
-                  <string>Kill</string>
-                 </property>
-                </widget>
-               </item>
                <item row="2" column="0">
                 <widget class="QPushButton" name="startTaskButton">
                  <property name="text">
-                  <string>Start</string>
+                  <string>Start Task</string>
                  </property>
                 </widget>
                </item>
-               <item row="3" column="3">
+               <item row="2" column="2">
+                <widget class="QPushButton" name="pauseTaskButton">
+                 <property name="text">
+                  <string>Pause Task</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="5">
+                <widget class="QPushButton" name="killTaskButton">
+                 <property name="text">
+                  <string>Kill Task</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="5">
+                <widget class="QPushButton" name="editTaskButton">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string>Edit Task...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="3" column="2">
                 <widget class="QPushButton" name="resetTaskButton">
                  <property name="text">
                   <string>Reset Task</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="3">
-                <widget class="QPushButton" name="doNothingTaskButton">
-                 <property name="text">
-                  <string>Do Nothing</string>
                  </property>
                 </widget>
                </item>
@@ -701,6 +710,9 @@
                </item>
                <item row="0" column="1">
                 <widget class="QPushButton" name="advancedSearchButton">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
                  <property name="text">
                   <string>Advanced...</string>
                  </property>
@@ -730,8 +742,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>63</width>
-             <height>52</height>
+             <width>1250</width>
+             <height>576</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">

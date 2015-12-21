@@ -85,20 +85,20 @@ def startJob(job_id):
         job.job_status = "S"
         job.update(t)
 
-def killJob(job_id):
+def killJob(job_id, newStatus = "K"):
     """Kills every task associated with job_id. Killed tasks have status code
-    'K'. If a task was already started, an a kill request is sent to the host
-    running it.
+    set by newStatus. If a task was already started, an a kill request
+    is sent to the host running it.
     @return: False if no errors while killing started tasks, else True"""
     tasks =  hydra_taskboard.fetch("where job_id = '%d'" % job_id)
     no_errors = True
     for task in tasks:
-        response = TaskUtils.killTask(task.id)
+        response = TaskUtils.killTask(task.id, newStatus)
         if response == False:
             no_errors = False
     with transaction() as t:
         [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
-        job.job_status = "K"
+        job.job_status = newStatus
         job.update(t)
     return no_errors
     

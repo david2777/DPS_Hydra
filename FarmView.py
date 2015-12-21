@@ -1,5 +1,6 @@
 #Standard
 import sys
+import os
 import webbrowser
 from exceptions import NotImplementedError
 import datetime
@@ -127,12 +128,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.searchByTaskID)
         QObject.connect(self.testFramesButton, SIGNAL("clicked()"),
                         self.callTestFrameBox)
-        QObject.connect(self.doNothingJobButton, SIGNAL("clicked()"),
-                        self.testCall)
+        QObject.connect(self.pauseJobButton, SIGNAL("clicked()"),
+                        self.pauseJobButtonHandler)
         QObject.connect(self.resetJobButton, SIGNAL("clicked()"),
                         self.resetJobButtonHandler)
         #TODO:Figure out why this doesn't work
-        QObject.connect(self.myFilterCheckbox, SIGNAL("stateChanged()"),
+        QObject.connect(self.myFilterCheckbox, SIGNAL("stateChanged(int)"),
                         self.doFetch)
 
         #Connect buttons in taskTable view
@@ -142,6 +143,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetTaskButtonHandler)
         QObject.connect(self.loadLogButton, SIGNAL("clicked()"),
                         self.loadLogButtonHandler)
+        QObject.connect(self.pauseTaskButton, SIGNAL("clicked()"),
+                        self.pauseTaskButtonHandler)
 
     #---------------------------------------------------------------------#
     #-------------------------JOB BUTTON HANDLERS-------------------------#
@@ -208,6 +211,25 @@ class FarmView(QMainWindow, Ui_FarmView):
                     job_id = int(self.jobTable.item(row, 0).text())
                     no_errors = True
                     if not JobUtils.killJob(job_id):
+                        no_errors = False
+            except sqlerror as err:
+                logger.debug(str(err))
+                aboutBox(self, "SQL Error", str(err))
+            finally:
+                if no_errors ==  False:
+                    aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
+                self.updateJobTable()
+                self.jobCellClickedHandler(rows[-1])
+                
+    def pauseJobButtonHandler(self):
+        rows = self.jobTableHandler()
+        choice = yesNoBox(self, "Confirm", "Really pause the selected jobs?")
+        if choice == QMessageBox.Yes:
+            try:
+                for row in rows:
+                    job_id = int(self.jobTable.item(row, 0).text())
+                    no_errors = True
+                    if not JobUtils.killJob(job_id, "U"):
                         no_errors = False
             except sqlerror as err:
                 logger.debug(str(err))
@@ -342,6 +364,26 @@ class FarmView(QMainWindow, Ui_FarmView):
                 task_id = int(self.taskTable.item(row, 0).text())
                 try:
                     killed = TaskUtils.killTask(task_id)
+                    if not killed:
+                        aboutBox(self, "Error", "Task couldn't be killed for ""some reason.")
+                except socketerror as err:
+                    logger.debug(str(err))
+                    aboutBox(self, "Error", "Task couldn't be killed because "
+                    "there was a problem communicating with the host running "
+                    "it.")
+                except sqlerror as err:
+                    logger.debug(str(err))
+                    aboutBox(self, "SQL Error", str(err))
+        self.reloadTaskTable()
+        
+    def pauseTaskButtonHandler(self):
+        rows = self.taskTableHandler()
+        choice = yesNoBox(self, "Confirm", "Really pause selected tasks?")
+        if choice == QMessageBox.Yes:
+            for row in rows:
+                task_id = int(self.taskTable.item(row, 0).text())
+                try:
+                    killed = TaskUtils.killTask(task_id, "U")
                     if not killed:
                         aboutBox(self, "Error", "Task couldn't be killed for ""some reason.")
                 except socketerror as err:
@@ -762,8 +804,16 @@ def setup(records, columns, grid):
             grid.addWidget(attr.dataWidget(record),row + 1, column,)
             
 def loadLog(record):
-    logger.debug("Opening Log File @ %s" % str(record.logFile))
-    webbrowser.open(record.logFile)
+    logFile = record.logFile
+    if logFile:
+        logFile = os.path.abspath(logFile)
+        if os.path.exists(logFile):
+            logger.debug("Opening Log File @ %s" % str(logFile))
+            webbrowser.open(logFile)
+        else:
+            logger.error("Invalid log file path for task: %d" % record.id)
+    else:
+        logger.info("No log file on record for task: %d" % record.id)
 
 
 #------------------------------------------------------------------------#
