@@ -1,22 +1,19 @@
 #Standard
 import datetime
 import threading
-import sched
-import time
 
 #Hydra
 from LoggingSetup import logger
 import NodeUtils
 import NodeSchedules
 
-def mainLoop(startupTime, shutdownTime, holidays):
-    status = NodeUtils.getThisNodeData().status
-    if status == "O" or status == "P":
-        isStarted = False
-    elif status == "I" or status == "S":
-        isStarted = True
-    else:
-        raise
+def mainLoop():
+    #Need these in global so that they don't get reset every time the loop runs
+    #These has to be a better way to do this...
+    global isStarted
+    global startTime
+    global endTime
+    global holidays
 
     now = datetime.datetime.now().replace(microsecond = 0)
     print "Current time:\t\t" + str(now)
@@ -41,13 +38,24 @@ def mainLoop(startupTime, shutdownTime, holidays):
         else:
             print "Waiting for end @:\t" + str(endTime) + "\n"
 
-def startupEvent(now, startTime):
+
+    interval = 5.0      #5 seconds for testing
+    mainThread = threading.Timer(interval, mainLoop)
+    mainThread.start()
+
+def startupEvent(now):
+    global isStarted
+    global startTime
+    isStarted = 1
     newDate = now.date() + datetime.timedelta(days = 1)
     newTime = startTime.time()
     startTime = datetime.datetime.combine(newDate, newTime)
     print "\n\nTriggering Startup Event\n\n"
 
-def shutdownEvent(now, shutdownTime):
+def shutdownEvent(now):
+    global isStarted
+    global endTime
+    isStarted = 0
     newDate = now.date() + datetime.timedelta(days = 1)
     newTime = endTime.time()
     endTime = datetime.datetime.combine(newDate, newTime)
@@ -85,13 +93,10 @@ def getSchedule(nodeOBJ):
 
 
 if __name__ == "__main__":
+    isStarted = 0
     startTime, endTime, isStarted = getSchedule(NodeUtils.getThisNodeData())
     holidays = NodeSchedules.HolidayList
     if startTime != None:
-        s = sched.scheduler(time.time, time.sleep)
-        #Calculate time differences here and pass them to the schedule
-        s.enter(10, 5, mainLoop, (startTime, endTime, holidays))
-        s.run()
+        mainLoop()
     else:
         logger.info("Node schedule set to 0, in manual control mode.")
-    raw_input("Press enter to exit...")

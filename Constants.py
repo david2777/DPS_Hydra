@@ -11,4 +11,5 @@ SETTINGS = os.path.join(BASEDIR, "HydraSettings.cfg")
 
 EXECUTEABLES = {"maya2014Render": "C:/Program Files/Autodesk/maya2014/bin/render.exe",
                 "maya2014Proper": "C:/Program Files/Autodesk/maya2014/bin/maya.exe",
+                "maya2015Render": "C:/Program Files/Autodesk/maya2015/bin/render.exe",
                 }
