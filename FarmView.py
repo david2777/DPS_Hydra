@@ -181,7 +181,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
         self.jobTable.setSortingEnabled(True)
-    
+
     def updateJobRow(self, row):
         job_id = int(self.jobTable.item(row, 0).text())
         [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
@@ -226,7 +226,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
-                
+
     def pauseJobButtonHandler(self):
         rows = self.jobTableHandler()
         choice = yesNoBox(self, "Confirm", "Really pause the selected jobs?")
@@ -245,7 +245,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
-                
+
     def resetJobButtonHandler(self):
         rows = self.jobTableHandler()
         choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
@@ -300,7 +300,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 7, TableWidgetItem_int(str(task.exitCode)))
                 self.taskTable.setItem(pos, 8, TableWidgetItem_int(reqsString))
-                
+
             #Update taskCount
             row = self.jobTable.selectionModel().selectedRows()[0].row()
             taskCount, taskDone = JobUtils.updateJobTaskCount(job_id, tasks)
@@ -329,7 +329,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             task_id = int(self.taskTable.item(row, 0).text())
             TaskUtils.startTask(task_id)
         self.reloadTaskTable()
-        
+
     def resetTaskButtonHandler(self):
         rows = self.taskTableHandler()
         choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
@@ -381,7 +381,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     logger.debug(str(err))
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
-        
+
     def pauseTaskButtonHandler(self):
         rows = self.taskTableHandler()
         choice = yesNoBox(self, "Confirm", "Really pause selected tasks?")
@@ -401,7 +401,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     logger.debug(str(err))
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
-        
+
     def loadLogButtonHandler(self):
         rows = self.taskTableHandler()
         if len(rows) > 1:
@@ -415,7 +415,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             task_id = int(self.taskTable.item(rows[0], 0).text())
             [taskOBJ] = hydra_taskboard.fetch("where id = '%d'" % task_id)
             loadLog(taskOBJ)
-            
+
     def advancedSearchButtonClicked(self):
         results = TaskSearchDialog.create()
         print results
@@ -504,10 +504,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         choice = yesNoBox(self, "Confirm", "All progress on the current job"
                           " will be lost. Are you sure you want to stop it?")
-                          
+
         if choice != QMessageBox.Yes:
             aboutBox(self, "Abort", "No action taken.")
-        
+
         else:
             if thisNode:
                 NodeUtils.offlineNode(thisNode)
@@ -618,21 +618,21 @@ class FarmView(QMainWindow, Ui_FarmView):
                                      " running, or it has become unresponsive.")
                     else:
                         aboutBox(self, "Success", "No job was found on node, node offlined")
-        
+
         self.doFetch()
-    
+
     def selectAllNodesButtonHandler(self):
         rows = self.renderNodeTable.rowCount()
         for rowIndex in range(0, rows):
             item = self.renderNodeTable.item(rowIndex, 0)
             item.setCheckState(Qt.Checked)
-            
+
     def selectNoneNodesButtonHandler(self):
         rows = self.renderNodeTable.rowCount()
         for rowIndex in range(0, rows):
             item = self.renderNodeTable.item(rowIndex, 0)
             item.setCheckState(Qt.Unchecked)
-            
+
     def selectByHostButtonHandler(self):
         reply = strBox(self, "Select By Host Name", "Host (using * as wildcard):")
         if reply[1]:
@@ -643,7 +643,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 if fnmatch.fnmatch(item, searchString):
                     self.renderNodeTable.item(rowIndex, 0).setCheckState(Qt.Checked)
                     logger.debug("Selecting %s matched with %s" % (item, searchString))
-                
+
     #---------------------------------------------------------------------#
     #--------------------------UPDATE HANDLERS----------------------------#
     #---------------------------------------------------------------------#
@@ -744,13 +744,14 @@ class FarmView(QMainWindow, Ui_FarmView):
             labelFactory('exitCode')]
         records = (hydra_taskboard.fetch(order = "order by id desc",
         limit = self.limitSpinBox.value()))
-        
+
         for task in records:
             if task.logFile:
-                task.logFile = task.logFile.replace("C:", "\\\\" + task.host)
-        
+                if task.host:
+                    task.logFile = task.logFile.replace("C:", "\\\\" + task.host)
+
         setup(records, columns, self.taskGrid)
-          
+
 
     def updateStatusBar(self):
 
@@ -831,7 +832,7 @@ def setup(records, columns, grid):
                 grid.removeItem(item)
                 item.widget().hide()
             grid.addWidget(attr.dataWidget(record),row + 1, column,)
-            
+
 def loadLog(record):
     logFile = record.logFile
     if logFile:
@@ -856,7 +857,7 @@ class widgetFactory():
     def __init__(self, name, intention = None):
         self.name = name
         self.intention = intention
-        
+
     def headerWidget(self):
         """Makes a label for the header row of the display."""
 
@@ -889,19 +890,19 @@ class lineEditFactory(widgetFactory):
         w.setText(self.data(record))
         w.setReadOnly(True)
         return w
-        
+
 class buttonFactory(widgetFactory):
     def dataWidget(self, record):
         b = QPushButton(self.name)
         if self.intention == None:
             QObject.connect(b, SIGNAL("clicked()"), self.doNothing)
-        
+
         else:
             handler = functools.partial(self.intention, record)
             QObject.connect(b, SIGNAL("clicked()"), handler)
-        
+
         return b
-    
+
     def doNothing(self):
         pass
 

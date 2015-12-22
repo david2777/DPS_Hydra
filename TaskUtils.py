@@ -39,7 +39,7 @@ def startTask(task_id):
             resetTask(task_id, "R")
 
         task.update(t)
-        
+
 def resetTask(task_id, newStatus = "U"):
     """Resets a task and puts it back on the job board with a new status."""
     with transaction() as t:
@@ -55,9 +55,9 @@ def resetTask(task_id, newStatus = "U"):
         task.endTime = None
         task.logFile = None
         task.exitCode = None
-        
+
         task.update(t)
-        
+
 
 def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
     with transaction() as t:
@@ -80,7 +80,7 @@ def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
 
 def sendKillQuestion(renderhost, newStatus="K"):
     """Tries to kill the current task running on the renderhost. Returns True if successful, otherwise False"""
-    logger.debug ('kill job on %s' % renderhost)
+    logger.debug('Kill task on %s' % renderhost)
     connection = TCPConnection(hostname=renderhost)
     answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
     if answer == None:

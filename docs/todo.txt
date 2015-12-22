@@ -1,3 +1,10 @@
+-[High Priority]Job kill doesn't actually kill the subprocess
+    -Probably because we are using STDOUT
+      -Should switch over to cominicate()
+        -https://docs.python.org/2/library/subprocess.html
+    -Also should add a check to see if it was killed or not
+      -If not, us os.kill()
+
 -[In Progress]Keep implementing new boards into farm View
     -[Mostly Done]Update button handlers
     -[Done]Figure out why table helpers don't like anything other than strings
@@ -12,7 +19,7 @@
     -Reqs and Capabilities MUST be in alphabetical order and reqs MUST have "%"
     instead of space and infront/behind to wildcard reqs that the node has but
     the task doesn't need
-    
+
 -[In Progress]Overhaul some functions (like getting a row) with the way I've done it on TASC before
 
 -[Done]Overhaul Job Ticket setup
