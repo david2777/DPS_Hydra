@@ -6,12 +6,13 @@ import threading
 import datetime
 import traceback
 import subprocess
+import psutil
 
 #Hydra
 from Servers import TCPServer
 from LoggingSetup import logger
 from Answers import RenderAnswer
-from MySQLSetup import * 
+from MySQLSetup import *
 import Constants
 import Utils
 import JobUtils
@@ -30,7 +31,7 @@ class RenderTCPServer(TCPServer):
         if nInstances == 0 and not sys.argv[0].endswith('.py'):
             logger.error("Can't find running RenderNodeMain.")
             sys.exit(1)
-            
+
         TCPServer.__init__(self, *arglist, **kwargs)
         self.childProcess = None
         self.childKilled = False
@@ -43,7 +44,7 @@ class RenderTCPServer(TCPServer):
                 newStatus = OFFLINE
             else:
                 newStatus = IDLE
-            taskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED,
+            TaskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED,
                               host=thisNode.host, newHostStatus=newStatus)
 
         #Update current software version on the DB if necessary
@@ -161,8 +162,15 @@ class RenderTCPServer(TCPServer):
     def killCurrentJob(self, statusAfterDeath):
         """Kills the render node's current job if it's running one."""
         logger.debug("Killing %r", self.childProcess)
-        if self.childProcess:
+        pid = self.childProcess.pid
+        try:
+            psutil_proc = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            psutil_proc = []
+        while self.childProcess:
             self.childProcess.kill()
+            for item in psutil_proc:
+                os.kill(item.pid)
             self.childKilled = True
             self.statusAfterDeath = statusAfterDeath
         else:
