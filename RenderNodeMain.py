@@ -6,6 +6,9 @@ import threading
 import datetime
 import traceback
 import subprocess
+import signal
+
+#3rd Party
 import psutil
 
 #Hydra
@@ -161,16 +164,23 @@ class RenderTCPServer(TCPServer):
 
     def killCurrentJob(self, statusAfterDeath):
         """Kills the render node's current job if it's running one."""
-        logger.debug("Killing %r", self.childProcess)
-        pid = self.childProcess.pid
+        #Get the subprocesses of the main child process
         try:
-            psutil_proc = psutil.Process(pid)
+            psutil_proc = psutil.Process(self.childProcess.pid)
+            children_procs = psutil_proc.children(recursive=True)
         except psutil.NoSuchProcess:
-            psutil_proc = []
+            children_procs = []
+
+        #Using a while statement to get around the thread being locked by STDOUT
         while self.childProcess:
-            self.childProcess.kill()
-            for item in psutil_proc:
-                os.kill(item.pid)
+            #Log and kill all of the subprocesses
+            for proc in children_procs:
+                logger.debug("Killing subtask with PID of %d" % proc.pid)
+                os.kill(proc.pid, signal.SIGTERM)
+            #Log and kill the main child process
+            logger.debug("Killing main task with PID of %d" % self.childProcess.pid)
+            os.kill(self.childProcess.pid, signal.SIGTERM)
+            #Set status as killed
             self.childKilled = True
             self.statusAfterDeath = statusAfterDeath
         else:

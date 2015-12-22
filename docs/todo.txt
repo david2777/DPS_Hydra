@@ -1,9 +1,10 @@
--[High Priority]Job kill doesn't actually kill the subprocess
-    -Probably because we are using STDOUT
+-[Done]Job kill doesn't actually kill the subprocess
+    -[Tried changing, broke logs]Probably because we are using STDOUT
       -Should switch over to cominicate()
         -https://docs.python.org/2/library/subprocess.html
     -Also should add a check to see if it was killed or not
-      -If not, us os.kill()
+      -[Solution]If not, us os.kill()
+    -Was caused by subprocess.kill() not working for some reason, using OS now
 
 -[In Progress]Keep implementing new boards into farm View
     -[Mostly Done]Update button handlers
