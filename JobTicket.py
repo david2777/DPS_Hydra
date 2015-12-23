@@ -59,8 +59,9 @@ class UberJobTicket:
     def commandBuilder(self, startFrame, endFrame):
         """Returns a command as a list for sending to subprocess.call on RenderNode"""
         #Using -mr:v 5 to get a more verbose log, render should still use correct engine
+        taskFile = '"' + self.taskFile + '"'
         return " ".join([EXECUTEABLES[self.execName], self.baseCMD, '-mr:v', '5', '-s',
-                str(startFrame), '-e', str(endFrame), self.taskFile])
+                str(startFrame), '-e', str(endFrame), taskFile])
 
     def compatabilityBuilder(self, compatabilityList):
         """Sorts compatabilityList and joins it with "%"s"""
@@ -152,16 +153,17 @@ class UberJobTicket:
 if __name__ == "__main__":
     prompt = raw_input("Create test Job? ").lower()
     if prompt == "yes" or prompt == "y":
-        baseCMD = "-preRender GetFinalRenderSettings -x 640 -y 360 -rl FX_Layer -proj \\\\zed\\Lego"
-        mayaFile = "\\\\zed\\Lego\\LEGOSWInstore\\1HY16\\LSW_Product_Feature_Function_1HY16\\75139_HallOfMirrors\\Animation\\seq_010\\shot_010_0040\\maya\\lighting\\75139_HallOfMirrors_shot_010_0040_litFX_v01.ma"
-        startFrame = 115
-        endFrame = 135
+        baseCMD = "-x 640 -y 360 -rl Beauty -proj \\\\zed\\Lego -rd C:\\Users\DPSPurple\\Desktop\\testFrames"
+        mayaFile = "\\\\zed\\Lego\\Legodk\\LEGO Minecraft\\1HY16_Loopable_Spins\\21125\\Animation\\seq_010\\shot_010_0010\\maya\\lighting\\Minecraft_21125_shot_010_0010_lit_v08.ma"
+        startFrame = 101
+        endFrame = 275
+        byFrame = 30
         priority = 50
-        niceName = "75139_HallOfMirrors_010_0050_LitFX"
+        niceName = "Minecraft_Test"
         owner = "dduvoisin"
         compatabilityList = ["MentalRay", "Maya2015"]
 
-        uberPhase01 = UberJobTicket("maya2015Render", baseCMD, startFrame, endFrame, 10, mayaFile,
+        uberPhase01 = UberJobTicket("maya2015Render", baseCMD, startFrame, endFrame, byFrame, mayaFile,
         priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityList)
         uberPhase01.doSubmit()
 

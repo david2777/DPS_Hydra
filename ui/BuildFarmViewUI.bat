@@ -1,1 +1,1 @@
-pyuic4 -x -o ../Ui_FarmView.py Ui_FarmView.ui
+pyuic4 -x -o ../UI_FarmView.py UI_FarmView.ui

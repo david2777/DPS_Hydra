@@ -39,6 +39,6 @@
     -Done on demand via Farmview when loading shot data for specific shots
     -Mostly should be done by RenderNodemain when it changes status in DB
 
--Make some sort of job submitter
+-[In Progress]Make some sort of job submitter
 
 -Everything else
