@@ -40,5 +40,8 @@
     -Mostly should be done by RenderNodemain when it changes status in DB
 
 -[In Progress]Make some sort of job submitter
+    -Make a simple one for Maya?
+
+-Need a way to limit nodes on test jobs
 
 -Everything else
