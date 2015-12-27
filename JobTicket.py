@@ -51,6 +51,12 @@ class UberJobTicket:
         self.owner = owner              #VARCHAR(45)
         self.compatabilityPattern = self.compatabilityBuilder(compatabilityList)    #VARCHAR(255)
         self.createTime = datetime.now()
+        
+        self.frameRange = range(self.startFrame, self.endFrame)
+        self.frameList = self.frameRange[0::self.byFrame]
+        if self.endFrame not in self.frameList:
+            self.frameList.append(self.endFrame)
+        self.frameCount = len(self.frameList)
 
         #Check this after we run it through the builder function
         if len(self.compatabilityPattern) > 255:
@@ -83,7 +89,9 @@ class UberJobTicket:
                             niceName = self.niceName,
                             owner = self.owner,
                             creationTime = self.createTime,
-                            requirements = self.compatabilityPattern)
+                            requirements = self.compatabilityPattern,
+                            taskDone = 0,
+                            totalTask = self.frameCount)
 
         with transaction() as t:
             job.insert(transaction=t)
@@ -92,11 +100,7 @@ class UberJobTicket:
 
     def createTasks(self):
         """Function for creating and inserting tasks for a range of frames."""
-        frameRange = range(self.startFrame, self.endFrame)
-        frameList = frameRange[0::self.byFrame]
-        if self.endFrame not in frameList:
-            frameList.append(self.endFrame)
-        for frame in frameList:
+        for frame in self.frameList:
             command = self.commandBuilder(frame, frame)
             logger.debug(command)
             task = hydra_taskboard(command = command,
@@ -148,6 +152,25 @@ class UberJobTicket:
         self.job_id = job.id
         self.createCMDTicketTask()
         logger.info("Submitted UberTicket CMDTicket job with id %d" % self.job_id)
+        
+    def __repr__(self):
+        reprList = ["\nJob Ticket Repr:",
+                    self.execName,
+                    self.baseCMD,
+                    self.startFrame,
+                    self.endFrame,
+                    self.byFrame,
+                    self.taskFile,
+                    self.priority,
+                    self.phase,
+                    self.jobStatus,
+                    self.niceName,
+                    self.owner,
+                    self.createTime,
+                    self.compatabilityPattern,
+                    "\n"]
+        reprList = [str(x) for x in reprList]
+        return "\n".join(reprList)
 
 
 if __name__ == "__main__":

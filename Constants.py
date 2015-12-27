@@ -9,11 +9,7 @@ BASELOGDIR = os.path.join(BASEDIR, "logs")
 RENDERLOGDIR = os.path.join(BASELOGDIR, "render")
 SETTINGS = os.path.join(BASEDIR, "HydraSettings.cfg")
 
-EXECUTEABLES = {"maya2014Render": "C:/Program Files/Autodesk/maya2014/bin/render.exe",
-                "maya2014Proper": "C:/Program Files/Autodesk/maya2014/bin/maya.exe",
-                "maya2015Render": "C:/Program Files/Autodesk/maya2015/bin/render.exe",
-                }
-EXECUTEABLENAMES = {"maya2014Render": "Maya 2014 Render",
-                "maya2014Proper": "Maya 2014 Regular",
-                "maya2015Render": "Maya 2015 Render",
+EXECUTEABLES = {"maya2014_Render": "C:/Program Files/Autodesk/maya2014/bin/render.exe",
+                "maya2014_Proper": "C:/Program Files/Autodesk/maya2014/bin/maya.exe",
+                "maya2015_Render": "C:/Program Files/Autodesk/maya2015/bin/render.exe",
                 }
