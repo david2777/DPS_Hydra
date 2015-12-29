@@ -150,24 +150,29 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         niceName = str(self.niceNameLineEdit.text())
         owner = db_username
         compatabilityList = self.getReqs()
+        testNodes = int(self.testNodesSpinBox.value())
         
         
         if self.testCheckBox.isChecked():
             logger.info("Building Phase 01")
+            #Phase specific overrides
             phase = 1
             niceNameOverride = niceName + "_Phase01"
+            baseCMDOverride = baseCMD + " -x 640 -y 360"
+            priorityOverride = int(priority * 1.25)
             phase01Ticket = UberJobTicket(execName,
-                                            baseCMD,
+                                            baseCMDOverride,
                                             startFrame,
                                             endFrame,
                                             byFrame,
                                             taskFile,
-                                            priority,
+                                            priorityOverride,
                                             phase,
                                             jobStatus,
                                             niceNameOverride,
                                             owner,
-                                            compatabilityList)
+                                            compatabilityList,
+                                            testNodes)
         
             phase01Ticket.doSubmit()
             logger.info("Phase 01 submitted")
@@ -175,9 +180,11 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             
         if self.finalCheckBox.isChecked():
             logger.info("Building Phase 02")
+            #Phase specific overrides
             phase = 2
             niceNameOverride = niceName + "_Phase02"
             byFrameOverride = 1
+            testNodesOverrride = 0
             if phase01Status:
                 jobStatusOverride = "U"
             phase02Ticket = UberJobTicket(execName,
@@ -191,7 +198,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             jobStatusOverride,
                                             niceNameOverride,
                                             owner,
-                                            compatabilityList)
+                                            compatabilityList,
+                                            testNodesOverrride)
         
             phase02Ticket.doSubmit()
             logger.info("Phase 02 submitted")

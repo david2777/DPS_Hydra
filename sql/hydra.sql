@@ -52,23 +52,25 @@ DROP TABLE IF EXISTS `hydra_jobboard`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hydra_jobboard` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID for the job, Auto Increment by DB on  insertion of job, ',
-  `execName` varchar(20) DEFAULT NULL,
-  `baseCMD` varchar(255) DEFAULT NULL COMMENT 'The base CMD, ie. $mayaPath -proj \\\\blah\\blahhh -x 1280 -y 720 etc.',
+  `execName` varchar(20) DEFAULT NULL COMMENT 'Executeable the job needs',
+  `baseCMD` varchar(255) DEFAULT NULL COMMENT 'The base CMD, ie. -x 1280 -y 720 -cam "TestCam" etc.',
   `startFrame` int(6) DEFAULT '1' COMMENT 'The start frame of the job',
   `endFrame` int(6) DEFAULT '1' COMMENT 'The end frame of the job',
-  `byFrame` int(4) DEFAULT '1',
-  `taskFile` varchar(60) DEFAULT NULL COMMENT 'The task file to be rendered ie. the Maya file or PS file or something',
+  `byFrame` int(4) DEFAULT '1' COMMENT 'Render each x frame. Caluclated by SubmitterMain for now so we can append the last frame to the frames. Should be editable in FarmView eventually. ',
+  `taskFile` varchar(255) DEFAULT NULL COMMENT 'The task file to be rendered ie. the Maya file or PS file or something',
   `priority` int(4) DEFAULT '50' COMMENT 'Priority of the job, higher priority jobs will be executed first',
   `phase` int(4) DEFAULT '0' COMMENT 'Job phase',
   `job_status` char(1) DEFAULT 'U' COMMENT 'Status of the job, for more info on this see MySQLSetup.py',
   `niceName` varchar(60) DEFAULT 'HydraJob' COMMENT 'Nice name of the job for display in FarmView',
   `owner` varchar(45) DEFAULT 'HydraUser' COMMENT 'User name of the person who submitted the job',
   `requirements` varchar(255) DEFAULT NULL COMMENT 'Requirements for the job ie. RedShift, Fusion, MentalRay, Power',
-  `creationTime` datetime DEFAULT NULL,
-  `taskDone` int(6) DEFAULT '0',
-  `totalTask` int(6) DEFAULT '0',
+  `creationTime` datetime DEFAULT NULL COMMENT 'Time the job was created',
+  `taskDone` int(6) DEFAULT '0' COMMENT 'Total tasks done, calculated and stored by FarmView and RenderNodeMain',
+  `totalTask` int(6) DEFAULT '0' COMMENT 'Total subtasks, to avoid querying the subtask DB all the time',
+  `maxNodes` int(4) DEFAULT '0' COMMENT 'Max nodes a job should run on',
+  `nodesOnJob` int(4) DEFAULT '0' COMMENT 'Nodes currently running on job',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=26 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=50 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -99,21 +101,21 @@ DROP TABLE IF EXISTS `hydra_taskboard`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hydra_taskboard` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `job_id` int(11) NOT NULL,
-  `command` varchar(1000) DEFAULT NULL,
-  `status` char(1) DEFAULT NULL,
-  `createTime` datetime DEFAULT NULL,
-  `startTime` datetime DEFAULT NULL,
-  `endTime` datetime DEFAULT NULL,
-  `host` varchar(80) DEFAULT NULL,
-  `exitCode` int(11) DEFAULT NULL,
-  `logFile` varchar(100) DEFAULT NULL,
-  `requirements` varchar(255) DEFAULT NULL,
-  `priority` int(4) DEFAULT NULL,
-  `frame` int(6) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'The task id for this task. Auto incremented and created on submission by DB. ',
+  `job_id` int(11) NOT NULL COMMENT 'The job_id for this task. ',
+  `command` varchar(1000) DEFAULT NULL COMMENT 'The command to be called by subprocess',
+  `status` char(1) DEFAULT NULL COMMENT 'Current task status',
+  `createTime` datetime DEFAULT NULL COMMENT 'Time the task was created',
+  `startTime` datetime DEFAULT NULL COMMENT 'Time the task started',
+  `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',
+  `host` varchar(80) DEFAULT NULL COMMENT 'Host the task is running on',
+  `exitCode` int(11) DEFAULT NULL COMMENT 'Exit code from the subprocess',
+  `logFile` varchar(100) DEFAULT NULL COMMENT 'Log file directory (Local)',
+  `requirements` varchar(255) DEFAULT NULL COMMENT 'Requirements to run this task',
+  `priority` int(4) DEFAULT NULL COMMENT 'Priority for the task',
+  `frame` int(6) DEFAULT NULL COMMENT 'The frame for this task',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=137 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=533 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -125,4 +127,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-12-15 23:56:07
+-- Dump completed on 2015-12-28 23:54:01

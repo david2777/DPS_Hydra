@@ -60,7 +60,7 @@ class RenderTCPServer(TCPServer):
     def processRenderTasks(self):
         """The loop that looks for jobs on the DB and runs them if the node meets
         the job's requirements (Priority & Capabilities)"""
-        [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
+        [thisNode] = hydra_rendernode.fetch("where host = '%s'" % Utils.myHostName())
         logger.info("""Host: %r
          Status: %r
          Capabilities %r""", thisNode.host, niceNames[thisNode.status], thisNode.capabilities)
@@ -81,7 +81,23 @@ class RenderTCPServer(TCPServer):
             if not render_tasks:
                 return
             render_task = render_tasks[0]
-
+            
+            #Get current render job db entry
+            #I'd like a way to do this without the hydra_jobboard query
+            #since it makes it a little more annying to unstick a task
+            """
+            [render_job] = hydra_jobboard.fetch("where id = '%d'" % render_task.job_id)
+            if render_job.maxNodes != 0:
+                render_job.nodesOnJob += 1
+                if render_job.nodesOnJob > render_job.maxNodes:
+                    logger.info("Max nodes running, passing on job...")
+                    return
+                else:
+                    render_job.update(t)
+            """
+                    
+                    
+                        
             #Create log for this task and update task entry in the DB
             if not os.path.isdir(Constants.RENDERLOGDIR):
                 os.makedirs(Constants.RENDERLOGDIR)

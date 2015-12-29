@@ -42,6 +42,6 @@
 -[In Progress]Make some sort of job submitter
     -Make a simple one for Maya?
 
--Need a way to limit nodes on test jobs
+-[In Progress]Need a way to limit nodes on test jobs
 
 -Everything else

@@ -14,7 +14,7 @@ Also has a main function for generating test data.
 class UberJobTicket:
     """A Ticket Class for submitting jobs and their subtasks."""
     def __init__(self, execName, baseCMD, startFrame, endFrame, byFrame, taskFile, priority,
-                phase, jobStatus, niceName, owner, compatabilityList):
+                phase, jobStatus, niceName, owner, compatabilityList, maxNodes):
         #Let's verify the data we just got from the user
         if len(baseCMD) > 255:
             raise Exception("baseCMD too long! baseCMD must be less than 255 characters!")
@@ -51,6 +51,7 @@ class UberJobTicket:
         self.owner = owner              #VARCHAR(45)
         self.compatabilityPattern = self.compatabilityBuilder(compatabilityList)    #VARCHAR(255)
         self.createTime = datetime.now()
+        self.maxNodes = maxNodes
         
         self.frameRange = range(self.startFrame, self.endFrame)
         self.frameList = self.frameRange[0::self.byFrame]
@@ -91,7 +92,8 @@ class UberJobTicket:
                             creationTime = self.createTime,
                             requirements = self.compatabilityPattern,
                             taskDone = 0,
-                            totalTask = self.frameCount)
+                            totalTask = self.frameCount,
+                            maxNodes = self.maxNodes)
 
         with transaction() as t:
             job.insert(transaction=t)
