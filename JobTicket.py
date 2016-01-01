@@ -122,6 +122,7 @@ class UberJobTicket:
         self.job_id = job.id
         self.createTasks()
         logger.info("Submitted UberTicket job with id %d" % self.job_id)
+        return self.job_id
 
     def createCMDTicketTask(self):
         """Command for making a task for a CMD Ticket.

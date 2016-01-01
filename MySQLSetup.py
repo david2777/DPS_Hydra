@@ -18,6 +18,7 @@ from PyQt4.QtGui import QColor
 #Taken from Cogswell's Project Hydra
 
 #Statuses for jobs/tasks
+HOLD = 'H'
 PAUSED = 'U'                #Job was paused(let running jobs finish)
 ERROR = 'E'                 #Job returned a non-zero exit code
 READY = 'R'                 #Ready to be run by a render node
@@ -43,6 +44,7 @@ niceNames = {PAUSED: 'Paused',
             PENDING: 'Pending',
             STARTED: 'Started',
             ERROR: 'Error',
+            HOLD: 'Hold',
             }
 
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
@@ -51,7 +53,8 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
             KILLED: QColor(240,200,200),        #Light Red
             CRASHED: QColor(220,90,90),         #Dark Red
             STARTED: QColor(200,220,240),       #Light Blue
-            ERROR: QColor(220,90,90),
+            ERROR: QColor(220,90,90),           #Red
+            HOLD: QColor(255,255,255),          #Light Green
             }
 
 SETTINGS = Constants.SETTINGS

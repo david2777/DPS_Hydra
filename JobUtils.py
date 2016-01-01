@@ -110,3 +110,42 @@ def prioritizeJob(job_id, priority):
         t.cur.execute("""update hydra_taskboard
                         set priority = '%d'
                         where job_id = '%d'""" % (priority, job_id))
+                        
+def setupNodeLimit(job_id, hold_status = "U"):
+    [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+    taskLimit = job.maxNodes
+    if taskLimit < 1:
+        return
+        
+    tasks = hydra_taskboard.fetch("where job_id = '%d'" % job_id)
+    startTasks = tasks[0:taskLimit]
+    holdTasks = tasks[taskLimit:]
+    
+    for task in startTasks:
+        TaskUtils.startTask(task.id)
+    
+    for task in holdTasks:
+        with transaction() as t:
+            t.cur.execute("update hydra_taskboard set status = '%s' where id = '%d'" % (hold_status, task.id))
+                        
+def manageNodeLimit(job_id, hold_status = "U"):
+    [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+    taskLimit = job.maxNodes
+    if taskLimit < 1:
+        return
+        
+    tasks = hydra_taskboard.fetch("where job_id = '%d'" % job_id)
+    startList = []
+    
+    for task in tasks:
+        if task.status == "S" or task.status == "R":
+            taskLimit -= 1
+        elif task.status == hold_status:
+            startList.append(task.id)
+    if taskLimit > 0:
+        for task_id in startList[0:taskLimit]:
+            TaskUtils.startTask(task_id)
+        
+    logger.info("Node Limit managed on Job: %d" % job_id)
+                
+    

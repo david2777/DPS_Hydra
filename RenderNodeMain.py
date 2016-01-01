@@ -43,12 +43,14 @@ class RenderTCPServer(TCPServer):
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
         if thisNode.task_id:
+            [task] = hydra_rendernode.fetch("where id = '%d'" % thisNode.task_id)
             if thisNode.status == PENDING or thisNode.status == OFFLINE:
                 newStatus = OFFLINE
             else:
                 newStatus = IDLE
             TaskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED,
                               host=thisNode.host, newHostStatus=newStatus)
+            JobUtils.manageNodeLimit(task.job_id)
 
         #Update current software version on the DB if necessary
         current_version = sys.argv[0]
@@ -80,23 +82,7 @@ class RenderTCPServer(TCPServer):
             render_tasks = hydra_taskboard.fetch(queryString, limit=1, explicitTransaction=t)
             if not render_tasks:
                 return
-            render_task = render_tasks[0]
-            
-            #Get current render job db entry
-            #I'd like a way to do this without the hydra_jobboard query
-            #since it makes it a little more annying to unstick a task
-            """
-            [render_job] = hydra_jobboard.fetch("where id = '%d'" % render_task.job_id)
-            if render_job.maxNodes != 0:
-                render_job.nodesOnJob += 1
-                if render_job.nodesOnJob > render_job.maxNodes:
-                    logger.info("Max nodes running, passing on job...")
-                    return
-                else:
-                    render_job.update(t)
-            """
-                    
-                    
+            render_task = render_tasks[0]                
                         
             #Create log for this task and update task entry in the DB
             if not os.path.isdir(Constants.RENDERLOGDIR):
@@ -176,6 +162,7 @@ class RenderTCPServer(TCPServer):
             self.childProcess = None
             #Update taskCount
             JobUtils.updateJobTaskCount(render_task.job_id)
+            JobUtils.manageNodeLimit(render_task.job_id)
             logger.debug ('Done with render task %s', render_task.id)
 
     def killCurrentJob(self, statusAfterDeath):

@@ -13,6 +13,7 @@ from MySQLSetup import db_username
 from LoggingSetup import logger
 from MessageBoxes import aboutBox, yesNoBox
 from JobTicket import UberJobTicket
+import JobUtils
 import Constants
 
 
@@ -100,9 +101,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                 col += 1
             
             #Set args passed from Maya to the Reqs
-            #Makes the checkboxes into squares which look kinda cool
             if item in self.settingsDict["-c"]:
-                c.setCheckState(True)
+                c.setCheckState(2)
                 
             self.reqChecks.append(c)
 
@@ -157,7 +157,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
-            niceNameOverride = niceName + "_Phase01"
+            niceNameOverride = "%s_Phase01" % niceName
             baseCMDOverride = baseCMD + " -x 640 -y 360"
             priorityOverride = int(priority * 1.25)
             phase01Ticket = UberJobTicket(execName,
@@ -174,15 +174,16 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             compatabilityList,
                                             testNodes)
         
-            phase01Ticket.doSubmit()
-            logger.info("Phase 01 submitted")
+            p1_job_id = phase01Ticket.doSubmit()
+            JobUtils.setupNodeLimit(p1_job_id)
+            logger.info("Phase 01 submitted with id: %d" % p1_job_id)
             phase01Status = True
             
         if self.finalCheckBox.isChecked():
             logger.info("Building Phase 02")
             #Phase specific overrides
             phase = 2
-            niceNameOverride = niceName + "_Phase02"
+            niceNameOverride = "%s_Phase02" % niceName
             byFrameOverride = 1
             testNodesOverrride = 0
             if phase01Status:
@@ -201,8 +202,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             compatabilityList,
                                             testNodesOverrride)
         
-            phase02Ticket.doSubmit()
-            logger.info("Phase 02 submitted")
+            p2_job_id = phase02Ticket.doSubmit()
+            logger.info("Phase 02 submitted with id: %d" % p2_job_id)
         
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")    
