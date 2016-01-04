@@ -6,7 +6,9 @@ tells the NodeScheduler which schedule to use. 0 will disable the scheduler.
 """
 
 ScheduleDict = {0 : [None, None],
-                1 : [t(18, 30, 00), t(06, 30, 00)]}
+                1 : [t(18, 30, 00), t(06, 35, 00)],
+                2 : [t(18, 30, 00), t(06, 30, 00)],
+                }
 
 HolidayList = [d(2015, 11, 26),     #Thanksgiving
                 d(2015, 12, 25),    #Christmas
