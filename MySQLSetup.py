@@ -11,9 +11,6 @@ from LoggingSetup import logger
 import Utils
 import Constants
 
-#QT
-from PyQt4.QtGui import QColor
-
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
@@ -45,16 +42,6 @@ niceNames = {PAUSED: 'Paused',
             STARTED: 'Started',
             ERROR: 'Error',
             HOLD: 'Hold',
-            }
-
-niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
-            READY: QColor(255,255,255),         #White
-            FINISHED: QColor(200,240,200),      #Light Green
-            KILLED: QColor(240,200,200),        #Light Red
-            CRASHED: QColor(220,90,90),         #Dark Red
-            STARTED: QColor(200,220,240),       #Light Blue
-            ERROR: QColor(220,90,90),           #Red
-            HOLD: QColor(255,255,255),          #Light Green
             }
 
 SETTINGS = Constants.SETTINGS
