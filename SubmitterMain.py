@@ -187,7 +187,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             testNodesP1)
         
             p1_job_id = phase01Ticket.doSubmit()
-            JobUtils.setupNodeLimit(p1_job_id)
+            if jobStatus == "R":
+                JobUtils.setupNodeLimit(p1_job_id)
             logger.info("Phase 01 submitted with id: %d" % p1_job_id)
             phase01Status = True
             
@@ -199,6 +200,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             byFrameOverride = 1
             if phase01Status:
                 jobStatusOverride = "U"
+            else:
+                jobStatusOverride = jobStatus
             phase02Ticket = UberJobTicket(execName,
                                             baseCMD,
                                             startFrame,
@@ -214,7 +217,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             testNodesP2)
         
             p2_job_id = phase02Ticket.doSubmit()
-            JobUtils.setupNodeLimit(p2_job_id)
+            if jobStatusOverride == "R":
+                JobUtils.setupNodeLimit(p2_job_id)
             logger.info("Phase 02 submitted with id: %d" % p2_job_id)
         
         self.submitButton.setEnabled(False)

@@ -76,7 +76,8 @@ class RenderTCPServer(TCPServer):
         #-Has a high enough priority level for this particular node and
         #-Is able to meet to jobs required capabilities
         queryString = ("where status = '%s' and priority >= %s" % (READY, thisNode.minPriority))
-        queryString += " and '%s' like requirements" % thisNode.capabilities
+        queryString += " and '%s' like requirements" % thisNode.capabilities 
+        queryString += " ORDER BY priority DESC, id ASC"
 
         with transaction() as t:
             render_tasks = hydra_taskboard.fetch(queryString, limit=1, explicitTransaction=t)

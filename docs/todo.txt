@@ -46,6 +46,7 @@
     -Limited jobs will pause all tasks above the node limit
     -Seems to be working for now, maybe missed some fringe error cases
     
--[High Priority]Make it prefer jobs with higher priority rather than ones submitted first
+-[Done]Make it prefer jobs with higher priority rather than ones submitted first
+    -Changed sorting
 
 -Everything else

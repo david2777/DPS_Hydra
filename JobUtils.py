@@ -82,7 +82,7 @@ def startJob(job_id):
         TaskUtils.startTask(task.id)
     with transaction() as t:
         [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
-        job.job_status = "S"
+        job.job_status = "R"
         job.update(t)
 
 def killJob(job_id, newStatus = "K"):
