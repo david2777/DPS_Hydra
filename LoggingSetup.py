@@ -30,9 +30,9 @@ if not os.path.isdir(BASELOGDIR):
     os.makedirs(BASELOGDIR)
 
 #Set the log file path to BASELOGDIR\appname.txt
-logfileName = os.path.join( BASELOGDIR, appname + '.txt')
+logfileName = os.path.join(BASELOGDIR, appname + '.txt')
 
-for handler in [logging.StreamHandler(), logging.handlers.TimedRotatingFileHandler(logfileName, when='midnight' ),]:
+for handler in [logging.StreamHandler(), logging.handlers.TimedRotatingFileHandler(logfileName, when='midnight'),]:
     handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(levelname)-9s%(message)s\n"
                                   "%(pathname)s line %(lineno)s\n"
