@@ -3,8 +3,7 @@ from datetime import datetime
 
 #Hydra
 from LoggingSetup import logger
-from MySQLSetup import hydra_jobboard, hydra_taskboard, transaction
-from Constants import EXECUTEABLES
+from MySQLSetup import hydra_jobboard, hydra_taskboard, hydra_executable, transaction
 
 """
 Contains a class with functions for submitting a job to the DB.
@@ -37,6 +36,9 @@ class UberJobTicket:
         if self.endFrame not in self.frameList:
             self.frameList.append(self.endFrame)
         self.frameCount = len(self.frameList)
+        
+        execs = hydra_executable.fetch()
+        self.execsDict = {ex.name: ex.path for ex in execs}
 
         #Check this after we run it through the builder function
         if len(self.compatabilityPattern) > 255:
@@ -46,7 +48,7 @@ class UberJobTicket:
         """Returns a command as a list for sending to subprocess.call on RenderNode"""
         #Using -mr:v 5 to get a more verbose log, render should still use correct engine
         taskFile = '"' + self.taskFile + '"'
-        return " ".join([EXECUTEABLES[self.execName], self.baseCMD, '-mr:v', '5', '-s',
+        return " ".join([self.execsDict[self.execName], self.baseCMD, '-mr:v', '5', '-s',
                 str(startFrame), '-e', str(endFrame), taskFile])
 
     def compatabilityBuilder(self, compatabilityList):

@@ -1,5 +1,3 @@
-CREATE DATABASE  IF NOT EXISTS `hydra` /*!40100 DEFAULT CHARACTER SET utf8 */;
-USE `hydra`;
 -- MySQL dump 10.13  Distrib 5.7.9, for Win64 (x86_64)
 --
 -- Host: 127.0.0.1    Database: hydra
@@ -31,6 +29,16 @@ CREATE TABLE `hydra_capabilities` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Dumping data for table `hydra_capabilities`
+--
+
+LOCK TABLES `hydra_capabilities` WRITE;
+/*!40000 ALTER TABLE `hydra_capabilities` DISABLE KEYS */;
+INSERT INTO `hydra_capabilities` VALUES ('Fusion'),('FXCache'),('HighPower'),('Houdini'),('Maya2014'),('Maya2015'),('MentalRay'),('Photoshop'),('Redshift'),('RenderMan'),('SOuP');
+/*!40000 ALTER TABLE `hydra_capabilities` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `hydra_executable`
 --
 
@@ -38,10 +46,21 @@ DROP TABLE IF EXISTS `hydra_executable`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hydra_executable` (
-  `name` varchar(255) NOT NULL,
+  `name` varchar(45) NOT NULL,
+  `path` varchar(255) NOT NULL,
   PRIMARY KEY (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Lists all executeables that can be run by the farm. This is specified when a job is submitted.';
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hydra_executable`
+--
+
+LOCK TABLES `hydra_executable` WRITE;
+/*!40000 ALTER TABLE `hydra_executable` DISABLE KEYS */;
+INSERT INTO `hydra_executable` VALUES ('maya2014_Proper','C:/Program Files/Autodesk/maya2014/bin/maya.exe'),('maya2014_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe'),('maya2015_Render','C:/Program Files/Autodesk/maya2015/bin/render.exe');
+/*!40000 ALTER TABLE `hydra_executable` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `hydra_jobboard`
@@ -68,10 +87,19 @@ CREATE TABLE `hydra_jobboard` (
   `taskDone` int(6) DEFAULT '0' COMMENT 'Total tasks done, calculated and stored by FarmView and RenderNodeMain',
   `totalTask` int(6) DEFAULT '0' COMMENT 'Total subtasks, to avoid querying the subtask DB all the time',
   `maxNodes` int(4) DEFAULT '0' COMMENT 'Max nodes a job should run on',
-  `nodesOnJob` int(4) DEFAULT '0' COMMENT 'Nodes currently running on job',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=50 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hydra_jobboard`
+--
+
+LOCK TABLES `hydra_jobboard` WRITE;
+/*!40000 ALTER TABLE `hydra_jobboard` DISABLE KEYS */;
+INSERT INTO `hydra_jobboard` VALUES (1,'maya2014_Render',' -proj F:/Projects/Fruits/ -x 640 -y 360',101,110,10,'F:/Projects/Fruits/scenes/orangeSliceTest.ma',62,1,'R','orangeSliceTest.ma_Phase01','dduvoisin','%%','2016-01-03 20:21:30',0,2,1),(2,'maya2014_Render',' -proj F:/Projects/Fruits/',101,110,1,'F:/Projects/Fruits/scenes/orangeSliceTest.ma',50,2,'U','orangeSliceTest.ma_Phase02','dduvoisin','%%','2016-01-03 20:21:30',0,10,1);
+/*!40000 ALTER TABLE `hydra_jobboard` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `hydra_rendernode`
@@ -92,6 +120,16 @@ CREATE TABLE `hydra_rendernode` (
   PRIMARY KEY (`host`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Describes all of the RenderNodes. Made in MySQL Workbench. ';
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hydra_rendernode`
+--
+
+LOCK TABLES `hydra_rendernode` WRITE;
+/*!40000 ALTER TABLE `hydra_rendernode` DISABLE KEYS */;
+INSERT INTO `hydra_rendernode` VALUES ('DAVIDPC','I',50,NULL,'C:\\Users\\David\\Documents\\GitHub\\DPS_Hydra\\RenderNodeMain.py','Maya2014 Maya2015 Quixel Redshift SOUP Substance','2016-01-03 20:01:41',1);
+/*!40000 ALTER TABLE `hydra_rendernode` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `hydra_taskboard`
@@ -115,8 +153,18 @@ CREATE TABLE `hydra_taskboard` (
   `priority` int(4) DEFAULT NULL COMMENT 'Priority for the task',
   `frame` int(6) DEFAULT NULL COMMENT 'The frame for this task',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=533 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `hydra_taskboard`
+--
+
+LOCK TABLES `hydra_taskboard` WRITE;
+/*!40000 ALTER TABLE `hydra_taskboard` DISABLE KEYS */;
+INSERT INTO `hydra_taskboard` VALUES (1,1,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -x 640 -y 360 -mr:v 5 -s 101 -e 101 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','R','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',62,101),(2,1,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -x 640 -y 360 -mr:v 5 -s 110 -e 110 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',62,110),(3,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 101 -e 101 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,101),(4,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 102 -e 102 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,102),(5,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 103 -e 103 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,103),(6,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 104 -e 104 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,104),(7,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 105 -e 105 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,105),(8,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 106 -e 106 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,106),(9,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 107 -e 107 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,107),(10,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 108 -e 108 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,108),(11,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 109 -e 109 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,109),(12,2,'C:/Program Files/Autodesk/maya2014/bin/render.exe  -proj F:/Projects/Fruits/ -mr:v 5 -s 110 -e 110 \"F:/Projects/Fruits/scenes/orangeSliceTest.ma\"','U','2016-01-03 20:21:30',NULL,NULL,NULL,NULL,NULL,'%%',50,110);
+/*!40000 ALTER TABLE `hydra_taskboard` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -127,4 +175,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-12-28 23:54:01
+-- Dump completed on 2016-01-03 20:44:28

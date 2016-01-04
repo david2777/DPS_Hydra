@@ -10,7 +10,7 @@ from PyQt4.QtCore import *
 from UI_Submitter import Ui_MainWindow
 
 #Hydra
-from MySQLSetup import db_username
+from MySQLSetup import db_username, hydra_capabilities, hydra_executable
 from LoggingSetup import logger
 from MessageBoxes import aboutBox, yesNoBox
 from JobTicket import UberJobTicket
@@ -93,8 +93,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
     def populateReqs(self):
         #Get requirements master list from the DB
         #Hardcoded for now
-        requirements = ["Redshift", "VRay", "MentalRay", "Photoshop", "RenderMan", "SOuP", "Houdini", "Fusion"]
-        requirements.sort()
+        requirements = hydra_capabilities.fetch()
+        requirements = [req.name for req in requirements]
         self.reqChecks = []
         col = 0
         row = 0
@@ -116,13 +116,11 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
     def populateExecs(self):
         #Get execs
         #Stored in Constants for now
-        execsDict = Constants.EXECUTEABLES
-        execs = list(execsDict.keys())
-        execs.sort()
+        execs = hydra_executable.fetch()
         execs.reverse()
 
-        for name in execs:
-            newItem = self.executableComboBox.addItem(name)
+        for execute in execs:
+            newItem = self.executableComboBox.addItem(execute.name)
             
         #Set the executeable to the value passed from Maya
         index = self.executableComboBox.findText(self.settingsDict["-x"])

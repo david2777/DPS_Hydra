@@ -114,7 +114,7 @@ class tupleObject:
                explicitTransaction=None):
         orderClause = "" if order is None else " " + order + " "
         limitClause = "" if limit is None else " limit %d " % limit
-        select = "select * from %s %s %s %s" % (cls.tableName (), whereClause, orderClause, limitClause)
+        select = "select * from %s %s %s %s" % (cls.tableName(), whereClause, orderClause, limitClause)
         logger.debug(select)
 
         def doFetch(t):
@@ -170,6 +170,12 @@ class hydra_jobboard(tupleObject):
 class hydra_taskboard(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
+    
+class hydra_capabilities(tupleObject):
+    primaryKey = 'name'
+    
+class hydra_executable(tupleObject):
+    primaryKey = 'name'
 
 
 class transaction:
