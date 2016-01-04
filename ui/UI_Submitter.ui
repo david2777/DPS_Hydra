@@ -296,6 +296,9 @@
         <string>Advanced</string>
        </attribute>
        <layout class="QFormLayout" name="formLayout_2">
+        <property name="fieldGrowthPolicy">
+         <enum>QFormLayout::AllNonFixedFieldsGrow</enum>
+        </property>
         <item row="0" column="0">
          <widget class="QLabel" name="sceneLabel">
           <property name="text">
@@ -348,6 +351,13 @@
            </widget>
           </item>
          </layout>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="startStatusLabel_2">
+          <property name="text">
+           <string>Start Status:</string>
+          </property>
+         </widget>
         </item>
         <item row="2" column="1">
          <layout class="QHBoxLayout" name="startStatusLayout">
@@ -427,27 +437,63 @@
           </property>
          </widget>
         </item>
+        <item row="9" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QLabel" name="testNodesP1Label">
+            <property name="text">
+             <string>Phase 01:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="testNodesP1SpinBox">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>1</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximum">
+             <number>500</number>
+            </property>
+            <property name="value">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="testNodesP2Label">
+            <property name="text">
+             <string>Phase 02:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="testNodesP2SpinBox">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>1</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximum">
+             <number>500</number>
+            </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
         <item row="9" column="0">
          <widget class="QLabel" name="testNodesLabel">
           <property name="text">
            <string>Test Nodes:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="1">
-         <widget class="QSpinBox" name="testNodesSpinBox">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="value">
-           <number>1</number>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="startStatusLabel_2">
-          <property name="text">
-           <string>Start Status:</string>
           </property>
          </widget>
         </item>

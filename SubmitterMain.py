@@ -1,5 +1,6 @@
 #Standard
 import sys
+import os
 import getopt
 
 #QT
@@ -82,6 +83,12 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                             self.submitButtonHandler)
             QObject.connect(self.testCheckBox, SIGNAL("stateChanged(int)"),
                             self.toggleTestBoxes)
+            QObject.connect(self.finalCheckBox, SIGNAL("stateChanged(int)"),
+                            self.toggleFinalBoxes)
+            QObject.connect(self.sceneButton, SIGNAL("clicked()"),
+                            self.sceneButtonHandler)            
+            QObject.connect(self.projButton, SIGNAL("clicked()"),
+                            self.projButtonHandler)  
 
     def populateReqs(self):
         #Get requirements master list from the DB
@@ -150,7 +157,12 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         niceName = str(self.niceNameLineEdit.text())
         owner = db_username
         compatabilityList = self.getReqs()
-        testNodes = int(self.testNodesSpinBox.value())
+        testNodesP1 = int(self.testNodesP1SpinBox.value())
+        testNodesP2 = int(self.testNodesP2SpinBox.value())
+        
+        renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
+        if renderLayers != "":
+            baseCMD += " -rl %s" % renderLayers
         
         
         if self.testCheckBox.isChecked():
@@ -172,7 +184,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             niceNameOverride,
                                             owner,
                                             compatabilityList,
-                                            testNodes)
+                                            testNodesP1)
         
             p1_job_id = phase01Ticket.doSubmit()
             JobUtils.setupNodeLimit(p1_job_id)
@@ -185,7 +197,6 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             phase = 2
             niceNameOverride = "%s_Phase02" % niceName
             byFrameOverride = 1
-            testNodesOverrride = 0
             if phase01Status:
                 jobStatusOverride = "U"
             phase02Ticket = UberJobTicket(execName,
@@ -200,23 +211,88 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             niceNameOverride,
                                             owner,
                                             compatabilityList,
-                                            testNodesOverrride)
+                                            testNodesP2)
         
             p2_job_id = phase02Ticket.doSubmit()
+            JobUtils.setupNodeLimit(p2_job_id)
             logger.info("Phase 02 submitted with id: %d" % p2_job_id)
         
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")    
         #aboutBox(title = "Submitted!", msg = "Job and Tasks have been submitted!\nCheck FarmView to view the status of your Jobs!")
-
+    
+    def browseFileButtonHandler(self, QTTarget, startDir, caption, fileFilter):
+        returnDir = QFileDialog.getOpenFileName(
+            parent = self,
+            caption = caption,
+            directory = startDir,
+            filter = fileFilter)
+        if returnDir:
+            if fileFilter == "workspace.mel;;All Files(*)":
+                # remove "workspace.mel" from the end of the path
+                returnDir = str(returnDir).split('/')
+                returnDir.pop()
+                returnDir = '/'.join(returnDir) + '/'
+            
+            QTTarget.setText(returnDir)
+            return returnDir
+        
+        else:
+            return False
+            
+    def sceneButtonHandler(self):
+        currentDir = str(self.sceneLineEdit.text())
+        startDir = None
+        if len(currentDir) == 0:
+            projDir = str(self.projLineEdit.text())
+            if len(projDir) == 0:
+                startDir = os.getcwd()
+            else:
+                startDir = projDir
+        else:
+            startDir = currentDir
+            
+        sceneFile = self.browseFileButtonHandler(self.sceneLineEdit,
+                                                startDir,
+                                                "Find maya scene file...",
+                                                "Maya Files (*.ma *.mb);;All Files(*)")
+        if sceneFile and str(self.niceNameLineEdit.text()) == "":
+            defName = sceneFile.split("/")[-1]
+            self.niceNameLineEdit.setText(defName)
+        
+    def projButtonHandler(self):
+        currentDir = str(self.projLineEdit.text())
+        startDir = None
+        if len(currentDir) == 0:
+            sceneDir = str(self.sceneLineEdit.text())
+            if len(sceneDir) == 0:
+                startDir = os.getcwd()
+            else:
+                sceneDir = str(sceneDir).split('/')
+                sceneDir.pop()
+                sceneDir.pop()
+                sceneDir = '/'.join(sceneDir) + '/'
+                startDir = sceneDir
+        else:
+            startDir = currentDir
+        self.browseFileButtonHandler(self.projLineEdit,
+                                    startDir,
+                                    "Find maya workspace.mel in project directory...",
+                                    "workspace.mel;;All Files(*)")
+    
     def toggleTestBoxes(self):
         if self.testFramesSpinBox.isEnabled():
             self.testFramesSpinBox.setEnabled(False)
-            self.testNodesSpinBox.setEnabled(False)
+            self.testNodesP1SpinBox.setEnabled(False)
         else:
             self.testFramesSpinBox.setEnabled(True)
-            self.testNodesSpinBox.setEnabled(True)
-            
+            self.testNodesP1SpinBox.setEnabled(True)
+    
+    def toggleFinalBoxes(self):
+        if self.testNodesP2SpinBox.isEnabled():
+            self.testNodesP2SpinBox.setEnabled(False)
+        else:
+            self.testNodesP2SpinBox.setEnabled(True)
     #------------------------------------------------------------------------#
     #----------------------------Get/Modify Data-----------------------------#
     #------------------------------------------------------------------------#
