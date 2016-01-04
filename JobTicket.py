@@ -15,27 +15,6 @@ class UberJobTicket:
     """A Ticket Class for submitting jobs and their subtasks."""
     def __init__(self, execName, baseCMD, startFrame, endFrame, byFrame, taskFile, priority,
                 phase, jobStatus, niceName, owner, compatabilityList, maxNodes):
-        #Let's verify the data we just got from the user
-        if len(baseCMD) > 255:
-            raise Exception("baseCMD too long! baseCMD must be less than 255 characters!")
-        if startFrame > endFrame:
-            raise Exception("startFrame is greater than endFrame!")
-        if 0 < startFrame > 65535 or 0 < endFrame > 65535:
-            raise Exception("Frame range out of range! Start/End frames must be between 0 and 65535!")
-        if 0 < byFrame > 255:
-            raise Exception("byFrame out of range! byFrame must be between 0 and 255!")
-        if len(taskFile) > 255:
-            raise Exception("taskFile out of range! taskFile path must be less than 255 characters!")
-        if 0 < priority > 255:
-            raise Exception("Priority out of range! Priority must be between 0 and 255!")
-        if 0 < phase > 255:
-            raise Exception("Phase out of range! Phase must be between 0 and 255!")
-        if len(jobStatus) > 1:
-            raise Exception("jobStatus out of range! jobStatus must only be one character!")
-        if len(niceName) > 60:
-            raise Exception("NiceName out of range! NiceName must be less than 60 characters!")
-        if len(owner) > 45:
-            raise Exception("Owner out of range! Owner must be less than 45 characters!")
 
         #Looks good, let's setup our class variables
         self.execName = execName        #VARCHAR(20)

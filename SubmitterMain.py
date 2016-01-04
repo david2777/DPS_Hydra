@@ -160,9 +160,43 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         testNodesP1 = int(self.testNodesP1SpinBox.value())
         testNodesP2 = int(self.testNodesP2SpinBox.value())
         
+        #Stuff not in JobTicket
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
         if renderLayers != "":
             baseCMD += " -rl %s" % renderLayers
+            
+        proj = str(self.projLineEdit.text())
+        if len(proj) < 5:
+            aboutBox(title = "Please set Project Directory!", msg = "Project Directory must be more than 5 characters long.")
+            raise Exception("Please set Project Directory! Project Directory must be more than 5 characters long.")
+        else:
+            baseCMD += " -proj %s" % proj
+            
+        #Error Checking
+        if len(baseCMD) > 1000:
+            aboutBox(title = "baseCMD too long!", msg = "baseCMD must be less than 1000 characters!")
+            raise Exception("baseCMD too long! baseCMD must be less than 1000 characters!")
+        if startFrame > endFrame:
+            aboutBox(title = "startFrame is greater than endFrame!", msg = "startFrame must be less than the endFrame!")
+            raise Exception("startFrame is greater than endFrame!")
+        if startFrame > 65535 or endFrame > 65535 or startFrame < 0 or endFrame < 0:
+            aboutBox(title = "Frame range out of range!", msg = "Start/End frames must be between 0 and 65535!")
+            raise Exception("Frame range out of range! Start/End frames must be between 0 and 65535!")
+        if byFrame > 255 or byFrame < 0:
+            aboutBox(title = "byFrame out of range!", msg = "byFrame must be between 0 and 255!")
+            raise Exception("byFrame out of range! byFrame must be between 0 and 255!")
+        if len(taskFile) > 255 or len(taskFile) < 5:
+            aboutBox(title = "taskFile out of range!", msg = "taskFile must be greater than 5 and less than 255 characters")
+            raise Exception("taskFile out of range! taskFile path must be greater than 5 and less than 255 characters!")
+        if priority > 255 or priority < 0:
+            aboutBox(title = "Priority out of range!", msg = "Priority must be between 0 and 255!")
+            raise Exception("Priority out of range! Priority must be between 0 and 255!")
+        if len(niceName) > 60 or len(niceName) < 1:
+            aboutBox(title = "NiceName out of range!", msg = "NiceName must be more than 1 and less than 60 characters!")
+            raise Exception("NiceName out of range! NiceName must be more than 1 and less than 60 characters!")
+        if len(owner) > 45:
+            aboutBox(title = "Owner out of range!", msg = "Owner must be less than 45 characters!")
+            raise Exception("Owner out of range! Owner must be less than 45 characters!")
         
         
         if self.testCheckBox.isChecked():
