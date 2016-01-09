@@ -197,6 +197,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             raise Exception("Owner out of range! Owner must be less than 45 characters!")
         
         
+        phase01Status = False
         if self.testCheckBox.isChecked():
             logger.info("Building Phase 01")
             #Phase specific overrides

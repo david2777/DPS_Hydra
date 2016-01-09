@@ -226,6 +226,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
+                self.jobTable.setCurrentCell(rows[-1], 0)
 
     def pauseJobButtonHandler(self):
         rows = self.jobTableHandler()
@@ -245,6 +246,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
+                self.jobTable.setCurrentCell(rows[-1], 0)
 
     def resetJobButtonHandler(self):
         rows = self.jobTableHandler()
@@ -262,6 +264,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             finally:
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
+                self.jobTable.setCurrentCell(rows[-1], 0)
 
     def setPriorityButtonHandler(self):
         rows = self.jobTableHandler()
