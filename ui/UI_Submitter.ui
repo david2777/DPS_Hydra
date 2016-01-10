@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>448</width>
-    <height>298</height>
+    <height>300</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -517,6 +517,30 @@
    </layout>
   </widget>
  </widget>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>niceNameLineEdit</tabstop>
+  <tabstop>renderLayersLineEdit</tabstop>
+  <tabstop>startSpinBox</tabstop>
+  <tabstop>endSpinBox</tabstop>
+  <tabstop>testFramesSpinBox</tabstop>
+  <tabstop>testCheckBox</tabstop>
+  <tabstop>finalCheckBox</tabstop>
+  <tabstop>autocompCheckBox</tabstop>
+  <tabstop>legoLayersCheckBox</tabstop>
+  <tabstop>sceneButton</tabstop>
+  <tabstop>sceneLineEdit</tabstop>
+  <tabstop>projButton</tabstop>
+  <tabstop>projLineEdit</tabstop>
+  <tabstop>startStatusRadioButton</tabstop>
+  <tabstop>startStatusLabel</tabstop>
+  <tabstop>prioritySpinBox</tabstop>
+  <tabstop>executableComboBox</tabstop>
+  <tabstop>cmdLineEdit</tabstop>
+  <tabstop>testNodesP1SpinBox</tabstop>
+  <tabstop>testNodesP2SpinBox</tabstop>
+  <tabstop>submitButton</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

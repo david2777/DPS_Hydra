@@ -17,6 +17,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from UI_FarmView import Ui_FarmView
 from TaskSearchDialog import TaskSearchDialog
+from JobFilterDialog import JobFilterDialog
 
 #Hydra
 from MySQLSetup import *
@@ -139,6 +140,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.pauseJobButtonHandler)
         QObject.connect(self.resetJobButton, SIGNAL("clicked()"),
                         self.resetJobButtonHandler)
+        QObject.connect(self.filterJobButton, SIGNAL("clicked()"),
+                        self.filterJobButtonHandler)
         QObject.connect(self.toggleArchiveButton, SIGNAL("clicked()"),
                         self.toggleArchiveButtonHandler)
         QObject.connect(self.myFilterCheckbox, SIGNAL("stateChanged(int)"),
@@ -466,6 +469,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def advancedSearchButtonClicked(self):
         results = TaskSearchDialog.create()
+        print results
+        
+    def filterJobButtonHandler(self):
+        results = JobFilterDialog.create()
         print results
 
     def searchByTaskID(self):
