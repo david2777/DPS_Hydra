@@ -3,6 +3,8 @@ import py2exe
 
 setup(options = {
         "py2exe": {
+            'bundle_files': 1,
+            'compressed': True,
             "includes":["sip"],
             "dll_excludes": ["MSVCP90.dll", 
                              "API-MS-Win-Core-DelayLoad-L1-1-0.dll",
@@ -25,7 +27,9 @@ setup(options = {
                              "IPHLPAPI.DLL",
                              "NSI.dll",
                              "WINNSI.DLL",
-                             "WTSAPI32.dll"]
+                             "WTSAPI32.dll",
+                             "w9xpopen.exe"]
             }
       },
-      console=["RenderNodeMain.py"])
+      console=["RenderNodeMain.py"],
+      zipfile = None)
