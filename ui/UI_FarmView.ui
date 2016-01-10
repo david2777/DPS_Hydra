@@ -516,30 +516,10 @@
                <string>Job Options</string>
               </property>
               <layout class="QGridLayout" name="gridLayout_7">
-               <item row="2" column="9">
-                <widget class="QCheckBox" name="myFilterCheckbox">
+               <item row="1" column="1">
+                <widget class="QPushButton" name="pauseJobButton">
                  <property name="text">
-                  <string>Filter My Jobs</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="5">
-                <widget class="QPushButton" name="filterJobButton">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="text">
-                  <string>Filters...</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="0">
-                <widget class="QPushButton" name="testFramesButton">
-                 <property name="text">
-                  <string>Start Test Frames...</string>
+                  <string>Pause Job</string>
                  </property>
                 </widget>
                </item>
@@ -568,17 +548,49 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="1">
-                <widget class="QPushButton" name="pauseJobButton">
-                 <property name="text">
-                  <string>Pause Job</string>
-                 </property>
-                </widget>
-               </item>
                <item row="1" column="9">
                 <widget class="QPushButton" name="resetJobButton">
                  <property name="text">
                   <string>Reset Job</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="5">
+                <widget class="QPushButton" name="killJobButton">
+                 <property name="text">
+                  <string>Kill Job</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="9">
+                <widget class="QCheckBox" name="myFilterCheckbox">
+                 <property name="text">
+                  <string>Filter My Jobs</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="10">
+                <widget class="QCheckBox" name="showArchivedCheckbox">
+                 <property name="font">
+                  <font>
+                   <pointsize>8</pointsize>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Show Archived</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="2" column="5">
+                <widget class="QPushButton" name="filterJobButton">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string>Filters...</string>
                  </property>
                 </widget>
                </item>
@@ -604,10 +616,17 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="5">
-                <widget class="QPushButton" name="killJobButton">
+               <item row="2" column="0">
+                <widget class="QPushButton" name="testFramesButton">
                  <property name="text">
-                  <string>Kill Job</string>
+                  <string>Start Test Frames...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="10">
+                <widget class="QPushButton" name="toggleArchiveButton">
+                 <property name="text">
+                  <string>Toggle Archive</string>
                  </property>
                 </widget>
                </item>

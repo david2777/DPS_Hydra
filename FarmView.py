@@ -139,8 +139,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.pauseJobButtonHandler)
         QObject.connect(self.resetJobButton, SIGNAL("clicked()"),
                         self.resetJobButtonHandler)
+        QObject.connect(self.toggleArchiveButton, SIGNAL("clicked()"),
+                        self.toggleArchiveButtonHandler)
         QObject.connect(self.myFilterCheckbox, SIGNAL("stateChanged(int)"),
-                        self.doFetch)
+                        self.updateJobTable)
+        QObject.connect(self.showArchivedCheckbox, SIGNAL("stateChanged(int)"),
+                        self.updateJobTable)
 
         #Connect buttons in taskTable view
         QObject.connect(self.startTaskButton, SIGNAL("clicked()"),
@@ -162,11 +166,19 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateJobTable(self):
         #TODO: Check for filters
         self.jobTable.setSortingEnabled(False)
-        try:
-            if self.myFilterCheckbox.isChecked():
-                jobs = hydra_jobboard.fetch("where owner = '%s'" % self.username)
+        command = ""
+        if self.myFilterCheckbox.isChecked():
+            if command == "":
+                command += "where owner = '%s'" % self.username
             else:
-                jobs = hydra_jobboard.fetch()
+                command += " and owner = '%s'" % self.username
+        if not self.showArchivedCheckbox.isChecked():
+            if command == "":
+                command += "where archived = 0"
+            else:
+                command += " and archived = 0"
+        try:
+            jobs = hydra_jobboard.fetch(command)
             self.jobTable.setRowCount(len(jobs))
             for pos, job in enumerate(jobs):
                 taskString  = "%d/%d" % (job.taskDone, job.totalTask)
@@ -177,6 +189,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
                 self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
                 self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
+                if job.archived == 1:
+                    self.jobTable.item(pos, 0).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 2).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
@@ -273,7 +291,34 @@ class FarmView(QMainWindow, Ui_FarmView):
             JobUtils.prioritizeJob(job_id, self.prioritySpinBox.value())
         self.updateJobTable()
         self.jobTable.setCurrentCell(rows[-1], 0)
-
+        
+    def toggleArchiveButtonHandler(self):
+        rows = self.jobTableHandler()
+        choice = yesNoBox(self, "Confirm", "Really archive or unarchive the selected jobs?")
+        if choice == QMessageBox.Yes:
+            try:
+                commandList = []
+                for row in rows:
+                    job_id = int(self.jobTable.item(row, 0).text())
+                    [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+                    if job.archived == 1:
+                        new = 0
+                    else:
+                        new = 1
+                    command = "update hydra_jobboard set archived = '%d' where id = '%d'" % (new, job_id)
+                    commandList.append(command)
+                
+                with transaction() as t:
+                    for cmd in commandList:
+                        t.cur.execute(cmd)
+                        
+            except sqlerror as err:
+                logger.debug(str(err))
+                aboutBox(self, "SQL Error", str(err))
+            finally:
+                self.updateJobTable()
+                self.jobCellClickedHandler(rows[-1])
+                self.jobTable.setCurrentCell(rows[-1], 0)
     #---------------------------------------------------------------------#
     #------------------------TASK BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
