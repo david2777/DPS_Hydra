@@ -202,7 +202,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
-            niceNameOverride = "%s_Phase01" % niceName
+            niceNameOverride = "%s_Test" % niceName
             baseCMDOverride = baseCMD + " -x 640 -y 360"
             priorityOverride = int(priority * 1.25)
             phase01Ticket = UberJobTicket(execName,
@@ -229,7 +229,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 02")
             #Phase specific overrides
             phase = 2
-            niceNameOverride = "%s_Phase02" % niceName
+            niceNameOverride = "%s_Final" % niceName
             byFrameOverride = 1
             if phase01Status:
                 jobStatusOverride = "U"

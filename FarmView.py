@@ -81,7 +81,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTable.setColumnWidth(0, 60)         #Job ID
         self.jobTable.setColumnWidth(1, 60)         #Status
         self.jobTable.setColumnWidth(2, 60)         #Priority
-        self.jobTable.setColumnWidth(4, 60)         #Tasks
+        self.jobTable.setColumnWidth(4, 80)         #Tasks
         self.jobTable.sortItems(0, order = Qt.DescendingOrder)
 
         # Column widths on the taskTable
@@ -184,7 +184,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             jobs = hydra_jobboard.fetch(command)
             self.jobTable.setRowCount(len(jobs))
             for pos, job in enumerate(jobs):
-                taskString  = "%d/%d" % (job.taskDone, job.totalTask)
+                percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
+                taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
                 self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
                 self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
                 self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
@@ -198,6 +199,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                     self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
+                if job.owner == self.username and self.myFilterCheckbox.isChecked() == False:
+                    self.jobTable.item(pos, 3).setBackgroundColor(QColor(225,240,225))
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
@@ -207,7 +210,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         job_id = int(self.jobTable.item(row, 0).text())
         [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
         pos = row
-        taskString  = "%d/%d" % (job.taskDone, job.totalTask)
+        percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
+        taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
         self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
         self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
         self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
@@ -218,10 +222,15 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def jobTableHandler(self):
         rows = self.jobTable.selectionModel().selectedRows()
+        if len(rows) < 1:
+            aboutBox(title="Selection Error", msg = "Please select something from the Job Table and try again.")
+            return None
         return [item.row() for item in rows]
 
     def startJobButtonHandler(self):
         rows = self.jobTableHandler()
+        if rows == None:
+            return
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
             JobUtils.startJob(job_id)
@@ -231,6 +240,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def killJobButtonHandler(self):
         rows = self.jobTableHandler()
+        if rows == None:
+            return
         choice = yesNoBox(self, "Confirm", "Really kill the selected jobs?")
         if choice == QMessageBox.Yes:
             try:
@@ -251,6 +262,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def pauseJobButtonHandler(self):
         rows = self.jobTableHandler()
+        if rows == None:
+            return
         choice = yesNoBox(self, "Confirm", "Really pause the selected jobs?")
         if choice == QMessageBox.Yes:
             try:
@@ -271,6 +284,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def resetJobButtonHandler(self):
         rows = self.jobTableHandler()
+        if rows == None:
+            return
         choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
         if choice == QMessageBox.Yes:
             try:
@@ -289,6 +304,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def setPriorityButtonHandler(self):
         rows = self.jobTableHandler()
+        if rows == None:
+            return
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
             JobUtils.prioritizeJob(job_id, self.prioritySpinBox.value())
@@ -297,6 +314,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         
     def toggleArchiveButtonHandler(self):
         rows = self.jobTableHandler()
+        if rows == None:
+            return
         choice = yesNoBox(self, "Confirm", "Really archive or unarchive the selected jobs?")
         if choice == QMessageBox.Yes:
             try:
@@ -392,7 +411,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def callTestFrameBox(self):
         try:
-            row = self.jobTableHandler()[0]
+            rows = self.jobTableHandler()
+            if rows == None:
+                return
+            row = rows[0]
             reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
             if reply[1]:
                 job_id = int(self.jobTable.item(row, 0).text())
@@ -1029,7 +1051,7 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              CRASHED: QColor(220,90,90),         #Dark Red
              STARTED: QColor(200,220,240),       #Light Blue
              ERROR: QColor(220,90,90),           #Red
-             HOLD: QColor(255,255,255),          #Light Green
+             HOLD: QColor(255,255,255),          #White, placeholder
              }
 
 #------------------------------------------------------------------------#
