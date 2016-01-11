@@ -44,7 +44,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Get user
         self.username = getDbInfo()[2]
-        
+
         self.filters = None
 
         #Partial applications for convenience
@@ -167,7 +167,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def testCall(self):
         pass
-        
+
     def jobCommandBuilder(self):
         command = "WHERE"
         if self.filters != None:
@@ -196,10 +196,10 @@ class FarmView(QMainWindow, Ui_FarmView):
                             command += " job_status <> '%s'" % checkboxKeys[i]
                             idx += 1
                         else:
-                            command += " OR job_status <> '%s'" % checkboxKeys[i]
+                            command += " AND job_status <> '%s'" % checkboxKeys[i]
                             idx += 1
         #TODO: Clean this up, have ti check to see if owner is already in the
-        #the query instead of just checking to see if the query is default                    
+        #the query instead of just checking to see if the query is default
         if command == "WHERE":
             if self.myFilterCheckbox.isChecked():
                 command += " owner = '%s'" % self.username
@@ -207,12 +207,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                 if command != "WHERE":
                     command += " AND"
                 command += " archived = 0"
-    
+
         if self.filters != None:
             command += " LIMIT 0,%d" % limit
-                            
+
         return command
-                            
+
 
     def updateJobTable(self):
         self.jobTable.setSortingEnabled(False)
@@ -221,8 +221,11 @@ class FarmView(QMainWindow, Ui_FarmView):
             jobs = hydra_jobboard.fetch(command)
             self.jobTable.setRowCount(len(jobs))
             for pos, job in enumerate(jobs):
-                percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
-                taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
+                if job.totalTask > 0:
+                    percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
+                    taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
+                else:
+                    taskString = "0% (0/0)"
                 self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
                 self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
                 self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
@@ -248,8 +251,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
             pos = row
-            percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
-            taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
+            if job.totalTask > 0:
+                percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
+                taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
+            else:
+                taskString = "0% (0/0)"
             self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
             self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
             self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
@@ -360,7 +366,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             JobUtils.prioritizeJob(job_id, self.prioritySpinBox.value())
         self.updateJobTable()
         self.jobTable.setCurrentCell(rows[-1], 0)
-        
+
     def toggleArchiveButtonHandler(self):
         rows = self.jobTableHandler()
         if rows == None:
@@ -378,11 +384,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                         new = 1
                     command = "update hydra_jobboard set archived = '%d' where id = '%d'" % (new, job_id)
                     commandList.append(command)
-                
+
                 with transaction() as t:
                     for cmd in commandList:
                         t.cur.execute(cmd)
-                        
+
             except sqlerror as err:
                 logger.debug(str(err))
                 aboutBox(self, "SQL Error", str(err))
@@ -537,7 +543,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         results = TaskSearchDialog.create()
         logger.error("Not Implemeted!")
         print results
-        
+
     def filterJobButtonHandler(self):
         self.filters = JobFilterDialog.create(self.filters)
         #logger.debug(self.filters)
@@ -1090,7 +1096,7 @@ class TableWidgetItem_dt(TableWidgetItem):
             return True
         else:
             return False
-            
+
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              READY: QColor(255,255,255),         #White
              FINISHED: QColor(200,240,200),      #Light Green
