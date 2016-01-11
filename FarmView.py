@@ -208,17 +208,29 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def updateJobRow(self, row):
         job_id = int(self.jobTable.item(row, 0).text())
-        [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
-        pos = row
-        percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
-        taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
-        self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
-        self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
-        self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
-        self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(job.priority)))
-        self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
-        self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
-        self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
+        try:
+            [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+            pos = row
+            percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
+            taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
+            self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
+            self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
+            self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
+            self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(job.priority)))
+            self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
+            self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
+            self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
+            if job.archived == 1:
+                self.jobTable.item(pos, 0).setBackgroundColor(QColor(220,220,220))
+                self.jobTable.item(pos, 2).setBackgroundColor(QColor(220,220,220))
+                self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
+                self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
+                self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
+            if job.owner == self.username and self.myFilterCheckbox.isChecked() == False:
+                self.jobTable.item(pos, 3).setBackgroundColor(QColor(225,240,225))
+        except sqlerror as err:
+            logger.debug(str(err))
+            aboutBox(self, "SQL error", str(err))
 
     def jobTableHandler(self):
         rows = self.jobTable.selectionModel().selectedRows()
@@ -370,11 +382,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 7, TableWidgetItem_int(str(task.exitCode)))
                 self.taskTable.setItem(pos, 8, TableWidgetItem_int(reqsString))
-
-            #Update taskCount
-            row = self.jobTable.selectionModel().selectedRows()[0].row()
-            taskCount, taskDone = JobUtils.updateJobTaskCount(job_id, tasks)
-            self.jobTable.setItem(row, 4, TableWidgetItem("%d/%d" % (taskDone, taskCount)))
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))

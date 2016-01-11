@@ -9,7 +9,7 @@ class JobFilterDialog(QDialog, Ui_jobFilterDialog):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
-        self.doSearch = False
+        #Connect Buttons
         QObject.connect(self.cancelButton, SIGNAL("clicked()"), 
                         self.cancelButtonHandler)
         QObject.connect(self.okButton, SIGNAL("clicked()"),
@@ -18,15 +18,33 @@ class JobFilterDialog(QDialog, Ui_jobFilterDialog):
                         self.resetTaskButtonHandler)
         QObject.connect(self.statusToggleButton, SIGNAL("clicked()"),
                         self.statusToggleButtonHandler)
+                        
+        #Set globals
+        self.doSearch = False
+        self.checkboxList = [self.crashedCheckbox, self.errorCheckbox,
+                            self.finishedCheckbox, self.killedCheckbox,
+                            self.pausedCheckbox, self.readyCheckbox,
+                            self.startedCheckbox]
+        self.checkboxKeys = ["C", "E", "F", "K", "U", "R", "S"]
         
     def getValues(self):
-        return "Values go here!"
+        checkboxDict = {}
+        for i in range(len(self.checkboxList)):
+            checkboxDict[self.checkboxKeys[i]] = self.checkboxList[i].isChecked()
+        owner = str(self.ownerLineEdit.text())
+        name = str(self.nameLineEdit.text())
+        limit = int(self.limitSpinBox.value())
+        return {"status":checkboxDict, "owner":owner, "name":name, "limit":limit}
         
     def statusToggleButtonHandler(self):
-        print "Nothing"
+        for checkbox in self.checkboxList:
+            checkbox.setCheckState(2)
         
     def resetTaskButtonHandler(self):
-        print "Reseting..."
+        self.statusToggleButtonHandler()
+        self.ownerLineEdit.setText("")
+        self.nameLineEdit.setText("")
+        self.limitSpinBox.setValue(100)  
     
     def cancelButtonHandler(self):
         self.close()
