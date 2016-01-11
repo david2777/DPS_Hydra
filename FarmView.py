@@ -44,6 +44,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Get user
         self.username = getDbInfo()[2]
+        
+        self.filters = None
 
         #Partial applications for convenience
         self.sqlErrorBox = (
@@ -165,21 +167,56 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def testCall(self):
         pass
+        
+    def jobCommandBuilder(self):
+        command = "WHERE"
+        if self.filters != None:
+            checkboxKeys = ["C", "E", "F", "K", "R", "S", "U"]
+            users = self.filters["owner"].split(",")
+            names = self.filters["name"].split(",")
+            statuses = self.filters["status"]
+            limit = self.filters["limit"]
+            if users[0] != "":
+                command += " owner = '%s'" % users[0]
+                for user in users[1:]:
+                    command += " OR owner = '%s'" % user
+            if names[0] != "":
+                if command != "WHERE":
+                    command += " AND"
+                command += " niceName LIKE '%s'" % names[0]
+                for name in names[1:]:
+                    command += " OR niceName LIKE '%s'" % name
+            if False in statuses:
+                idx = 0
+                for i in range(len(statuses)):
+                    if statuses[i] == False:
+                        if command != "WHERE" and idx == 0:
+                            command += " AND"
+                        if idx == 0:
+                            command += " job_status <> '%s'" % checkboxKeys[i]
+                            idx += 1
+                        else:
+                            command += " OR job_status <> '%s'" % checkboxKeys[i]
+                            idx += 1
+        #TODO: Clean this up, have ti check to see if owner is already in the
+        #the query instead of just checking to see if the query is default                    
+        if command == "WHERE":
+            if self.myFilterCheckbox.isChecked():
+                command += " owner = '%s'" % self.username
+            if not self.showArchivedCheckbox.isChecked():
+                if command != "WHERE":
+                    command += " AND"
+                command += " archived = 0"
+    
+        if self.filters != None:
+            command += " LIMIT 0,%d" % limit
+                            
+        return command
+                            
 
     def updateJobTable(self):
-        #TODO: Check for filters
         self.jobTable.setSortingEnabled(False)
-        command = ""
-        if self.myFilterCheckbox.isChecked():
-            if command == "":
-                command += "where owner = '%s'" % self.username
-            else:
-                command += " and owner = '%s'" % self.username
-        if not self.showArchivedCheckbox.isChecked():
-            if command == "":
-                command += "where archived = 0"
-            else:
-                command += " and archived = 0"
+        command = self.jobCommandBuilder()
         try:
             jobs = hydra_jobboard.fetch(command)
             self.jobTable.setRowCount(len(jobs))
@@ -498,11 +535,14 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def advancedSearchButtonClicked(self):
         results = TaskSearchDialog.create()
+        logger.error("Not Implemeted!")
         print results
         
     def filterJobButtonHandler(self):
-        results = JobFilterDialog.create()
-        print results
+        self.filters = JobFilterDialog.create(self.filters)
+        #logger.debug(self.filters)
+        logger.debug(self.jobCommandBuilder())
+        self.updateJobTable()
 
     def searchByTaskID(self):
         """Given a task id, finds the job, selects it in the job table, and
