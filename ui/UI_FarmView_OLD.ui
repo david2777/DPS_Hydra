@@ -357,11 +357,6 @@
         </item>
         <item row="0" column="0">
          <widget class="QTableWidget" name="renderNodeTable">
-          <property name="font">
-           <font>
-            <pointsize>8</pointsize>
-           </font>
-          </property>
           <property name="verticalScrollBarPolicy">
            <enum>Qt::ScrollBarAlwaysOn</enum>
           </property>
@@ -385,9 +380,6 @@
           </attribute>
           <attribute name="verticalHeaderVisible">
            <bool>false</bool>
-          </attribute>
-          <attribute name="verticalHeaderDefaultSectionSize">
-           <number>20</number>
           </attribute>
           <column>
            <property name="text">
@@ -479,11 +471,6 @@
             </property>
             <item row="1" column="0" colspan="5">
              <widget class="QTableWidget" name="jobTable">
-              <property name="font">
-               <font>
-                <pointsize>8</pointsize>
-               </font>
-              </property>
               <property name="layoutDirection">
                <enum>Qt::LeftToRight</enum>
               </property>
@@ -516,9 +503,6 @@
               </attribute>
               <attribute name="verticalHeaderVisible">
                <bool>false</bool>
-              </attribute>
-              <attribute name="verticalHeaderDefaultSectionSize">
-               <number>20</number>
               </attribute>
               <column>
                <property name="text">
@@ -730,22 +714,11 @@
               <property name="enabled">
                <bool>true</bool>
               </property>
-              <property name="font">
-               <font>
-                <pointsize>8</pointsize>
-               </font>
-              </property>
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
               </property>
-              <property name="alternatingRowColors">
-               <bool>false</bool>
-              </property>
               <property name="selectionBehavior">
                <enum>QAbstractItemView::SelectRows</enum>
-              </property>
-              <property name="showGrid">
-               <bool>true</bool>
               </property>
               <property name="gridStyle">
                <enum>Qt::SolidLine</enum>
@@ -756,23 +729,11 @@
               <property name="cornerButtonEnabled">
                <bool>false</bool>
               </property>
-              <property name="rowCount">
-               <number>0</number>
-              </property>
-              <attribute name="horizontalHeaderDefaultSectionSize">
-               <number>100</number>
-              </attribute>
-              <attribute name="horizontalHeaderMinimumSectionSize">
-               <number>25</number>
-              </attribute>
               <attribute name="horizontalHeaderStretchLastSection">
                <bool>true</bool>
               </attribute>
               <attribute name="verticalHeaderVisible">
                <bool>false</bool>
-              </attribute>
-              <attribute name="verticalHeaderDefaultSectionSize">
-               <number>20</number>
               </attribute>
               <column>
                <property name="text">
