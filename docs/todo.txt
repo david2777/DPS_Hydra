@@ -45,8 +45,12 @@
 -[Done]Need a way to limit nodes on test jobs
     -Limited jobs will pause all tasks above the node limit
     -Seems to be working for now, maybe missed some fringe error cases
-    
+
 -[Done]Make it prefer jobs with higher priority rather than ones submitted first
     -Changed sorting
+
+-Make RenderNodeMain not pick up archived jobs
+
+-Change UI to right click
 
 -Everything else
