@@ -403,7 +403,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
 
     def updateTaskTable(self, job_id):
-        self.taskTableLabel.setText("Task List(job: " + str(job_id) + ")")
+        self.taskTableLabel.setText("Task List (Job ID: " + str(job_id) + ")")
         try:
             tasks = hydra_taskboard.fetch("WHERE job_id = %d" % job_id)
             self.taskTable.setRowCount(len(tasks))
@@ -443,10 +443,15 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def taskTableHandler(self):
         rows = self.taskTable.selectionModel().selectedRows()
+        if len(rows) < 1:
+            aboutBox(title="Selection Error", msg = "Please select something from the Job Table and try again.")
+            return None
         return [item.row() for item in rows]
 
     def startTaskButtonHandler(self):
         rows = self.taskTableHandler()
+        if rows == None:
+            return
         for row in rows:
             task_id = int(self.taskTable.item(row, 0).text())
             TaskUtils.startTask(task_id)
@@ -454,6 +459,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def resetTaskButtonHandler(self):
         rows = self.taskTableHandler()
+        if rows == None:
+            return
         choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
         if choice == QMessageBox.Yes:
             for row in rows:
@@ -489,6 +496,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def killTaskButtonHandler(self):
         rows = self.taskTableHandler()
+        if rows == None:
+            return
         choice = yesNoBox(self, "Confirm", "Really kill selected tasks?")
         if choice == QMessageBox.Yes:
             for row in rows:
@@ -509,6 +518,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def pauseTaskButtonHandler(self):
         rows = self.taskTableHandler()
+        if rows == None:
+            return
         choice = yesNoBox(self, "Confirm", "Really pause selected tasks?")
         if choice == QMessageBox.Yes:
             for row in rows:
@@ -529,6 +540,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def loadLogButtonHandler(self):
         rows = self.taskTableHandler()
+        if rows == None:
+            return
         if len(rows) > 1:
             choice = yesNoBox(self, "Open logs?", "Note, this will open a text editor for EACH task selected. Continue?")
             if choice == QMessageBox.Yes:
@@ -888,13 +901,15 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateStatusBar(self):
         with transaction() as t:
             t.cur.execute ("SELECT count(status), status FROM hydra_rendernode GROUP BY status")
-            counts = t.cur.fetchall ()
-        logger.debug(counts)
+            counts = t.cur.fetchall()
+        thisNode = NodeUtils.getThisNodeData()
+        logger.debug("Counts = " + str(counts))
         countString = ", ".join (["%d %s" % (count, niceNames[status])
                                   for(count, status) in counts])
+        countString += ", %s %s" % (thisNode.host, niceNames[thisNode.status])
         time = datetime.datetime.now().strftime ("%H:%M")
         msg = "%s as of %s" % (countString, time)
-        self.statusLabel.setText(msg)
+        self.statusbar.showMessage(msg)
 
     def setThisNodeButtonsEnabled(self, choice):
         """Enables or disables buttons on This Node tab"""
