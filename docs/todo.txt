@@ -51,6 +51,7 @@
 
 -[Done]Make RenderNodeMain not pick up archived jobs
 
--Change UI to right click
+-[In Progress]Change UI to right click
+    -Need to separate creation and activation of QMenus for toggles
 
 -Everything else

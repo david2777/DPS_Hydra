@@ -160,13 +160,38 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.loadLogButtonHandler)
         QObject.connect(self.pauseTaskButton, SIGNAL("clicked()"),
                         self.pauseTaskButtonHandler)
+        
+        #Connect Context Menus
+        self.jobTable.setContextMenuPolicy(Qt.CustomContextMenu) 
+        self.jobTable.customContextMenuRequested.connect(self.jobContextHandler)
+        
+        self.taskTable.setContextMenuPolicy(Qt.CustomContextMenu) 
+        self.taskTable.customContextMenuRequested.connect(self.taskContextHandler)
 
     #---------------------------------------------------------------------#
     #-------------------------JOB BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
 
-    def testCall(self):
-        pass
+    def jobContextHandler(self):
+        def addItem(name, handler):
+            action = QAction(name, self)
+            action.triggered.connect(handler)
+            self.jobMenu.addAction(action)
+            
+        self.jobMenu = QMenu(self)
+        
+        addItem("Start Jobs", self.startJobButtonHandler)
+        addItem("Pause Jobs", self.pauseJobButtonHandler)
+        addItem("Kill Jobs", self.killJobButtonHandler)
+        addItem("Reset Jobs", self.resetJobButtonHandler)
+        self.jobMenu.addSeparator()
+        addItem("Toggle Archive", self.toggleArchiveButtonHandler)
+        self.jobMenu.addSeparator()
+        addItem("Start Test Frames...", self.callTestFrameBox)
+        self.jobMenu.addSeparator()
+        addItem("Filters...", self.filterJobButtonHandler)
+        self.jobMenu.popup(QCursor.pos())
+    
 
     def jobCommandBuilder(self):
         command = "WHERE"
@@ -401,6 +426,22 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     #------------------------TASK BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
+    
+    def taskContextHandler(self):
+        def addItem(name, handler):
+            action = QAction(name, self)
+            action.triggered.connect(handler)
+            self.taskMenu.addAction(action)
+            
+        self.taskMenu = QMenu(self)
+        
+        addItem("Start Tasks", self.startTaskButtonHandler)
+        addItem("Pause Tasks", self.pauseTaskButtonHandler)
+        addItem("Kill Tasks", self.killTaskButtonHandler)
+        addItem("Reset Tasks", self.resetTaskButtonHandler)
+        self.taskMenu.addSeparator()
+        addItem("Load LogFile", self.loadLogButtonHandler)
+        self.taskMenu.popup(QCursor.pos())
 
     def updateTaskTable(self, job_id):
         self.taskTableLabel.setText("Task List (Job ID: " + str(job_id) + ")")

@@ -36,7 +36,8 @@ def startTask(task_id):
             logger.info("Setting paused Task %d to Ready" % task_id)
             task.status = "R"
         else:
-            resetTask(task_id, "R")
+            logger.info("Skipping...")
+            #resetTask(task_id, "R")
 
         task.update(t)
 
