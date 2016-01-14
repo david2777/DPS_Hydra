@@ -249,7 +249,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateJobRow(self, row):
         job_id = int(self.jobTable.item(row, 0).text())
         try:
-            [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+            [job] = hydra_jobboard.fetch("WHERE id = '%d'" % job_id)
             pos = row
             if job.totalTask > 0:
                 percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
@@ -346,7 +346,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             try:
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    tasks = hydra_taskboard.fetch("where job_id = '%d'" % job_id)
+                    tasks = hydra_taskboard.fetch("WHERE job_id = '%d'" % job_id)
                     for task in tasks:
                         TaskUtils.resetTask(task.id, "U")
             except sqlerror as err:
@@ -377,13 +377,15 @@ class FarmView(QMainWindow, Ui_FarmView):
                 commandList = []
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+                    [job] = hydra_jobboard.fetch("WHERE id = '%d'" % job_id)
                     if job.archived == 1:
                         new = 0
                     else:
                         new = 1
-                    command = "update hydra_jobboard set archived = '%d' where id = '%d'" % (new, job_id)
-                    commandList.append(command)
+                    job_command = "UPDATE hydra_jobboard SET archived = '%d' WHERE id = '%d'" % (new, job_id)
+                    task_command = "UPDATE hydra_taskboard SET archived = '%d' WHERE job_id = '%d'" % (new, job_id)
+                    commandList.append(job_command)
+                    commandList.append(task_command)
 
                 with transaction() as t:
                     for cmd in commandList:
@@ -403,7 +405,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateTaskTable(self, job_id):
         self.taskTableLabel.setText("Task List(job: " + str(job_id) + ")")
         try:
-            tasks = hydra_taskboard.fetch("where job_id = %d" % job_id)
+            tasks = hydra_taskboard.fetch("WHERE job_id = %d" % job_id)
             self.taskTable.setRowCount(len(tasks))
             for pos, task in enumerate(tasks):
                 #Calcuate time difference
@@ -469,12 +471,12 @@ class FarmView(QMainWindow, Ui_FarmView):
             if reply[1]:
                 job_id = int(self.jobTable.item(row, 0).text())
                 logger.info("Starting %d test frames on job_id %d" % (reply[0], job_id))
-                tasks = hydra_taskboard.fetch ("where job_id = %d" % job_id)
+                tasks = hydra_taskboard.fetch ("WHERE job_id = %d" % job_id)
                 for task in tasks[0:reply[0]]:
                     TaskUtils.startTask(task.id)
                 logger.info("Test Tasks Started!")
                 with transaction() as t:
-                    [job] = hydra_jobboard.fetch("where id = '%d'" % job_id)
+                    [job] = hydra_jobboard.fetch("WHERE id = '%d'" % job_id)
                     job.job_status = "S"
                     job.update(t)
                 self.updateJobTable()
@@ -532,11 +534,11 @@ class FarmView(QMainWindow, Ui_FarmView):
             if choice == QMessageBox.Yes:
                 for row in rows:
                     task_id = int(self.taskTable.item(row, 0).text())
-                    [taskOBJ] = hydra_taskboard.fetch("where id = '%d'" % task_id)
+                    [taskOBJ] = hydra_taskboard.fetch("WHERE id = '%d'" % task_id)
                     loadLog(taskOBJ)
         else:
             task_id = int(self.taskTable.item(rows[0], 0).text())
-            [taskOBJ] = hydra_taskboard.fetch("where id = '%d'" % task_id)
+            [taskOBJ] = hydra_taskboard.fetch("WHERE id = '%d'" % task_id)
             loadLog(taskOBJ)
 
     def advancedSearchButtonClicked(self):
@@ -559,7 +561,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         task_id = str(self.taskIDLineEdit.text())
         if task_id:
             with transaction() as t:
-                query = "select job_id from hydra_taskboard where id = %s"
+                query = "SELECT job_id FROM hydra_taskboard WHERE id = %s"
                 t.cur.execute(query % task_id)
                 job_id = t.cur.fetchall()
 
@@ -884,11 +886,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
 
     def updateStatusBar(self):
-
         with transaction() as t:
-            t.cur.execute ("""select count(status), status
-                                from hydra_rendernode
-                                group by status""")
+            t.cur.execute ("SELECT count(status), status FROM hydra_rendernode GROUP BY status")
             counts = t.cur.fetchall ()
         logger.debug(counts)
         countString = ", ".join (["%d %s" % (count, niceNames[status])

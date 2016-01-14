@@ -49,7 +49,7 @@
 -[Done]Make it prefer jobs with higher priority rather than ones submitted first
     -Changed sorting
 
--Make RenderNodeMain not pick up archived jobs
+-[Done]Make RenderNodeMain not pick up archived jobs
 
 -Change UI to right click
 

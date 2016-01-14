@@ -41,9 +41,9 @@ class RenderTCPServer(TCPServer):
         self.statusAfterDeath = None
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
-        [thisNode] = hydra_rendernode.fetch ("where host = '%s'" % Utils.myHostName())
+        [thisNode] = hydra_rendernode.fetch ("WHERE host = '%s'" % Utils.myHostName())
         if thisNode.task_id:
-            [task] = hydra_rendernode.fetch("where id = '%d'" % thisNode.task_id)
+            [task] = hydra_rendernode.fetch("WHERE id = '%d'" % thisNode.task_id)
             if thisNode.status == PENDING or thisNode.status == OFFLINE:
                 newStatus = OFFLINE
             else:
@@ -62,7 +62,7 @@ class RenderTCPServer(TCPServer):
     def processRenderTasks(self):
         """The loop that looks for jobs on the DB and runs them if the node meets
         the job's requirements (Priority & Capabilities)"""
-        [thisNode] = hydra_rendernode.fetch("where host = '%s'" % Utils.myHostName())
+        [thisNode] = hydra_rendernode.fetch("WHERE host = '%s'" % Utils.myHostName())
         logger.info("""Host: %r
          Status: %r
          Capabilities %r""", thisNode.host, niceNames[thisNode.status], thisNode.capabilities)
@@ -75,8 +75,9 @@ class RenderTCPServer(TCPServer):
         #-Ready to be run and
         #-Has a high enough priority level for this particular node and
         #-Is able to meet to jobs required capabilities
-        queryString = ("where status = '%s' and priority >= %s" % (READY, thisNode.minPriority))
-        queryString += " and '%s' like requirements" % thisNode.capabilities 
+        queryString = ("WHERE status = '%s' AND priority >= %s" % (READY, thisNode.minPriority))
+        queryString += " AND '%s' LIKE requirements" % thisNode.capabilities 
+        queryString += " AND archived = '0'"
         queryString += " ORDER BY priority DESC, id ASC"
 
         with transaction() as t:
@@ -127,7 +128,7 @@ class RenderTCPServer(TCPServer):
         finally:
             #Get the latest info about this render node
             with transaction() as t:
-                [thisNode] = hydra_rendernode.fetch("where host = '%s'" % Utils.myHostName(), explicitTransaction=t)
+                [thisNode] = hydra_rendernode.fetch("WHERE host = '%s'" % Utils.myHostName(), explicitTransaction=t)
 
                 #Check if job was killed, update the job board accordingly
                 if self.childKilled:
@@ -148,7 +149,7 @@ class RenderTCPServer(TCPServer):
 
                 #Return to 'IDLE' IF current status is 'STARTED'
                 if thisNode.status == STARTED:
-                    logger.debug("status: %r", thisNode.status)
+                    logger.debug("Status: %r", thisNode.status)
                     thisNode.status = IDLE
                 elif thisNode.status == PENDING:
                     thisNode.status = OFFLINE
@@ -195,9 +196,7 @@ def heartbeat(interval = 5):
     while True:
         try:
             with transaction() as t:
-                t.cur.execute("update hydra_rendernode "
-                    "set pulse = NOW() "
-                    "where host = '%s'" % host)
+                t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '%s'" % host)
         except Exception, e:
             logger.error(traceback.format_exc(e))
         time.sleep(interval)
