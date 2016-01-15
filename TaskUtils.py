@@ -15,11 +15,11 @@ def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
     if type(old_status_list) is not list:
         logger.error("Bad Old Status List in TaskUtils!")
         raise Exception("Please use a list for old statuses")
-    command = """update hydra_taskboard set status = '%s' where id = '%d'""" % (new_status, task_id)
+    command = "UPDATE hydra_taskboard SET status = '%s' WHERE id = '%d'" % (new_status, task_id)
     if len(old_status_list) > 0:
-        command = command + """ and status = '%s'""" % old_status_list[0]
+        command = command + " AND status = '%s'" % old_status_list[0]
         for status in old_status_list[1:]:
-            command = command + """ or status = '%s'""" % status
+            command = command + " OR status = '%s'" % status
 
     with transaction() as t:
         t.cur.execute(command)
@@ -28,7 +28,7 @@ def startTask(task_id):
     """Start task if it is paused, ressurect task if it is killed/errored.
     Pass over task if it is already Ready or Started"""
     with transaction() as t:
-        [task] = hydra_taskboard.fetch("where id = '%d'" % task_id)
+        [task] = hydra_taskboard.fetch("WHERE id = '%d'" % task_id)
         if task.status == "R" or task.status == "S" or task.status == "F":
             logger.info("Pass Task %d because it is either already started or ready" % task_id)
             return None
@@ -44,7 +44,7 @@ def startTask(task_id):
 def resetTask(task_id, newStatus = "U"):
     """Resets a task and puts it back on the job board with a new status."""
     with transaction() as t:
-        [task] = hydra_taskboard.fetch("where id = '%d'" % task_id)
+        [task] = hydra_taskboard.fetch("WHERE id = '%d'" % task_id)
         logger.info("Reseting Task %d" % task_id)
         if task.status == "S":
             if not killTask(task.id):
@@ -63,7 +63,7 @@ def resetTask(task_id, newStatus = "U"):
 def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
     with transaction() as t:
         if taskID:
-            [task] = hydra_taskboard.fetch("where id = %d" % taskID)
+            [task] = hydra_taskboard.fetch("WHERE id = %d" % taskID)
             #If the task is marked, say, CRASHED, leave the host name alone.
             #Only READY would be confusing with a host named filled in. I think.
             if newTaskStatus == READY:
@@ -74,7 +74,7 @@ def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
             task.endTime = None
             task.update(t)
         if host:
-            [host] = hydra_rendernode.fetch("where host = '%s'" % host)
+            [host] = hydra_rendernode.fetch("WHERE host = '%s'" % host)
             host.task_id = None
             host.status = newHostStatus
             host.update(t)
@@ -95,7 +95,7 @@ def killTask(task_id, newStatus = "K"):
     """Kills the task with the specified id. If the task has been started, a
     kill request is sent to the node running it.
     @return: True if there were no errors killing the task, else False."""
-    [task] = hydra_taskboard.fetch("where id = '%d'" % task_id)
+    [task] = hydra_taskboard.fetch("WHERE id = '%d'" % task_id)
     if task.status == newStatus:
         return True
     elif task.status == "R" or task.status == "U":

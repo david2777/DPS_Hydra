@@ -45,7 +45,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Get user
         self.username = getDbInfo()[2]
 
+        #Globals for filters
         self.filters = None
+        self.userFilter = True
+        self.showArchivedFilter = False
+        
+        self.statusMsg = ""
 
         #Partial applications for convenience
         self.sqlErrorBox = (
@@ -122,44 +127,10 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.selectNoneNodesButtonHandler)
         QObject.connect(self.selectByHostButton, SIGNAL("clicked()"),
                         self.selectByHostButtonHandler)
-
-        #Connect buttons in jobList view
-        QObject.connect(self.startJobButton, SIGNAL("clicked()"),
-                        self.startJobButtonHandler)
+                        
+        #Connect actions in Job View
         QObject.connect(self.jobTable, SIGNAL ("cellClicked(int,int)"),
-                        self.jobCellClickedHandler)
-        QObject.connect(self.killJobButton, SIGNAL ("clicked()"),
-                        self.killJobButtonHandler)
-        QObject.connect(self.killTaskButton, SIGNAL ("clicked()"),
-                        self.killTaskButtonHandler)
-        QObject.connect(self.advancedSearchButton, SIGNAL ("clicked()"),
-                        self.advancedSearchButtonClicked)
-        QObject.connect(self.taskIDLineEdit, SIGNAL("returnPressed()"),
-                        self.searchByTaskID)
-        QObject.connect(self.testFramesButton, SIGNAL("clicked()"),
-                        self.callTestFrameBox)
-        QObject.connect(self.pauseJobButton, SIGNAL("clicked()"),
-                        self.pauseJobButtonHandler)
-        QObject.connect(self.resetJobButton, SIGNAL("clicked()"),
-                        self.resetJobButtonHandler)
-        QObject.connect(self.filterJobButton, SIGNAL("clicked()"),
-                        self.filterJobButtonHandler)
-        QObject.connect(self.toggleArchiveButton, SIGNAL("clicked()"),
-                        self.toggleArchiveButtonHandler)
-        QObject.connect(self.myFilterCheckbox, SIGNAL("stateChanged(int)"),
-                        self.updateJobTable)
-        QObject.connect(self.showArchivedCheckbox, SIGNAL("stateChanged(int)"),
-                        self.updateJobTable)
-
-        #Connect buttons in taskTable view
-        QObject.connect(self.startTaskButton, SIGNAL("clicked()"),
-                        self.startTaskButtonHandler)
-        QObject.connect(self.resetTaskButton, SIGNAL("clicked()"),
-                        self.resetTaskButtonHandler)
-        QObject.connect(self.loadLogButton, SIGNAL("clicked()"),
-                        self.loadLogButtonHandler)
-        QObject.connect(self.pauseTaskButton, SIGNAL("clicked()"),
-                        self.pauseTaskButtonHandler)
+                self.jobCellClickedHandler)
         
         #Connect Context Menus
         self.jobTable.setContextMenuPolicy(Qt.CustomContextMenu) 
@@ -172,27 +143,65 @@ class FarmView(QMainWindow, Ui_FarmView):
     #-------------------------JOB BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
 
+    def doNothing(self):
+        pass
+        
+    def resetStatusBar(self):
+        self.statusbar.showMessage(self.statusMsg)
+
     def jobContextHandler(self):
-        def addItem(name, handler):
+        def addItem(name, handler, statusTip):
             action = QAction(name, self)
+            action.setStatusTip(statusTip)
             action.triggered.connect(handler)
             self.jobMenu.addAction(action)
+            return action
             
         self.jobMenu = QMenu(self)
+        #self.jobMenu.setTearOffEnabled(True)
         
-        addItem("Start Jobs", self.startJobButtonHandler)
-        addItem("Pause Jobs", self.pauseJobButtonHandler)
-        addItem("Kill Jobs", self.killJobButtonHandler)
-        addItem("Reset Jobs", self.resetJobButtonHandler)
+        QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
+                        self.resetStatusBar)
+        
+        addItem("Start Jobs", self.startJobButtonHandler, "Start all jobs selected in Job List")
+        addItem("Pause Jobs", self.pauseJobButtonHandler, "Pause all jobs selected in Job List")
+        addItem("Kill Jobs", self.killJobButtonHandler, "Kill all jobs selected in Job List")
+        addItem("Reset Jobs", self.resetJobButtonHandler, "Reset all jobs selected in Job List")
+        addItem("Start Test Frames...", self.callTestFrameBox, "Open a dialog to start the first X frames in each job selected in the Job List")
         self.jobMenu.addSeparator()
-        addItem("Toggle Archive", self.toggleArchiveButtonHandler)
+        addItem("Toggle Archive", self.toggleArchiveButtonHandler, "Toggle the Archived status on each job selected int he Job List")
         self.jobMenu.addSeparator()
-        addItem("Start Test Frames...", self.callTestFrameBox)
+        editJob = addItem("Edit Job...", self.doNothing, "Edit Job, WIP")
+        editJob.setEnabled(False)
         self.jobMenu.addSeparator()
-        addItem("Filters...", self.filterJobButtonHandler)
+        
+        userFilterAction = addItem("Only Show My Jobs", self.userFilterActionHandler, "Only show the jobs belonging to the current user")
+        userFilterAction.setCheckable(True)
+        if self.userFilter == True:
+            userFilterAction.setChecked(True)
+            
+        archivedFilterAction = addItem("Show Archived Jobs", self.archivedFilterActionHandler, "Show jobs which have been archived")
+        archivedFilterAction.setCheckable(True)
+        if self.showArchivedFilter == True:
+            archivedFilterAction.setChecked(True)
+            
+        addItem("Filters...", self.filterJobButtonHandler, "Open filters dialog to select which types of jobs are shown in the Job List")
         self.jobMenu.popup(QCursor.pos())
     
+    def userFilterActionHandler(self):
+        if self.userFilter == True:
+            self.userFilter = False
+        else:
+            self.userFilter = True
+        self.updateJobTable()
 
+    def archivedFilterActionHandler(self):
+        if self.showArchivedFilter == True:
+            self.showArchivedFilter = False
+        else:
+            self.showArchivedFilter = True
+        self.updateJobTable()
+        
     def jobCommandBuilder(self):
         command = "WHERE"
         if self.filters != None:
@@ -223,19 +232,22 @@ class FarmView(QMainWindow, Ui_FarmView):
                         else:
                             command += " AND job_status <> '%s'" % checkboxKeys[i]
                             idx += 1
-        #TODO: Clean this up, have ti check to see if owner is already in the
+        #TODO: Clean this up, have to check to see if owner is already in the
         #the query instead of just checking to see if the query is default
         if command == "WHERE":
-            if self.myFilterCheckbox.isChecked():
+            if self.userFilter:
                 command += " owner = '%s'" % self.username
-            if not self.showArchivedCheckbox.isChecked():
+            if not self.showArchivedFilter:
                 if command != "WHERE":
                     command += " AND"
                 command += " archived = 0"
 
         if self.filters != None:
             command += " LIMIT 0,%d" % limit
-
+            
+        if command == "WHERE":
+            command = ""
+            
         return command
 
 
@@ -264,7 +276,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
-                if job.owner == self.username and self.myFilterCheckbox.isChecked() == False:
+                if job.owner == self.username and self.userFilter == False:
                     self.jobTable.item(pos, 3).setBackgroundColor(QColor(225,240,225))
         except sqlerror as err:
             logger.debug(str(err))
@@ -294,13 +306,14 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                 self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                 self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
-            if job.owner == self.username and self.myFilterCheckbox.isChecked() == False:
+            if job.owner == self.username and self.userFilter == False:
                 self.jobTable.item(pos, 3).setBackgroundColor(QColor(225,240,225))
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
 
     def jobTableHandler(self):
+        self.resetStatusBar()
         rows = self.jobTable.selectionModel().selectedRows()
         if len(rows) < 1:
             aboutBox(title="Selection Error", msg = "Please select something from the Job Table and try again.")
@@ -428,19 +441,23 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     
     def taskContextHandler(self):
-        def addItem(name, handler):
+        def addItem(name, handler, statusTip):
             action = QAction(name, self)
+            action.setStatusTip(statusTip)
             action.triggered.connect(handler)
             self.taskMenu.addAction(action)
             
         self.taskMenu = QMenu(self)
         
-        addItem("Start Tasks", self.startTaskButtonHandler)
-        addItem("Pause Tasks", self.pauseTaskButtonHandler)
-        addItem("Kill Tasks", self.killTaskButtonHandler)
-        addItem("Reset Tasks", self.resetTaskButtonHandler)
+        QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
+                        self.resetStatusBar)
+        
+        addItem("Start Tasks", self.startTaskButtonHandler, "Start all tasks selected in the Task List")
+        addItem("Pause Tasks", self.pauseTaskButtonHandler, "Pause all tasks selected in the Task List")
+        addItem("Kill Tasks", self.killTaskButtonHandler, "Kill all tasks selected in the Task List")
+        addItem("Reset Tasks", self.resetTaskButtonHandler, "Reset all tasks selected in the Task List")
         self.taskMenu.addSeparator()
-        addItem("Load LogFile", self.loadLogButtonHandler)
+        addItem("Load LogFile", self.loadLogButtonHandler, "Load the log file for all tasks selected in the Task List")
         self.taskMenu.popup(QCursor.pos())
 
     def updateTaskTable(self, job_id):
@@ -483,6 +500,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobCellClickedHandler(row)
 
     def taskTableHandler(self):
+        self.resetStatusBar()
         rows = self.taskTable.selectionModel().selectedRows()
         if len(rows) < 1:
             aboutBox(title="Selection Error", msg = "Please select something from the Job Table and try again.")
@@ -950,7 +968,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         countString += ", %s %s" % (thisNode.host, niceNames[thisNode.status])
         time = datetime.datetime.now().strftime ("%H:%M")
         msg = "%s as of %s" % (countString, time)
-        self.statusbar.showMessage(msg)
+        self.statusMsg = msg
+        self.statusbar.showMessage(self.statusMsg)
 
     def setThisNodeButtonsEnabled(self, choice):
         """Enables or disables buttons on This Node tab"""
@@ -1026,8 +1045,10 @@ def loadLog(record):
             logger.debug("Opening Log File @ %s" % str(logFile))
             webbrowser.open(logFile)
         else:
+            aboutBox(title = "Invalid Log File Path", msg = "Invalid log file path for task: %d" % record.id)
             logger.error("Invalid log file path for task: %d" % record.id)
     else:
+        aboutBox(title = "No Log on File", msg = "No log on file for task: %d\nJob was probably never started or was recently reset." % record.id)
         logger.info("No log file on record for task: %d" % record.id)
 
 
