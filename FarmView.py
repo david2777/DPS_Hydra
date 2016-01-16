@@ -47,7 +47,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Globals for filters
         self.filters = None
-        self.userFilter = True
+        self.userFilter = False
         self.showArchivedFilter = False
         
         self.statusMsg = ""
@@ -108,25 +108,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Connect buttons in This Node tab
         QObject.connect(self.fetchButton, SIGNAL("clicked()"), self.doFetch)
         QObject.connect(self.onlineThisNodeButton, SIGNAL("clicked()"),
-                        self.onlineThisNodeButtonClicked)
+                        self.onlineThisNodeButtonHandler)
         QObject.connect(self.offlineThisNodeButton, SIGNAL("clicked()"),
-                        self.offlineThisNodeButtonClicked)
+                        self.offlineThisNodeButtonHandler)
         QObject.connect(self.getOffThisNodeButton, SIGNAL("clicked()"),
-                        self.getOffThisNodeButtonClicked)
-
-        #Connect buttons in RenderNode tab
-        QObject.connect(self.onlineRenderNodesButton, SIGNAL("clicked()"),
-                        self.onlineRenderNodesButtonClicked)
-        QObject.connect(self.offlineRenderNodesButton, SIGNAL("clicked()"),
-                        self.offlineRenderNodesButtonClicked)
-        QObject.connect(self.getOffRenderNodesButton, SIGNAL("clicked()"),
-                        self.getOffRenderNodesButtonClicked)
-        QObject.connect(self.selectAllNodesButton, SIGNAL("clicked()"),
-                        self.selectAllNodesButtonHandler)
-        QObject.connect(self.selectNoneNodesButton, SIGNAL("clicked()"),
-                        self.selectNoneNodesButtonHandler)
-        QObject.connect(self.selectByHostButton, SIGNAL("clicked()"),
-                        self.selectByHostButtonHandler)
+                        self.getOffThisNodeButtonHandler)
                         
         #Connect actions in Job View
         QObject.connect(self.jobTable, SIGNAL ("cellClicked(int,int)"),
@@ -138,6 +124,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         
         self.taskTable.setContextMenuPolicy(Qt.CustomContextMenu) 
         self.taskTable.customContextMenuRequested.connect(self.taskContextHandler)
+        
+        self.renderNodeTable.setContextMenuPolicy(Qt.CustomContextMenu) 
+        self.renderNodeTable.customContextMenuRequested.connect(self.nodeContextHandler)
 
     #---------------------------------------------------------------------#
     #-------------------------JOB BUTTON HANDLERS-------------------------#
@@ -270,14 +259,14 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
                 self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
                 self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
+                if job.owner == self.username:
+                    self.jobTable.item(pos, 3).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
                 if job.archived == 1:
                     self.jobTable.item(pos, 0).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 2).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
-                if job.owner == self.username and self.userFilter == False:
-                    self.jobTable.item(pos, 3).setBackgroundColor(QColor(225,240,225))
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
@@ -306,8 +295,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                 self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                 self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
-            if job.owner == self.username and self.userFilter == False:
-                self.jobTable.item(pos, 3).setBackgroundColor(QColor(225,240,225))
+            if job.owner == self.username:
+                self.jobTable.item(pos, 3).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
@@ -439,7 +428,6 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     #------------------------TASK BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
-    
     def taskContextHandler(self):
         def addItem(name, handler, statusTip):
             action = QAction(name, self)
@@ -658,83 +646,34 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     #------------------------NODE BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
+    
+    def nodeContextHandler(self):
+        def addItem(name, handler, statusTip):
+            action = QAction(name, self)
+            action.setStatusTip(statusTip)
+            action.triggered.connect(handler)
+            self.nodeMenu.addAction(action)
+            return action
+            
+        self.nodeMenu = QMenu(self)
+        
+        QObject.connect(self.nodeMenu, SIGNAL("aboutToHide()"),
+                        self.resetStatusBar)
+        
+        addItem("Online Nodes", self.onlineRenderNodesButtonHandler, "Online all checked nodes")
+        addItem("Offline Nodes", self.offlineRenderNodesButtonHandler, "Offline all checked nodes without killing their current task")
+        addItem("Get Off Nodes", self.getOffRenderNodesButtonHandler, "Kill task then offline all checked nodes")
+        self.nodeMenu.addSeparator()
+        addItem("Select All Nodes", self.selectAllNodesButtonHandler, "Check all nodes in the Node Table")
+        addItem("Deselect All Node", self.selectNoneNodesButtonHandler, "Uncheck all ndoes in the Node Table")
+        addItem("Select by Host Name...", self.selectByHostButtonHandler, "Open a dialog to check nodes based on their host name")
+        self.nodeMenu.addSeparator()
+        editNodeItem = addItem("Edit Node...", self.doNothing, "Open a dialog to edit selected node's attributes. WIP.")
+        editNodeItem.setEnabled(False)
+        
+        self.nodeMenu.popup(QCursor.pos())
 
-    def onlineThisNodeButtonClicked(self):
-        """Changes the local render node's status to online if it was offline,
-        goes back to started if it was pending offline."""
-        #Get most current info from the database
-        thisNode = None
-        try:
-            thisNode = NodeUtils.getThisNodeData()
-        except sqlerror as err:
-            logger.debug(str(err))
-            self.sqlErrorBox()
-            return
-
-        if thisNode:
-            NodeUtils.onlineNode(thisNode)
-
-        self.doFetch()
-
-    def offlineThisNodeButtonClicked(self):
-        """Changes the local render node's status to offline if it was idle,
-        pending if it was working on something."""
-        #Get the most current info from the database
-        thisNode = None
-        try:
-            thisNode = NodeUtils.getThisNodeData()
-        except sqlerror as err:
-            logger.debug(str(err))
-            self.sqlErrorBox()
-            return
-
-        if thisNode:
-            NodeUtils.offlineNode(thisNode)
-
-        self.doFetch()
-
-    def getOffThisNodeButtonClicked(self):
-        #TODO: TEST THIS FUNCTION
-        """***UNTESTED***Offlines the node and sends a message to the render node server
-        running on localhost to kill its current task(task will be
-        resubmitted)"""
-        thisNode = None
-        try:
-            thisNode = NodeUtils.getThisNodeData()
-        except sqlerror as err:
-            logger.debug(str(err))
-            self.sqlErrorBox()
-            return
-
-        choice = yesNoBox(self, "Confirm", "All progress on the current job"
-                          " will be lost. Are you sure you want to stop it?")
-
-        if choice != QMessageBox.Yes:
-            aboutBox(self, "Abort", "No action taken.")
-
-        else:
-            if thisNode:
-                NodeUtils.offlineNode(thisNode)
-                if thisNode.task_id:
-                    task_id = thisNode.task_id
-                    try:
-                        response = TaskUtils.killTask(task_id)
-                        TaskUtils.startTask(task_id)
-                        if not response:
-                            logger.debug("Problem killing task durring GetOff")
-                            aboutBox(self, "Error", "There was a problem killing the task during GetOff!")
-                        else:
-                            aboutBox(self, "Success", "Job was reset, node offlined.")
-                    except socketerror:
-                        logger.debug(socketerror.message)
-                        aboutBox(self, "Error", "There was a problem communicating"
-                                 " with the render node software. Either it's not"
-                                 " running, or it has become unresponsive.")
-                else:
-                    aboutBox(self, "Success", "No job was found on node, node offlined")
-                self.doFetch()
-
-    def onlineRenderNodesButtonClicked(self):
+    def onlineRenderNodesButtonHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
         status to online."""
         hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
@@ -756,7 +695,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     NodeUtils.onlineNode(node_row)
         self.doFetch()
 
-    def offlineRenderNodesButtonClicked(self):
+    def offlineRenderNodesButtonHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
         status to offline if idle, or pending if started."""
         hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
@@ -778,9 +717,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                     NodeUtils.offlineNode(node_row)
         self.doFetch()
 
-    def getOffRenderNodesButtonClicked(self):
-        #TODO:TEST FUNCTION!
-        """***UNTESTED***For all nodes with boxes checked in the render nodes table, changes
+    def getOffRenderNodesButtonHandler(self):
+        """For all nodes with boxes checked in the render nodes table, changes
         status to offline if idle, or pending if started, and attempts to kill
         any task that is running on each node."""
 
@@ -847,6 +785,84 @@ class FarmView(QMainWindow, Ui_FarmView):
                 if fnmatch.fnmatch(item, searchString):
                     self.renderNodeTable.item(rowIndex, 0).setCheckState(Qt.Checked)
                     logger.debug("Selecting %s matched with %s" % (item, searchString))
+                    
+    #---------------------------------------------------------------------#
+    #-------------------------THIS NODE HANDLERS--------------------------#
+    #---------------------------------------------------------------------#
+                    
+    def onlineThisNodeButtonHandler(self):
+        """Changes the local render node's status to online if it was offline,
+        goes back to started if it was pending offline."""
+        #Get most current info from the database
+        thisNode = None
+        try:
+            thisNode = NodeUtils.getThisNodeData()
+        except sqlerror as err:
+            logger.debug(str(err))
+            self.sqlErrorBox()
+            return
+
+        if thisNode:
+            NodeUtils.onlineNode(thisNode)
+
+        self.doFetch()
+
+    def offlineThisNodeButtonHandler(self):
+        """Changes the local render node's status to offline if it was idle,
+        pending if it was working on something."""
+        #Get the most current info from the database
+        thisNode = None
+        try:
+            thisNode = NodeUtils.getThisNodeData()
+        except sqlerror as err:
+            logger.debug(str(err))
+            self.sqlErrorBox()
+            return
+
+        if thisNode:
+            NodeUtils.offlineNode(thisNode)
+
+        self.doFetch()
+
+    def getOffThisNodeButtonHandler(self):
+        """Offlines the node and sends a message to the render node server
+        running on localhost to kill its current task(task will be
+        resubmitted)"""
+        thisNode = None
+        try:
+            thisNode = NodeUtils.getThisNodeData()
+        except sqlerror as err:
+            logger.debug(str(err))
+            self.sqlErrorBox()
+            return
+
+        choice = yesNoBox(self, "Confirm", "All progress on the current job"
+                          " will be lost. Are you sure you want to stop it?")
+
+        if choice != QMessageBox.Yes:
+            aboutBox(self, "Abort", "No action taken.")
+
+        else:
+            if thisNode:
+                NodeUtils.offlineNode(thisNode)
+                if thisNode.task_id:
+                    task_id = thisNode.task_id
+                    try:
+                        response = TaskUtils.killTask(task_id)
+                        TaskUtils.startTask(task_id)
+                        if not response:
+                            logger.debug("Problem killing task durring GetOff")
+                            aboutBox(self, "Error", "There was a problem killing the task during GetOff!")
+                        else:
+                            aboutBox(self, "Success", "Job was reset, node offlined.")
+                    except socketerror:
+                        logger.debug(socketerror.message)
+                        aboutBox(self, "Error", "There was a problem communicating"
+                                 " with the render node software. Either it's not"
+                                 " running, or it has become unresponsive.")
+                else:
+                    aboutBox(self, "Success", "No job was found on node, node offlined")
+                self.doFetch()
 
     #---------------------------------------------------------------------#
     #--------------------------UPDATE HANDLERS----------------------------#
