@@ -218,15 +218,15 @@ class FarmView(QMainWindow, Ui_FarmView):
             statuses = self.filters["status"]
             limit = self.filters["limit"]
             if users[0] != "":
-                command += " owner = '%s'" % users[0]
+                command += " owner = '{0}'".format(users[0])
                 for user in users[1:]:
-                    command += " OR owner = '%s'" % user
+                    command += " OR owner = '{0}'".format(user)
             if names[0] != "":
                 if command != "WHERE":
                     command += " AND"
-                command += " niceName LIKE '%s'" % names[0]
+                command += " niceName LIKE '{0}'".format(names[0])
                 for name in names[1:]:
-                    command += " OR niceName LIKE '%s'" % name
+                    command += " OR niceName LIKE '{0}'".format(name)
             if False in statuses:
                 idx = 0
                 for i in range(len(statuses)):
@@ -234,23 +234,23 @@ class FarmView(QMainWindow, Ui_FarmView):
                         if command != "WHERE" and idx == 0:
                             command += " AND"
                         if idx == 0:
-                            command += " job_status <> '%s'" % checkboxKeys[i]
+                            command += " job_status <> '{0}'".format(checkboxKeys[i])
                             idx += 1
                         else:
-                            command += " AND job_status <> '%s'" % checkboxKeys[i]
+                            command += " AND job_status <> '{0}'".format(checkboxKeys[i])
                             idx += 1
         #TODO: Clean this up, have to check to see if owner is already in the
         #the query instead of just checking to see if the query is default
         if command == "WHERE":
             if self.userFilter:
-                command += " owner = '%s'" % self.username
+                command += " owner = '{0}'".format(self.username)
             if not self.showArchivedFilter:
                 if command != "WHERE":
                     command += " AND"
                 command += " archived = 0"
 
         if self.filters != None:
-            command += " LIMIT 0,%d" % limit
+            command += " LIMIT 0,{0}".format(limit)
             
         if command == "WHERE":
             command = ""
@@ -293,7 +293,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateJobRow(self, row):
         job_id = int(self.jobTable.item(row, 0).text())
         try:
-            [job] = hydra_jobboard.fetch("WHERE id = '%d'" % job_id)
+            [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
             pos = row
             if job.totalTask > 0:
                 percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
@@ -391,7 +391,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             try:
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    tasks = hydra_taskboard.fetch("WHERE job_id = '%d'" % job_id)
+                    tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
                     for task in tasks:
                         TaskUtils.resetTask(task.id, "U")
             except sqlerror as err:
@@ -422,13 +422,13 @@ class FarmView(QMainWindow, Ui_FarmView):
                 commandList = []
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    [job] = hydra_jobboard.fetch("WHERE id = '%d'" % job_id)
+                    [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
                     if job.archived == 1:
                         new = 0
                     else:
                         new = 1
-                    job_command = "UPDATE hydra_jobboard SET archived = '%d' WHERE id = '%d'" % (new, job_id)
-                    task_command = "UPDATE hydra_taskboard SET archived = '%d' WHERE job_id = '%d'" % (new, job_id)
+                    job_command = "UPDATE hydra_jobboard SET archived = '{0}' WHERE id = '{1}'".format(new, job_id)
+                    task_command = "UPDATE hydra_taskboard SET archived = '{0}' WHERE job_id = '{1}'".format(new, job_id)
                     commandList.append(job_command)
                     commandList.append(task_command)
 
@@ -469,7 +469,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateTaskTable(self, job_id):
         self.taskTableLabel.setText("Task List (Job ID: " + str(job_id) + ")")
         try:
-            tasks = hydra_taskboard.fetch("WHERE job_id = %d" % job_id)
+            tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
             self.taskTable.setRowCount(len(tasks))
             for pos, task in enumerate(tasks):
                 #Calcuate time difference
@@ -542,13 +542,13 @@ class FarmView(QMainWindow, Ui_FarmView):
             reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
             if reply[1]:
                 job_id = int(self.jobTable.item(row, 0).text())
-                logger.info("Starting %d test frames on job_id %d" % (reply[0], job_id))
-                tasks = hydra_taskboard.fetch ("WHERE job_id = %d" % job_id)
+                logger.info("Starting {0} test frames on job_id {1}".format(reply[0], job_id))
+                tasks = hydra_taskboard.fetch ("WHERE job_id = '{0}'".format(job_id))
                 for task in tasks[0:reply[0]]:
                     TaskUtils.startTask(task.id)
                 logger.info("Test Tasks Started!")
                 with transaction() as t:
-                    [job] = hydra_jobboard.fetch("WHERE id = '%d'" % job_id)
+                    [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
                     job.job_status = "S"
                     job.update(t)
                 self.updateJobTable()
@@ -612,11 +612,11 @@ class FarmView(QMainWindow, Ui_FarmView):
             if choice == QMessageBox.Yes:
                 for row in rows:
                     task_id = int(self.taskTable.item(row, 0).text())
-                    [taskOBJ] = hydra_taskboard.fetch("WHERE id = '%d'" % task_id)
+                    [taskOBJ] = hydra_taskboard.fetch("WHERE id = '{0}'".format(task_id))
                     loadLog(taskOBJ)
         else:
             task_id = int(self.taskTable.item(rows[0], 0).text())
-            [taskOBJ] = hydra_taskboard.fetch("WHERE id = '%d'" % task_id)
+            [taskOBJ] = hydra_taskboard.fetch("WHERE id = '{0}'".format(task_id))
             loadLog(taskOBJ)
 
     def advancedSearchButtonClicked(self):
@@ -639,8 +639,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         task_id = str(self.taskIDLineEdit.text())
         if task_id:
             with transaction() as t:
-                query = "SELECT job_id FROM hydra_taskboard WHERE id = %s"
-                t.cur.execute(query % task_id)
+                query = "SELECT job_id FROM hydra_taskboard WHERE id = {0}".format(task_id)
+                t.cur.execute(query)
                 job_id = t.cur.fetchall()
 
                 if not job_id:
@@ -802,7 +802,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 item = str(self.renderNodeTable.item(rowIndex, 1).text())
                 if fnmatch.fnmatch(item, searchString):
                     self.renderNodeTable.item(rowIndex, 0).setCheckState(Qt.Checked)
-                    logger.debug("Selecting %s matched with %s" % (item, searchString))
+                    logger.debug("Selecting {0} matched with {1}".format(item, searchString))
                     
     #---------------------------------------------------------------------#
     #-------------------------THIS NODE HANDLERS--------------------------#
@@ -997,11 +997,10 @@ class FarmView(QMainWindow, Ui_FarmView):
             counts = t.cur.fetchall()
         thisNode = NodeUtils.getThisNodeData()
         logger.debug("Counts = " + str(counts))
-        countString = ", ".join (["%d %s" % (count, niceNames[status])
-                                  for(count, status) in counts])
-        countString += ", %s %s" % (thisNode.host, niceNames[thisNode.status])
-        time = datetime.datetime.now().strftime ("%H:%M")
-        msg = "%s as of %s" % (countString, time)
+        countString = ", ".join (["{0} {1}".format(count, niceNames[status]) for (count, status) in counts])
+        countString += ", {0} {1}".format(thisNode.host, niceNames[thisNode.status])
+        time = datetime.datetime.now().strftime("%H:%M")
+        msg = "{0} as of {1}".format(countString, time)
         self.statusMsg = msg
         self.statusbar.showMessage(self.statusMsg)
 
@@ -1090,14 +1089,14 @@ def loadLog(record):
     if logFile:
         logFile = os.path.abspath(logFile)
         if os.path.exists(logFile):
-            logger.debug("Opening Log File @ %s" % str(logFile))
+            logger.debug("Opening Log File @ {0}".format(str(logFile)))
             webbrowser.open(logFile)
         else:
-            aboutBox(title = "Invalid Log File Path", msg = "Invalid log file path for task: %d" % record.id)
-            logger.error("Invalid log file path for task: %d" % record.id)
+            aboutBox(title = "Invalid Log File Path", msg = "Invalid log file path for task: {0}".format(record.id))
+            logger.error("Invalid log file path for task: {0}".format(record.id))
     else:
-        aboutBox(title = "No Log on File", msg = "No log on file for task: %d\nJob was probably never started or was recently reset." % record.id)
-        logger.info("No log file on record for task: %d" % record.id)
+        aboutBox(title = "No Log on File", msg = "No log on file for task: {0}\nJob was probably never started or was recently reset.".format(record.id))
+        logger.info("No log file on record for task: {0}".format(record.id))
 
 
 #------------------------------------------------------------------------#
@@ -1182,7 +1181,7 @@ class getOffButton(widgetFactory):
         return w
 
     def doGetOff(self, record):
-        logger.debug('clobber %s', record.host)
+        logger.debug('clobber {0}'.format(record.host))
 
 class WidgetForTable:
     def setIntoTable(self, table, row, column):
