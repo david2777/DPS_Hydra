@@ -119,6 +119,9 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobCellClickedHandler)
         
         #Connect Context Menus
+        self.centralwidget.setContextMenuPolicy(Qt.CustomContextMenu) 
+        self.centralwidget.customContextMenuRequested.connect(self.centralContextHandler)
+        
         self.jobTable.setContextMenuPolicy(Qt.CustomContextMenu) 
         self.jobTable.customContextMenuRequested.connect(self.jobContextHandler)
         
@@ -127,16 +130,31 @@ class FarmView(QMainWindow, Ui_FarmView):
         
         self.renderNodeTable.setContextMenuPolicy(Qt.CustomContextMenu) 
         self.renderNodeTable.customContextMenuRequested.connect(self.nodeContextHandler)
+        
+    def centralContextHandler(self):
+        def addItem(name, handler, statusTip):
+            action = QAction(name, self)
+            action.setStatusTip(statusTip)
+            action.triggered.connect(handler)
+            self.centralMenu.addAction(action)
+            return action
+            
+        self.centralMenu = QMenu(self)
+        
+        QObject.connect(self.centralMenu, SIGNAL("aboutToHide()"),
+                        self.resetStatusBar)
+        
+        addItem("Fetch", self.doFetch, "Fetch the latest information from the Database")
+        self.centralMenu.addSeparator()
+        addItem("Online This Node", self.onlineThisNodeButtonHandler, "Online This Node")
+        addItem("Offline This Node", self.offlineThisNodeButtonHandler, "Wait for the current job to finish then offline this node")
+        addItem("Get Off This Node!", self.getOffThisNodeButtonHandler, "Kill the current task and offline this node immediately")
+        
+        self.centralMenu.popup(QCursor.pos())
 
     #---------------------------------------------------------------------#
     #-------------------------JOB BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
-
-    def doNothing(self):
-        pass
-        
-    def resetStatusBar(self):
-        self.statusbar.showMessage(self.statusMsg)
 
     def jobContextHandler(self):
         def addItem(name, handler, statusTip):
@@ -249,7 +267,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             for pos, job in enumerate(jobs):
                 if job.totalTask > 0:
                     percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
-                    taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
+                    taskString  = "{0} ({1}/{2})".format(percent, job.taskDone, job.totalTask)
                 else:
                     taskString = "0% (0/0)"
                 self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
@@ -279,7 +297,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             pos = row
             if job.totalTask > 0:
                 percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
-                taskString  = "%s (%d/%d)" % (percent, job.taskDone, job.totalTask)
+                taskString  = "{0} ({1}/{2})".format(percent, job.taskDone, job.totalTask)
             else:
                 taskString = "0% (0/0)"
             self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
@@ -962,16 +980,16 @@ class FarmView(QMainWindow, Ui_FarmView):
             labelFactory('startTime'),
             labelFactory('endTime'),
             labelFactory('exitCode')]
-        records = (hydra_taskboard.fetch(order = "order by id desc",
-        limit = self.limitSpinBox.value()))
+        command = "ORDER BY id DESC LIMIT {0}".format(self.limitSpinBox.value())
+        records = (hydra_taskboard.fetch(command))
 
         for task in records:
             if task.logFile:
                 if task.host:
                     task.logFile = task.logFile.replace("C:", "\\\\" + task.host)
-
-        setup(records, columns, self.taskGrid)
-
+                    
+        clearLayout(self.taskGrid)
+        setupDataGrid(records, columns, self.taskGrid)
 
     def updateStatusBar(self):
         with transaction() as t:
@@ -993,6 +1011,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.offlineThisNodeButton.setEnabled(choice)
         self.getOffThisNodeButton.setEnabled(choice)
         self.thisNodeButtonsEnabled = choice
+        
+    def doNothing(self):
+        pass
+        
+    def resetStatusBar(self):
+        self.statusbar.showMessage(self.statusMsg)
 
 #------------------------------------------------------------------------#
 #---------------------------EXTERNAL FUNCTIONS---------------------------#
@@ -1034,7 +1058,7 @@ def getCheckedItems(table, itemColumn, checkBoxColumn):
             checks.append(item)
     return checks
 
-def setup(records, columns, grid):
+def setupDataGrid(records, columns, grid):
     """Populate a data grid. "colums" is a list of widget factory objects."""
     #Build the header row
     for(column, attr) in enumerate(columns):
@@ -1052,6 +1076,14 @@ def setup(records, columns, grid):
                 grid.removeItem(item)
                 item.widget().hide()
             grid.addWidget(attr.dataWidget(record),row + 1, column,)
+            
+def clearLayout(layout):
+    while layout.count():
+        child = layout.takeAt(0)
+        if child.widget() is not None:
+            child.widget().deleteLater()
+        elif child.layout() is not None:
+            clearLayout(child.layout())
 
 def loadLog(record):
     logFile = record.logFile
