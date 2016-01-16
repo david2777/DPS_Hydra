@@ -422,7 +422,7 @@
           </column>
           <column>
            <property name="text">
-            <string>Project</string>
+            <string>Min Priority</string>
            </property>
           </column>
           <column>

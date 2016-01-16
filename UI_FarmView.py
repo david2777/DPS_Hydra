@@ -350,7 +350,7 @@ class Ui_FarmView(object):
         item = self.renderNodeTable.horizontalHeaderItem(3)
         item.setText(_translate("FarmView", "Task ID", None))
         item = self.renderNodeTable.horizontalHeaderItem(4)
-        item.setText(_translate("FarmView", "Project", None))
+        item.setText(_translate("FarmView", "Min Priority", None))
         item = self.renderNodeTable.horizontalHeaderItem(5)
         item.setText(_translate("FarmView", "Capabilities", None))
         item = self.renderNodeTable.horizontalHeaderItem(6)

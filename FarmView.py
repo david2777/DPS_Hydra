@@ -79,9 +79,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.setColumnWidth(1, 200) # host
         self.renderNodeTable.setColumnWidth(2, 70)  # status
         self.renderNodeTable.setColumnWidth(3, 70)  # task id
-        self.renderNodeTable.setColumnWidth(4, 110) # minPriority
-        self.renderNodeTable.setColumnWidth(5, 200) # capabilities
-        self.renderNodeTable.setColumnWidth(6, 80)  # version
+        self.renderNodeTable.setColumnWidth(4, 80) # minPriority
+        self.renderNodeTable.setColumnWidth(5, 500) # capabilities
+        self.renderNodeTable.setColumnWidth(6, 60)  # version
         self.renderNodeTable.setColumnWidth(7, 110) # heartbeat
 
         #Column widths on jobTable
@@ -690,6 +690,34 @@ class FarmView(QMainWindow, Ui_FarmView):
         editNodeItem.setEnabled(False)
         
         self.nodeMenu.popup(QCursor.pos())
+        
+    def updateRenderNodeTable(self):
+        #Clear the table(note: this is done to avoid duplication of items)
+        self.renderNodeTable.clearContents()
+        self.renderNodeTable.setRowCount(0)
+
+        #Prevent rows from being sorted while table is populating
+        self.renderNodeTable.setSortingEnabled(False)
+
+        nodes = hydra_rendernode.fetch(order="order by host")
+        self.renderNodeTable.setRowCount(len(nodes))
+        
+        
+        for pos, node in enumerate(nodes):
+            self.renderNodeTable.setItem(pos, 0, TableWidgetItem_check())
+            self.renderNodeTable.setItem(pos, 1, TableWidgetItem_int(str(node.host)))
+            self.renderNodeTable.setItem(pos, 2, TableWidgetItem(str(niceNames[node.status])))
+            self.renderNodeTable.item(pos, 2).setBackgroundColor(niceColors[node.status])
+            self.renderNodeTable.setItem(pos, 3, TableWidgetItem(str(node.task_id)))
+            self.renderNodeTable.setItem(pos, 4, TableWidgetItem(str(node.minPriority)))
+            self.renderNodeTable.setItem(pos, 5, TableWidgetItem(str(node.capabilities)))
+            nodeVersion  = getSoftwareVersionText(node.software_version)
+            self.renderNodeTable.setItem(pos, 6, TableWidgetItem(str(nodeVersion)))
+            self.renderNodeTable.setItem(pos, 7, TableWidgetItem_dt(node.pulse))
+            if node.host == Utils.myHostName():
+                self.renderNodeTable.item(pos, 1).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
+
+        self.renderNodeTable.setSortingEnabled(True)
 
     def onlineRenderNodesButtonHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
@@ -942,34 +970,6 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateCapabilitiesLabel(self, capabilities):
         self.capabilitiesLabel.setText(capabilities)
 
-    def updateRenderNodeTable(self):
-        #Clear the table(note: this is done to avoid duplication of items)
-        self.renderNodeTable.clearContents()
-        self.renderNodeTable.setRowCount(0)
-
-        #Prevent rows from being sorted while table is populating
-        self.renderNodeTable.setSortingEnabled(False)
-
-        rows = hydra_rendernode.fetch(order="order by host")
-        self.renderNodeTable.setRowCount(len(rows))
-        columns = [
-            lambda o: TableWidgetItem_check(),
-            lambda o: TableWidgetItem(str(o.host)),
-            lambda o: TableWidgetItem(str(niceNames[o.status])),
-            lambda o: TableWidgetItem(str(o.task_id)),
-            lambda o: TableWidgetItem(str(o.minPriority)),
-            lambda o: TableWidgetItem(str(o.capabilities)),
-            lambda o: TableWidgetItem(
-                                getSoftwareVersionText(o.software_version)),
-            lambda o: TableWidgetItem_dt(o.pulse),
-            ]
-        for(rowIndex, row) in enumerate(rows):
-            for(columnIndex, columnFun) in enumerate(columns):
-                columnFun(row).setIntoTable(self.renderNodeTable,
-                                              rowIndex, columnIndex)
-
-        self.renderNodeTable.setSortingEnabled(True)
-
     def updateRenderTaskGrid(self):
         columns = [
             labelFactory('id'),
@@ -1036,7 +1036,7 @@ def getSoftwareVersionText(sw_ver):
 
         #Case 2: source code file
         elif re.search("rendernodemain.py$", sw_ver, re.IGNORECASE):
-            return "Development source"
+            return "Dev"
 
         #Case 3: no freakin' clue
         return sw_ver
@@ -1221,13 +1221,16 @@ class TableWidgetItem_dt(TableWidgetItem):
             return False
 
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
-             READY: QColor(255,255,255),         #White
-             FINISHED: QColor(200,240,200),      #Light Green
-             KILLED: QColor(240,200,200),        #Light Red
-             CRASHED: QColor(220,90,90),         #Dark Red
-             STARTED: QColor(200,220,240),       #Light Blue
-             ERROR: QColor(220,90,90),           #Red
-             HOLD: QColor(255,255,255),          #White, placeholder
+             READY: QColor(255,255,255),        #White
+             FINISHED: QColor(200,240,200),     #Light Green
+             KILLED: QColor(240,200,200),       #Light Red
+             CRASHED: QColor(220,90,90),        #Dark Red
+             STARTED: QColor(200,220,240),      #Light Blue
+             ERROR: QColor(220,90,90),          #Red
+             HOLD: QColor(255,255,255),         #White, placeholder
+             IDLE: QColor(255,255,255),         #White
+             OFFLINE: QColor(220,220,220),      #Gray
+             PENDING: QColor(240,230,200),      #Orange
              }
 
 #------------------------------------------------------------------------#
