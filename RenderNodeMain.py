@@ -56,23 +56,17 @@ class RenderTCPServer(TCPServer):
             thisNode.software_version = current_version
             with transaction() as t:
                 thisNode.update(t)
-        logger.debug("Finished TCPServer Setup")
 
     def processRenderTasks(self):
         """The loop that looks for jobs on the DB and runs them if the node meets
         the job's requirements (Priority & Capabilities)"""
-        logger.debug("Starting Process Render Tasks")
-        try:
-            [thisNode] = hydra_rendernode.fetch("WHERE host = '%s'" % Utils.myHostName())
-        except:
-            logger.error("Weird Error")
+        [thisNode] = hydra_rendernode.fetch("WHERE host = '%s'" % Utils.myHostName())
         
         logger.info("Host: %r Status: %r Capabilities %r", thisNode.host, niceNames[thisNode.status], thisNode.capabilities)
         
         #If this node is not idle, don't try to find a new job
         
         if thisNode.status != IDLE:
-            logger.debug("Node not Idle, returning...")
             return
         
 
@@ -197,7 +191,6 @@ class RenderTCPServer(TCPServer):
             logger.debug("No process was running.")
 
 def heartbeat(interval = 5):
-    logger.debug("heartbeat")
     host = Utils.myHostName()
     while True:
         try:
@@ -211,13 +204,9 @@ def main():
     logger.info ('starting in %s', os.getcwd())
     logger.info ('arglist %s', sys.argv)
     socketServer = RenderTCPServer()
-    logger.debug("Starting Server")
     socketServer.createIdleLoop(5, socketServer.processRenderTasks)
-    logger.debug("Server Started")
-    
-    #pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
-    #pulseThread.start()
-    #logger.debug("Pulse started")
+    pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
+    pulseThread.start()
 
 if __name__ == '__main__':
     main()

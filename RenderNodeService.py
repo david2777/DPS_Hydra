@@ -5,7 +5,8 @@ import win32event
 import servicemanager 
 import socket 
 
-import RenderNodeMain
+from RenderNodeMain import *
+from LoggingSetup import logger
  
 class AppServerSvc (win32serviceutil.ServiceFramework): 
     _svc_name_ = "HydraRender" 
@@ -20,7 +21,7 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING) 
         win32event.SetEvent(self.hWaitStop) 
  
-    def SvcDoRun(self): 
+    def SvcDoRun(self):
         self.ReportServiceStatus(win32service.SERVICE_RUNNING)
         servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE, 
                               servicemanager.PYS_SERVICE_STARTED, 
@@ -28,7 +29,12 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
         self.main() 
  
     def main(self): 
-        RenderNodeMain.main() 
+        logger.info ('Starting in %s', os.getcwd())
+        logger.info ('arglist %s', sys.argv)
+        socketServer = RenderTCPServer()
+        socketServer.createIdleLoop(5, socketServer.processRenderTasks)
+        pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
+        pulseThread.start()
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:

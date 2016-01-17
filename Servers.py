@@ -26,7 +26,7 @@ class Server:
             try:
                 function()
             except Exception, e:
-                logger.error("""Idle loop exception: %s""", traceback.format_exc(e))
+                logger.error("Idle loop exception: %s", traceback.format_exc(e))
             time.sleep(interval)
 
 class LocalServer(Server):
