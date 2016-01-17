@@ -8,13 +8,20 @@ from LoggingSetup import logger
 import NodeUtils
 import NodeSchedules
 
-def mainLoop(interval, startTime, endTime, holidays, isStarted):
+def schedThread(interval):
+    #Do the stuff
+    startTime, endTime, isStarted = getSchedule(NodeUtils.getThisNodeData())
+    holidays = NodeSchedules.HolidayList
+    
+    if startTime == None:
+        return
+    
     while True:
         now = datetime.datetime.now().replace(microsecond = 0)
         print "Current time:\t\t" + str(now)
 
         #If we're not started, check to see if we're in a condition to startup
-        if isStarted == 0:
+        if not isStarted:
             #If it's a holiday, start it up!
             if datetime.date.today() in holidays:
                 print "Today is a holiday!"
@@ -27,16 +34,16 @@ def mainLoop(interval, startTime, endTime, holidays, isStarted):
                     print "Waiting for start @:\t" + str(startTime) + "\n"
 
         #If we are started, check to see if we're in a condition to shutdown
-        elif isStarted == 1:
+        elif isStarted:
             if endTime <= now:
                 isStarted, endTime = shutdownEvent(now. isStarted, endTime)
             else:
                 print "Waiting for end @:\t" + str(endTime) + "\n"
                 
         time.sleep(interval)
-
+        
 def startupEvent(now, isStarted, startTime):
-    isStarted = 1
+    isStarted = True
     newDate = now.date() + datetime.timedelta(days = 1)
     newTime = startTime.time()
     startTime = datetime.datetime.combine(newDate, newTime)
@@ -44,7 +51,7 @@ def startupEvent(now, isStarted, startTime):
     return isStarted, startTime
 
 def shutdownEvent(now, isStarted, endTime):
-    isStarted = 0
+    isStarted = False
     newDate = now.date() + datetime.timedelta(days = 1)
     newTime = endTime.time()
     endTime = datetime.datetime.combine(newDate, newTime)
@@ -54,9 +61,9 @@ def shutdownEvent(now, isStarted, endTime):
 def getSchedule(nodeOBJ):
     #Get isStarted via node status
     if nodeOBJ.status == "I" or nodeOBJ.status == "S":
-        isStarted = 1
+        isStarted = True
     else:
-        isStarted = 0
+        isStarted = False
 
     #Get the curent schedule for the node
     now = datetime.datetime.now()
@@ -66,7 +73,7 @@ def getSchedule(nodeOBJ):
     except KeyError:
         logger.error("Invalid Schedule, update node's DB entry with a valid schedule entry")
         logger.info("Setting node to manual control mode due to scheduling error")
-        return None, None, 0
+        return None, None, False
     #If the start time is not None then it is probably a legit schedule
     if timeList[0] != None:
         nodeSch = []
@@ -83,11 +90,5 @@ def getSchedule(nodeOBJ):
 
 
 if __name__ == "__main__":
-    isStarted = 0
-    startTime, endTime, isStarted = getSchedule(NodeUtils.getThisNodeData())
-    holidays = NodeSchedules.HolidayList
-    if startTime != None:
-        schThread = threading.Thread(target = mainLoop, name = "main", args = (5, startTime, endTime, holidays, isStarted))
-        schThread.start()
-    else:
-        logger.info("Node schedule set to 0, in manual control mode.")
+    schedThread = threading.Thread(target = schedThread, name = "schedThread", args = (5,))
+    schedThread.start()
