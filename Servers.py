@@ -50,6 +50,7 @@ class TCPServer(Server):
         self.serverThread.start()
 
     def shutdown(self):
+        logger.debug("Shutting down TCPServer...")
         self.serverObject.shutdown()
 
 def runTheServer(serverObject):
