@@ -9,7 +9,7 @@ import datetime
 #Hydra
 from Answers import TimeAnswer, EchoAnswer, CMDAnswer, RenderAnswer, KillCurrentJobAnswer
 from MySQLSetup import hydra_taskboard
-from RenderNodeMain import RenderTCPServer
+import RenderNodeMain
 from Constants import RENDERLOGDIR
 
 #Authors: David Gladstein and Aaron Cohn
@@ -79,7 +79,7 @@ class RenderQuestion(Question):
             log.close( )
 
 class KillCurrentTaskQuestion(Question):
-    """A Question for killing a job on a RenderTCPServer"""
+    """A Question for killing a job on a RenderNodeMain.RenderTCPServer"""
     def __init__(self, statusAfterDeath):
         self.statusAfterDeath = statusAfterDeath
         

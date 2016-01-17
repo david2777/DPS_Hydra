@@ -25,7 +25,7 @@ class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):
         #Check for another instance of RenderNodeMain.exe
         nInstances = len(filter(lambda line: 'RenderNodeMain' in line,
-                                  subprocess.check_output ('tasklist').split('\n')))
+                                  subprocess.check_output('tasklist').split('\n')))
         logger.info ("%d RenderNodeMain instances running." % nInstances)
         if nInstances > 1:
             logger.info("Blocked RenderNodeMain from running because another"
@@ -33,13 +33,12 @@ class RenderTCPServer(TCPServer):
             sys.exit(1)
         if nInstances == 0 and not sys.argv[0].endswith('.py'):
             logger.error("Can't find running RenderNodeMain.")
-            sys.exit(1)
+            #sys.exit(1)
 
         TCPServer.__init__(self, *arglist, **kwargs)
         self.childProcess = None
         self.childKilled = False
         self.statusAfterDeath = None
-
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         [thisNode] = hydra_rendernode.fetch ("WHERE host = '%s'" % Utils.myHostName())
         if thisNode.task_id:
@@ -51,25 +50,31 @@ class RenderTCPServer(TCPServer):
             TaskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED,
                               host=thisNode.host, newHostStatus=newStatus)
             JobUtils.manageNodeLimit(task.job_id)
-
         #Update current software version on the DB if necessary
         current_version = sys.argv[0]
         if thisNode.software_version != current_version:
             thisNode.software_version = current_version
             with transaction() as t:
                 thisNode.update(t)
+        logger.debug("Finished TCPServer Setup")
 
     def processRenderTasks(self):
         """The loop that looks for jobs on the DB and runs them if the node meets
         the job's requirements (Priority & Capabilities)"""
-        [thisNode] = hydra_rendernode.fetch("WHERE host = '%s'" % Utils.myHostName())
-        logger.info("""Host: %r
-         Status: %r
-         Capabilities %r""", thisNode.host, niceNames[thisNode.status], thisNode.capabilities)
-
+        logger.debug("Starting Process Render Tasks")
+        try:
+            [thisNode] = hydra_rendernode.fetch("WHERE host = '%s'" % Utils.myHostName())
+        except:
+            logger.error("Weird Error")
+        
+        logger.info("Host: %r Status: %r Capabilities %r", thisNode.host, niceNames[thisNode.status], thisNode.capabilities)
+        
         #If this node is not idle, don't try to find a new job
+        
         if thisNode.status != IDLE:
+            logger.debug("Node not Idle, returning...")
             return
+        
 
         #Otherwise, get a job that's:
         #-Ready to be run and
@@ -192,6 +197,7 @@ class RenderTCPServer(TCPServer):
             logger.debug("No process was running.")
 
 def heartbeat(interval = 5):
+    logger.debug("heartbeat")
     host = Utils.myHostName()
     while True:
         try:
@@ -205,9 +211,13 @@ def main():
     logger.info ('starting in %s', os.getcwd())
     logger.info ('arglist %s', sys.argv)
     socketServer = RenderTCPServer()
+    logger.debug("Starting Server")
     socketServer.createIdleLoop(5, socketServer.processRenderTasks)
-    pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
-    pulseThread.start()
+    logger.debug("Server Started")
+    
+    #pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
+    #pulseThread.start()
+    #logger.debug("Pulse started")
 
 if __name__ == '__main__':
     main()
