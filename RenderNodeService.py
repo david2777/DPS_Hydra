@@ -5,9 +5,12 @@ import win32event
 import servicemanager 
 import socket
 import sys
+import logging.handlers
 
 from RenderNodeMain import *
 from LoggingSetup import logger
+ 
+logger.setLevel(logging.INFO)
  
 class AppServerSvc (win32serviceutil.ServiceFramework): 
     _svc_name_ = "HydraRender" 
@@ -44,17 +47,17 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
                 break
  
     def main(self): 
-        logger.info ('Starting in %s', os.getcwd())
-        logger.info ('arglist %s', sys.argv)
+        logger.info('Starting in {0}'.format(os.getcwd()))
+        logger.info('arglist {0}'.format(sys.argv))
         socketServer = RenderTCPServer()
         socketServer.createIdleLoop(5, socketServer.processRenderTasks)
         pulseThread = threading.Thread(target = self.heartbeatSVC, name = "heartbeatSVC", args = (60000,))
         pulseThread.start()
-        logger.debug("Live! Live! Live!")
+        logger.info("Live! Live! Live!")
         while True:
             if win32event.WaitForSingleObject(self.hWaitStop, 5000) == win32event.WAIT_OBJECT_0:
                 socketServer.shutdown()
-                logger.debug("RIP [*]")
+                logger.info("RIP [*]")
                 sys.exit(0)
 
 if __name__ == '__main__':

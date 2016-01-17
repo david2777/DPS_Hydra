@@ -8,6 +8,7 @@ import datetime
 import functools
 import re
 from socket import error as socketerror
+import logging.handlers
 
 #3rd party
 from MySQLdb import Error as sqlerror
@@ -29,6 +30,8 @@ import JobUtils
 import NodeUtils
 
 #Parts taken from Cogswell's Project Hydra by David Gladstein and Aaron Cohn
+
+logger.setLevel(logging.INFO)
 
 class FarmView(QMainWindow, Ui_FarmView):
     def __init__(self):
@@ -316,7 +319,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             if job.owner == self.username:
                 self.jobTable.item(pos, 3).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
         except sqlerror as err:
-            logger.debug(str(err))
+            logger.error(str(err))
             aboutBox(self, "SQL error", str(err))
 
     def jobTableHandler(self):
@@ -351,7 +354,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     if not JobUtils.killJob(job_id):
                         no_errors = False
             except sqlerror as err:
-                logger.debug(str(err))
+                logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
                 if no_errors ==  False:
@@ -373,7 +376,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     if not JobUtils.killJob(job_id, "U"):
                         no_errors = False
             except sqlerror as err:
-                logger.debug(str(err))
+                logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
                 if no_errors ==  False:
@@ -395,7 +398,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     for task in tasks:
                         TaskUtils.resetTask(task.id, "U")
             except sqlerror as err:
-                logger.debug(str(err))
+                logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
                 self.updateJobTable()
@@ -437,12 +440,10 @@ class FarmView(QMainWindow, Ui_FarmView):
                         t.cur.execute(cmd)
 
             except sqlerror as err:
-                logger.debug(str(err))
+                logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
                 self.updateJobTable()
-                self.jobCellClickedHandler(rows[-1])
-                self.jobTable.setCurrentCell(rows[-1], 0)
     #---------------------------------------------------------------------#
     #------------------------TASK BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
@@ -572,12 +573,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                     if not killed:
                         aboutBox(self, "Error", "Task couldn't be killed for ""some reason.")
                 except socketerror as err:
-                    logger.debug(str(err))
+                    logger.error(str(err))
                     aboutBox(self, "Error", "Task couldn't be killed because "
                     "there was a problem communicating with the host running "
                     "it.")
                 except sqlerror as err:
-                    logger.debug(str(err))
+                    logger.error(str(err))
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
 
@@ -594,12 +595,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                     if not killed:
                         aboutBox(self, "Error", "Task couldn't be killed for ""some reason.")
                 except socketerror as err:
-                    logger.debug(str(err))
+                    logger.error(str(err))
                     aboutBox(self, "Error", "Task couldn't be killed because "
                     "there was a problem communicating with the host running "
                     "it.")
                 except sqlerror as err:
-                    logger.debug(str(err))
+                    logger.error(str(err))
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
 
@@ -627,7 +628,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def filterJobButtonHandler(self):
         self.filters = JobFilterDialog.create(self.filters)
         #logger.debug(self.filters)
-        logger.debug(self.jobCommandBuilder())
+        logger.info(self.jobCommandBuilder())
         self.updateJobTable()
 
     def searchByTaskID(self):
@@ -795,12 +796,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                             response = TaskUtils.killTask(task_id)
                             TaskUtils.startTask(task_id)
                             if not response:
-                                logger.debug("Problem killing task durring GetOff")
+                                logger.warning("Problem killing task durring GetOff")
                                 aboutBox(self, "Error", "There was a problem killing the task during GetOff!")
                             else:
                                 aboutBox(self, "Success", "Job was reset, node offlined.")
                         except socketerror:
-                            logger.debug(socketerror.message)
+                            logger.error(socketerror.message)
                             aboutBox(self, "Error", "There was a problem communicating"
                                      " with the render node software. Either it's not"
                                      " running, or it has become unresponsive.")
@@ -830,7 +831,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 item = str(self.renderNodeTable.item(rowIndex, 1).text())
                 if fnmatch.fnmatch(item, searchString):
                     self.renderNodeTable.item(rowIndex, 0).setCheckState(Qt.Checked)
-                    logger.debug("Selecting {0} matched with {1}".format(item, searchString))
+                    logger.info("Selecting {0} matched with {1}".format(item, searchString))
                     
     #---------------------------------------------------------------------#
     #-------------------------THIS NODE HANDLERS--------------------------#
@@ -844,7 +845,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
-            logger.debug(str(err))
+            logger.error(str(err))
             self.sqlErrorBox()
             return
 
@@ -861,7 +862,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
-            logger.debug(str(err))
+            logger.error(str(err))
             self.sqlErrorBox()
             return
 
@@ -878,7 +879,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
-            logger.debug(str(err))
+            logger.error(str(err))
             self.sqlErrorBox()
             return
 
@@ -897,12 +898,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                         response = TaskUtils.killTask(task_id)
                         TaskUtils.startTask(task_id)
                         if not response:
-                            logger.debug("Problem killing task durring GetOff")
+                            logger.warning("Problem killing task durring GetOff")
                             aboutBox(self, "Error", "There was a problem killing the task during GetOff!")
                         else:
                             aboutBox(self, "Success", "Job was reset, node offlined.")
                     except socketerror:
-                        logger.debug(socketerror.message)
+                        logger.error(socketerror.message)
                         aboutBox(self, "Error", "There was a problem communicating"
                                  " with the render node software. Either it's not"
                                  " running, or it has become unresponsive.")
@@ -923,7 +924,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.updateJobTable()
             self.updateStatusBar()
         except sqlerror as err:
-            logger.debug(str(err))
+            logger.error(str(err))
             self.sqlErrorBox()
 
     def updateThisNodeInfo(self):
@@ -938,7 +939,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
-            logger.debug(str(err))
+            logger.error(str(err))
             self.sqlErrorBox()
 
         if thisNode:
@@ -1089,14 +1090,14 @@ def loadLog(record):
     if logFile:
         logFile = os.path.abspath(logFile)
         if os.path.exists(logFile):
-            logger.debug("Opening Log File @ {0}".format(str(logFile)))
+            logger.info("Opening Log File @ {0}".format(str(logFile)))
             webbrowser.open(logFile)
         else:
             aboutBox(title = "Invalid Log File Path", msg = "Invalid log file path for task: {0}".format(record.id))
             logger.error("Invalid log file path for task: {0}".format(record.id))
     else:
         aboutBox(title = "No Log on File", msg = "No log on file for task: {0}\nJob was probably never started or was recently reset.".format(record.id))
-        logger.info("No log file on record for task: {0}".format(record.id))
+        logger.warning("No log file on record for task: {0}".format(record.id))
 
 
 #------------------------------------------------------------------------#
@@ -1181,7 +1182,7 @@ class getOffButton(widgetFactory):
         return w
 
     def doGetOff(self, record):
-        logger.debug('clobber {0}'.format(record.host))
+        logger.info('GetOff! {0}'.format(record.host))
 
 class WidgetForTable:
     def setIntoTable(self, table, row, column):

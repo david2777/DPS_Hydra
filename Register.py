@@ -21,6 +21,6 @@ try:
     with transaction() as t:
         hydra_rendernode(host = me, status = OFFLINE, minPriority = minJobPriority).insert(t)
 except IntegrityError:
-    logger.debug("Host %s already exists in the hydra_rendernode table on the databse" % me)
+    logger.info("Host %s already exists in the hydra_rendernode table on the databse" % me)
 
 raw_input("\nPress enter to exit...")

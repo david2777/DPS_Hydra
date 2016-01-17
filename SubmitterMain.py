@@ -2,6 +2,7 @@
 import sys
 import os
 import getopt
+import logging.handlers
 
 #QT
 from PyQt4.QtGui import *
@@ -17,6 +18,7 @@ from JobTicket import UberJobTicket
 import JobUtils
 import Constants
 
+logger.setLevel(logging.INFO)
 
 class SubmitterMain(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -69,7 +71,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         keys = list(opts.keys())
         for key in keys:
             self.settingsDict[key] = opts[key]
-            logger.debug("Setting Key '%s' with opt: %s" % (key, str(opts[key])))
+            logger.info("Setting Key '{0}' with opt: '{1}'".format(key, str(opts[key])))
 
         #Fix paths
         self.settingsDict["-p"] = self.settingsDict["-p"].replace('\\', '/')
@@ -202,7 +204,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
-            niceNameOverride = "%s_Test" % niceName
+            niceNameOverride = "{0}_Test".format(niceName)
             baseCMDOverride = baseCMD + " -x 640 -y 360"
             priorityOverride = int(priority * 1.25)
             phase01Ticket = UberJobTicket(execName,
@@ -222,14 +224,14 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             p1_job_id = phase01Ticket.doSubmit()
             if jobStatus == "R":
                 JobUtils.setupNodeLimit(p1_job_id)
-            logger.info("Phase 01 submitted with id: %d" % p1_job_id)
+            logger.info("Phase 01 submitted with id: {0}".format(p1_job_id))
             phase01Status = True
             
         if self.finalCheckBox.isChecked():
             logger.info("Building Phase 02")
             #Phase specific overrides
             phase = 2
-            niceNameOverride = "%s_Final" % niceName
+            niceNameOverride = "{0}_Final".format(niceName)
             byFrameOverride = 1
             if phase01Status:
                 jobStatusOverride = "U"
