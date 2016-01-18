@@ -1,1 +1,2 @@
+cd ..
 del /S *.pyc
