@@ -386,6 +386,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
     def resetJobButtonHandler(self):
+        #TODO:Move function to a JobUtil
         rows = self.jobTableHandler()
         if rows == None:
             return
@@ -401,17 +402,19 @@ class FarmView(QMainWindow, Ui_FarmView):
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
+                JobUtils.updateJobTaskCount(job_id, tasks)
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
     def setPriorityButtonHandler(self):
+        #TODO:Reimplement
         rows = self.jobTableHandler()
         if rows == None:
             return
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
-            JobUtils.prioritizeJob(job_id, self.prioritySpinBox.value())
+            #JobUtils.prioritizeJob(job_id, self.prioritySpinBox.value())
         self.updateJobTable()
         self.jobTable.setCurrentCell(rows[-1], 0)
 

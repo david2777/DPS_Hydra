@@ -45,7 +45,7 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
         while True:
             try:
                 with transaction() as t:
-                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '%s'" % host)
+                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '{0}'".format(host))
             except Exception, e:
                 logger.error(traceback.format_exc(e))
             

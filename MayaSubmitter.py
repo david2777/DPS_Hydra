@@ -29,13 +29,13 @@ renderLayersReturn = ",".join(renderLayersList)
 
 reqsReturn  = ",".join(reqsList)
 
-command = "python C:\\Users\\David\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py %s -s %d -e %d -p %s" % (sceneFile, startFrame, endFrame, project)
+command = "python C:\\Users\\David\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py {0} -s {1} -e {2} -p {3}".format(sceneFile, startFrame, endFrame, project)
 if cmd != "":
-    command += " -m %s" % cmd
+    command += " -m {0}".format(cmd)
 if reqsReturn != "":
-    command += " -c %s" % reqsReturn
+    command += " -c {0}".format(reqsReturn)
 if renderLayersReturn != "":
-    command += " -r %s" % renderLayersReturn
+    command += " -r {0}".format(renderLayersReturn)
     
 print command
 subprocess.check_call(command)

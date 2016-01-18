@@ -102,7 +102,7 @@ class UberJobTicket:
         job = self.createJob()
         self.job_id = job.id
         self.createTasks()
-        logger.info("Submitted UberTicket job with id %d" % self.job_id)
+        logger.info("Submitted UberTicket job with id {0}".format(self.job_id))
         return self.job_id
 
     def createCMDTicketTask(self):
@@ -135,7 +135,7 @@ class UberJobTicket:
         job = self.createJob()
         self.job_id = job.id
         self.createCMDTicketTask()
-        logger.info("Submitted UberTicket CMDTicket job with id %d" % self.job_id)
+        logger.info("Submitted UberTicket CMDTicket job with id {0}".format(self.job_id))
         
     def __repr__(self):
         reprList = ["\nJob Ticket Repr:",

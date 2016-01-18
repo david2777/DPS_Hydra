@@ -26,7 +26,7 @@ class Server:
             try:
                 function()
             except Exception, e:
-                logger.error("Idle loop exception: %s", traceback.format_exc(e))
+                logger.error("Idle loop exception: {0}".format(traceback.format_exc(e)))
             time.sleep(interval)
 
 class LocalServer(Server):
@@ -41,7 +41,7 @@ class TCPServer(Server):
                   ):
 
         MyTCPHandler.TCPserver = self
-        logger.info('open socket %r %s', "", port)
+        logger.info('Open TCPServer Socket @ Port {0}'.format(port))
         self.serverObject = MySocketServer(("", port), MyTCPHandler)
         self.serverThread = threading.Thread(target = runTheServer,
                                               name = "server thread",
@@ -71,4 +71,4 @@ class MyTCPHandler(SocketServer.StreamRequestHandler):
             answerBytes = pickle.dumps( answer )
             self.wfile.write( answerBytes )
         except:
-            logger.error("""Exception caught: %s""", traceback.format_exc())
+            logger.error("Exception caught: {0}".format(traceback.format_exc()))

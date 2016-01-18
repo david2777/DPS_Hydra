@@ -163,14 +163,14 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         #Stuff not in JobTicket
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
         if renderLayers != "":
-            baseCMD += " -rl %s" % renderLayers
+            baseCMD += " -rl {0}".format(renderLayers)
             
         proj = str(self.projLineEdit.text())
         if len(proj) < 5:
             aboutBox(title = "Please set Project Directory!", msg = "Project Directory must be more than 5 characters long.")
             raise Exception("Please set Project Directory! Project Directory must be more than 5 characters long.")
         else:
-            baseCMD += " -proj %s" % proj
+            baseCMD += " -proj {0}".format(proj)
             
         #Error Checking
         if len(baseCMD) > 1000:
@@ -254,7 +254,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             p2_job_id = phase02Ticket.doSubmit()
             if jobStatusOverride == "R":
                 JobUtils.setupNodeLimit(p2_job_id)
-            logger.info("Phase 02 submitted with id: %d" % p2_job_id)
+            logger.info("Phase 02 submitted with id: {0}".format(p2_job_id))
         
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")    

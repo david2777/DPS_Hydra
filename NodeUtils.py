@@ -8,7 +8,7 @@ def getThisNodeData():
     """Gets the row corresponding to localhost in the hydra_rendernode table.
     Raises MySQLdb.Error"""
 
-    [thisNode] = hydra_rendernode.fetch("WHERE host = '%s'" % Utils.myHostName())
+    [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(Utils.myHostName()))
     return thisNode
 
 def onlineNode(node):

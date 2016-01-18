@@ -62,12 +62,12 @@ class RenderQuestion(Question):
         log = file(render_task.logFile, 'w')
         
         try:
-            log.write('hydra log file %s on %s\n' % (render_task.logFile, render_task.host))
-            log.write('Command: %s\n\n' % (render_task.command))
+            log.write('hydra log file {0} on {1}\n'.format(render_task.logFile, render_task.host))
+            log.write('Command: {0}\n\n'.format(render_task.command))
             log.flush()
             
             render_task.exitCode = subprocess.call(eval(render_task.command), stdout = log, stderr = subprocess.STDOUT)
-            log.write( '\nProcess exited with code %d\n' % render_task.exitCode )
+            log.write('\nProcess exited with code {0}\n'.format(render_task.exitCode))
             return RenderAnswer( )
         except Exception, e:
             traceback.print_exc( e, log )
