@@ -447,6 +447,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 aboutBox(self, "SQL Error", str(err))
             finally:
                 self.updateJobTable()
+                
     #---------------------------------------------------------------------#
     #------------------------TASK BUTTON HANDLERS-------------------------#
     #---------------------------------------------------------------------#
