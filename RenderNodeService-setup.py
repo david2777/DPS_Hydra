@@ -6,14 +6,14 @@ class Target:
     def __init__(self, **kw):
         self.__dict__.update(kw)
         # for the versioninfo resources
-        self.version = "3"
+        self.version = "4"
         self.company_name = "DPS"
         self.copyright = "None"
-        self.name = "Test Name"
+        self.name = "Hydra Render Node Service"
 
 
 myservice = Target(
-    description = 'Render Node Service Test',
+    description = 'Hydra Render Node Service',
     modules = ['RenderNodeService'],
     cmdline_style='pywin32'
 )

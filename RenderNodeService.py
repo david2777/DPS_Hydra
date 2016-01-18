@@ -6,11 +6,18 @@ import servicemanager
 import socket
 import sys
 import logging.handlers
+import logging
 
 from RenderNodeMain import *
 from LoggingSetup import logger
  
 logger.setLevel(logging.INFO)
+
+class NoSQLFilter(logging.Filter):
+    def filter(self, record):
+        return not record.getMessage().startswith('SELECT * FROM')
+
+logger.addFilter(NoSQLFilter())
  
 class AppServerSvc (win32serviceutil.ServiceFramework): 
     _svc_name_ = "HydraRender" 

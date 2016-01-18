@@ -93,10 +93,7 @@ def killJob(job_id, newStatus = "K"):
         response = TaskUtils.killTask(task.id, newStatus)
         if response == False:
             no_errors = False
-    with transaction() as t:
-        [job] = hydra_jobboard.fetch("WHERE id = '%d'" % job_id)
-        job.job_status = newStatus
-        job.update(t)
+    updateJobTaskCount(job_id, tasks)
     return no_errors
     
 def prioritizeJob(job_id, priority):

@@ -1,0 +1,7 @@
+Some notes to put in the Readme later:
+
+Service needs to be run by a user, running at as the SYSTEM doesn't work for
+    some reason (probably permissions).
+    
+    If the render starts but it doesn't get past "Starting "C:\BlahBlahBlah""
+    then this might be the problem. 

@@ -68,7 +68,7 @@ class RenderTCPServer(TCPServer):
         the job's requirements (Priority & Capabilities)"""
         [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(Utils.myHostName()))
         
-        logger.info("Host: {0} Status: {1} Capabilities {2}".format(thisNode.host, niceNames[thisNode.status], thisNode.capabilities))
+        logger.debug("Host: {0} Status: {1} Capabilities {2}".format(thisNode.host, niceNames[thisNode.status], thisNode.capabilities))
         
         #If this node is not idle, don't try to find a new job
         
@@ -89,7 +89,7 @@ class RenderTCPServer(TCPServer):
             render_tasks = hydra_taskboard.fetch(queryString, limit=1, explicitTransaction=t)
             if not render_tasks:
                 return
-            render_task = render_tasks[0]                
+            render_task = render_tasks[0] 
                         
             #Create log for this task and update task entry in the DB
             if not os.path.isdir(Constants.RENDERLOGDIR):
@@ -103,6 +103,7 @@ class RenderTCPServer(TCPServer):
             render_task.startTime = datetime.datetime.now()
             render_task.update(t)
             thisNode.update(t)
+            JobUtils.updateJobTaskCount(render_task.job_id)
 
         logger.info('Starting render task {0}'.format(render_task.id))
         log = file(render_task.logFile, 'w')
@@ -185,7 +186,11 @@ class RenderTCPServer(TCPServer):
             #Log and kill all of the subprocesses
             for proc in children_procs:
                 logger.info("Killing subtask with PID of {0}".format(proc.pid))
-                os.kill(proc.pid, signal.SIGTERM)
+                try:
+                    os.kill(proc.pid, signal.SIGTERM)
+                except WindowsError as err:
+                    logger.error("Could not kill PID {0} due to a WindowsError")
+                    logger.error(str(err))
             #Log and kill the main child process
             logger.info("Killing main task with PID of {0}".format(self.childProcess.pid))
             os.kill(self.childProcess.pid, signal.SIGTERM)
@@ -193,7 +198,8 @@ class RenderTCPServer(TCPServer):
             self.childKilled = True
             self.statusAfterDeath = statusAfterDeath
         else:
-            logger.info("No process was running.")
+            logger.warning("No process was running.")
+            
 
 def heartbeat(interval = 5):
     host = Utils.myHostName()
