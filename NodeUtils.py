@@ -5,10 +5,11 @@ from MySQLdb import Error as sqlerror
 from MySQLSetup import *
 
 def getThisNodeData():
-    """Gets the row corresponding to localhost in the hydra_rendernode table.
-    Raises MySQLdb.Error"""
-
-    [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(Utils.myHostName()))
+    """Gets the row corresponding to localhost in the hydra_rendernode table."""
+    try:
+        [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(Utils.myHostName()))
+    except ValueError:
+        thisNode = None
     return thisNode
 
 def onlineNode(node):

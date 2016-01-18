@@ -111,11 +111,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Connect buttons in This Node tab
         QObject.connect(self.fetchButton, SIGNAL("clicked()"), self.doFetch)
         QObject.connect(self.onlineThisNodeButton, SIGNAL("clicked()"),
-                        self.onlineThisNodeButtonHandler)
+                        self.onlineThisNodeHandler)
         QObject.connect(self.offlineThisNodeButton, SIGNAL("clicked()"),
-                        self.offlineThisNodeButtonHandler)
+                        self.offlineThisNodeHandler)
         QObject.connect(self.getOffThisNodeButton, SIGNAL("clicked()"),
-                        self.getOffThisNodeButtonHandler)
+                        self.getOffThisNodeHandler)
                         
         #Connect actions in Job View
         QObject.connect(self.jobTable, SIGNAL ("cellClicked(int,int)"),
@@ -149,14 +149,19 @@ class FarmView(QMainWindow, Ui_FarmView):
         
         addItem("Fetch", self.doFetch, "Fetch the latest information from the Database")
         self.centralMenu.addSeparator()
-        addItem("Online This Node", self.onlineThisNodeButtonHandler, "Online This Node")
-        addItem("Offline This Node", self.offlineThisNodeButtonHandler, "Wait for the current job to finish then offline this node")
-        addItem("Get Off This Node!", self.getOffThisNodeButtonHandler, "Kill the current task and offline this node immediately")
+        onAct = addItem("Online This Node", self.onlineThisNodeHandler, "Online This Node")
+        offAct = addItem("Offline This Node", self.offlineThisNodeHandler, "Wait for the current job to finish then offline this node")
+        getAct = addItem("Get Off This Node!", self.getOffThisNodeHandler, "Kill the current task and offline this node immediately")
+        
+        if not self.thisNodeButtonsEnabled:
+            onAct.setEnabled(False)
+            offAct.setEnabled(False)
+            getAct.setEnabled(False)
         
         self.centralMenu.popup(QCursor.pos())
 
     #---------------------------------------------------------------------#
-    #-------------------------JOB BUTTON HANDLERS-------------------------#
+    #----------------------------JOB HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
 
     def jobContextHandler(self):
@@ -173,13 +178,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
-        addItem("Start Jobs", self.startJobButtonHandler, "Start all jobs selected in Job List")
-        addItem("Pause Jobs", self.pauseJobButtonHandler, "Pause all jobs selected in Job List")
-        addItem("Kill Jobs", self.killJobButtonHandler, "Kill all jobs selected in Job List")
-        addItem("Reset Jobs", self.resetJobButtonHandler, "Reset all jobs selected in Job List")
+        addItem("Start Jobs", self.startJobHandler, "Start all jobs selected in Job List")
+        addItem("Pause Jobs", self.pauseJobHandler, "Pause all jobs selected in Job List")
+        addItem("Kill Jobs", self.killJobHandler, "Kill all jobs selected in Job List")
+        addItem("Reset Jobs", self.resetJobHandler, "Reset all jobs selected in Job List")
         addItem("Start Test Frames...", self.callTestFrameBox, "Open a dialog to start the first X frames in each job selected in the Job List")
         self.jobMenu.addSeparator()
-        addItem("Toggle Archive", self.toggleArchiveButtonHandler, "Toggle the Archived status on each job selected int he Job List")
+        addItem("Toggle Archive", self.toggleArchiveHandler, "Toggle the Archived status on each job selected int he Job List")
         self.jobMenu.addSeparator()
         editJob = addItem("Edit Job...", self.doNothing, "Edit Job, WIP")
         editJob.setEnabled(False)
@@ -195,7 +200,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if self.showArchivedFilter == True:
             archivedFilterAction.setChecked(True)
             
-        addItem("Filters...", self.filterJobButtonHandler, "Open filters dialog to select which types of jobs are shown in the Job List")
+        addItem("Filters...", self.filterJobHandler, "Open filters dialog to select which types of jobs are shown in the Job List")
         self.jobMenu.popup(QCursor.pos())
     
     def userFilterActionHandler(self):
@@ -330,7 +335,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return None
         return [item.row() for item in rows]
 
-    def startJobButtonHandler(self):
+    def startJobHandler(self):
         rows = self.jobTableHandler()
         if rows == None:
             return
@@ -341,7 +346,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobCellClickedHandler(rows[-1])
         self.jobTable.setCurrentCell(rows[-1], 0)
 
-    def killJobButtonHandler(self):
+    def killJobHandler(self):
         rows = self.jobTableHandler()
         if rows == None:
             return
@@ -363,7 +368,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
-    def pauseJobButtonHandler(self):
+    def pauseJobHandler(self):
         rows = self.jobTableHandler()
         if rows == None:
             return
@@ -385,7 +390,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
-    def resetJobButtonHandler(self):
+    def resetJobHandler(self):
         #TODO:Move function to a JobUtil
         rows = self.jobTableHandler()
         if rows == None:
@@ -407,7 +412,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
-    def setPriorityButtonHandler(self):
+    def setPriorityHandler(self):
         #TODO:Reimplement
         rows = self.jobTableHandler()
         if rows == None:
@@ -418,7 +423,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.updateJobTable()
         self.jobTable.setCurrentCell(rows[-1], 0)
 
-    def toggleArchiveButtonHandler(self):
+    def toggleArchiveHandler(self):
         rows = self.jobTableHandler()
         if rows == None:
             return
@@ -449,7 +454,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.updateJobTable()
                 
     #---------------------------------------------------------------------#
-    #------------------------TASK BUTTON HANDLERS-------------------------#
+    #---------------------------TASK HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
     def taskContextHandler(self):
         def addItem(name, handler, statusTip):
@@ -463,12 +468,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
-        addItem("Start Tasks", self.startTaskButtonHandler, "Start all tasks selected in the Task List")
-        addItem("Pause Tasks", self.pauseTaskButtonHandler, "Pause all tasks selected in the Task List")
-        addItem("Kill Tasks", self.killTaskButtonHandler, "Kill all tasks selected in the Task List")
-        addItem("Reset Tasks", self.resetTaskButtonHandler, "Reset all tasks selected in the Task List")
+        addItem("Start Tasks", self.startTaskHandler, "Start all tasks selected in the Task List")
+        addItem("Pause Tasks", self.pauseTaskHandler, "Pause all tasks selected in the Task List")
+        addItem("Kill Tasks", self.killTaskHandler, "Kill all tasks selected in the Task List")
+        addItem("Reset Tasks", self.resetTaskHandler, "Reset all tasks selected in the Task List")
         self.taskMenu.addSeparator()
-        addItem("Load LogFile", self.loadLogButtonHandler, "Load the log file for all tasks selected in the Task List")
+        addItem("Load LogFile", self.loadLogHandler, "Load the log file for all tasks selected in the Task List")
         self.taskMenu.popup(QCursor.pos())
 
     def updateTaskTable(self, job_id):
@@ -518,7 +523,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return None
         return [item.row() for item in rows]
 
-    def startTaskButtonHandler(self):
+    def startTaskHandler(self):
         rows = self.taskTableHandler()
         if rows == None:
             return
@@ -527,7 +532,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             TaskUtils.startTask(task_id)
         self.reloadTaskTable()
 
-    def resetTaskButtonHandler(self):
+    def resetTaskHandler(self):
         rows = self.taskTableHandler()
         if rows == None:
             return
@@ -564,7 +569,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         except IndexError:
             aboutBox(self, "Error", "Make a slection in the job table to continue...")
 
-    def killTaskButtonHandler(self):
+    def killTaskHandler(self):
         rows = self.taskTableHandler()
         if rows == None:
             return
@@ -586,7 +591,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
 
-    def pauseTaskButtonHandler(self):
+    def pauseTaskHandler(self):
         rows = self.taskTableHandler()
         if rows == None:
             return
@@ -608,7 +613,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     aboutBox(self, "SQL Error", str(err))
         self.reloadTaskTable()
 
-    def loadLogButtonHandler(self):
+    def loadLogHandler(self):
         rows = self.taskTableHandler()
         if rows == None:
             return
@@ -624,12 +629,12 @@ class FarmView(QMainWindow, Ui_FarmView):
             [taskOBJ] = hydra_taskboard.fetch("WHERE id = '{0}'".format(task_id))
             loadLog(taskOBJ)
 
-    def advancedSearchButtonClicked(self):
+    def advancedSearchHandler(self):
         results = TaskSearchDialog.create()
         logger.error("Not Implemeted!")
         print results
 
-    def filterJobButtonHandler(self):
+    def filterJobHandler(self):
         self.filters = JobFilterDialog.create(self.filters)
         #logger.debug(self.filters)
         logger.info(self.jobCommandBuilder())
@@ -667,7 +672,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
 
     #---------------------------------------------------------------------#
-    #------------------------NODE BUTTON HANDLERS-------------------------#
+    #---------------------------NODE HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
     
     def nodeContextHandler(self):
@@ -683,13 +688,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.nodeMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
-        addItem("Online Nodes", self.onlineRenderNodesButtonHandler, "Online all checked nodes")
-        addItem("Offline Nodes", self.offlineRenderNodesButtonHandler, "Offline all checked nodes without killing their current task")
-        addItem("Get Off Nodes", self.getOffRenderNodesButtonHandler, "Kill task then offline all checked nodes")
+        addItem("Online Nodes", self.onlineRenderNodesHandler, "Online all checked nodes")
+        addItem("Offline Nodes", self.offlineRenderNodesHandler, "Offline all checked nodes without killing their current task")
+        addItem("Get Off Nodes", self.getOffRenderNodesHandler, "Kill task then offline all checked nodes")
         self.nodeMenu.addSeparator()
-        addItem("Select All Nodes", self.selectAllNodesButtonHandler, "Check all nodes in the Node Table")
-        addItem("Deselect All Node", self.selectNoneNodesButtonHandler, "Uncheck all ndoes in the Node Table")
-        addItem("Select by Host Name...", self.selectByHostButtonHandler, "Open a dialog to check nodes based on their host name")
+        addItem("Select All Nodes", self.selectAllNodesHandler, "Check all nodes in the Node Table")
+        addItem("Deselect All Node", self.selectNoneNodesHandler, "Uncheck all ndoes in the Node Table")
+        addItem("Select by Host Name...", self.selectByHostHandler, "Open a dialog to check nodes based on their host name")
         self.nodeMenu.addSeparator()
         editNodeItem = addItem("Edit Node...", self.doNothing, "Open a dialog to edit selected node's attributes. WIP.")
         editNodeItem.setEnabled(False)
@@ -724,7 +729,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.renderNodeTable.setSortingEnabled(True)
 
-    def onlineRenderNodesButtonHandler(self):
+    def onlineRenderNodesHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
         status to online."""
         hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
@@ -746,7 +751,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     NodeUtils.onlineNode(node_row)
         self.doFetch()
 
-    def offlineRenderNodesButtonHandler(self):
+    def offlineRenderNodesHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
         status to offline if idle, or pending if started."""
         hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
@@ -768,7 +773,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     NodeUtils.offlineNode(node_row)
         self.doFetch()
 
-    def getOffRenderNodesButtonHandler(self):
+    def getOffRenderNodesHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
         status to offline if idle, or pending if started, and attempts to kill
         any task that is running on each node."""
@@ -814,19 +819,19 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.doFetch()
 
-    def selectAllNodesButtonHandler(self):
+    def selectAllNodesHandler(self):
         rows = self.renderNodeTable.rowCount()
         for rowIndex in range(0, rows):
             item = self.renderNodeTable.item(rowIndex, 0)
             item.setCheckState(Qt.Checked)
 
-    def selectNoneNodesButtonHandler(self):
+    def selectNoneNodesHandler(self):
         rows = self.renderNodeTable.rowCount()
         for rowIndex in range(0, rows):
             item = self.renderNodeTable.item(rowIndex, 0)
             item.setCheckState(Qt.Unchecked)
 
-    def selectByHostButtonHandler(self):
+    def selectByHostHandler(self):
         reply = strBox(self, "Select By Host Name", "Host (using * as wildcard):")
         if reply[1]:
             searchString = str(reply[0])
@@ -838,14 +843,13 @@ class FarmView(QMainWindow, Ui_FarmView):
                     logger.info("Selecting {0} matched with {1}".format(item, searchString))
                     
     #---------------------------------------------------------------------#
-    #-------------------------THIS NODE HANDLERS--------------------------#
+    #----------------------THIS NODE BUTTON HANDLERS----------------------#
     #---------------------------------------------------------------------#
                     
-    def onlineThisNodeButtonHandler(self):
+    def onlineThisNodeHandler(self):
         """Changes the local render node's status to online if it was offline,
         goes back to started if it was pending offline."""
         #Get most current info from the database
-        thisNode = None
         try:
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
@@ -858,11 +862,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.doFetch()
 
-    def offlineThisNodeButtonHandler(self):
+    def offlineThisNodeHandler(self):
         """Changes the local render node's status to offline if it was idle,
         pending if it was working on something."""
         #Get the most current info from the database
-        thisNode = None
         try:
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
@@ -875,11 +878,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.doFetch()
 
-    def getOffThisNodeButtonHandler(self):
+    def getOffThisNodeHandler(self):
         """Offlines the node and sends a message to the render node server
         running on localhost to kill its current task(task will be
         resubmitted)"""
-        thisNode = None
         try:
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
@@ -957,7 +959,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         else:
             QMessageBox.about(self, "Notice",
-                "Information about this node cannot be displayed because it is"
+                "Information about this node cannot be displayed because it is "
                 "not registered on the render farm. You may continue to use"
                 " Farm View, but it must be restarted after this node is "
                 "registered if you wish to see this node's information.")
@@ -1003,7 +1005,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         thisNode = NodeUtils.getThisNodeData()
         logger.debug("Counts = " + str(counts))
         countString = ", ".join (["{0} {1}".format(count, niceNames[status]) for (count, status) in counts])
-        countString += ", {0} {1}".format(thisNode.host, niceNames[thisNode.status])
+        if thisNode:
+            countString += ", {0} {1}".format(thisNode.host, niceNames[thisNode.status])
         time = datetime.datetime.now().strftime("%H:%M")
         msg = "{0} as of {1}".format(countString, time)
         self.statusMsg = msg
