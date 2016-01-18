@@ -139,8 +139,8 @@ class RenderTCPServer(TCPServer):
                 if self.childKilled:
                     #Reset the rendertask
                     render_task.status = self.statusAfterDeath
-                    render_task.startTime = None
-                    render_task.host = None
+                    #render_task.startTime = None
+                    #render_task.host = None
                     self.childKilled = False
                 else:
                     #Report that the job was finished if exit code is 0

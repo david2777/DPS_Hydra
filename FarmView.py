@@ -184,8 +184,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         addItem("Reset Jobs", self.resetJobHandler, "Reset all jobs selected in Job List")
         addItem("Start Test Frames...", self.callTestFrameBox, "Open a dialog to start the first X frames in each job selected in the Job List")
         self.jobMenu.addSeparator()
-        addItem("Toggle Archive", self.toggleArchiveHandler, "Toggle the Archived status on each job selected int he Job List")
+        addItem("Toggle Archive", self.toggleArchiveHandler, "Toggle the Archived status on each job selected in he Job List")
         self.jobMenu.addSeparator()
+        #setJobPriorityHandler
+        addItem("Set Job Priority...", self.setJobPriorityHandler, "Set priority on each job selected in the Job List")
         editJob = addItem("Edit Job...", self.doNothing, "Edit Job, WIP")
         editJob.setEnabled(False)
         self.jobMenu.addSeparator()
@@ -337,7 +339,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def startJobHandler(self):
         rows = self.jobTableHandler()
-        if rows == None:
+        if not rows:
             return
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
@@ -348,7 +350,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def killJobHandler(self):
         rows = self.jobTableHandler()
-        if rows == None:
+        if not rows:
             return
         choice = yesNoBox(self, "Confirm", "Really kill the selected jobs?")
         if choice == QMessageBox.Yes:
@@ -370,7 +372,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def pauseJobHandler(self):
         rows = self.jobTableHandler()
-        if rows == None:
+        if not rows:
             return
         choice = yesNoBox(self, "Confirm", "Really pause the selected jobs?")
         if choice == QMessageBox.Yes:
@@ -393,7 +395,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def resetJobHandler(self):
         #TODO:Move function to a JobUtil
         rows = self.jobTableHandler()
-        if rows == None:
+        if not rows:
             return
         choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
         if choice == QMessageBox.Yes:
@@ -412,20 +414,25 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
-    def setPriorityHandler(self):
-        #TODO:Reimplement
+    def setJobPriorityHandler(self):
         rows = self.jobTableHandler()
-        if rows == None:
+        if not rows:
             return
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
-            #JobUtils.prioritizeJob(job_id, self.prioritySpinBox.value())
+            msgString = "Priority for job {0}:".format(job_id)
+            #TODO:Get current priority
+            reply = intBox(self, "Set Job Priority", msgString , 50)
+            if reply[1]:
+                JobUtils.prioritizeJob(job_id, reply[0])
+            else:
+                logger.info("prioritizeJob skipped on {0}".format(job_id))
         self.updateJobTable()
         self.jobTable.setCurrentCell(rows[-1], 0)
 
     def toggleArchiveHandler(self):
         rows = self.jobTableHandler()
-        if rows == None:
+        if not rows:
             return
         choice = yesNoBox(self, "Confirm", "Really archive or unarchive the selected jobs?")
         if choice == QMessageBox.Yes:
@@ -525,7 +532,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def startTaskHandler(self):
         rows = self.taskTableHandler()
-        if rows == None:
+        if not rows:
             return
         for row in rows:
             task_id = int(self.taskTable.item(row, 0).text())
@@ -534,7 +541,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def resetTaskHandler(self):
         rows = self.taskTableHandler()
-        if rows == None:
+        if not rows:
             return
         choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
         if choice == QMessageBox.Yes:
@@ -546,7 +553,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def callTestFrameBox(self):
         try:
             rows = self.jobTableHandler()
-            if rows == None:
+            if not rows:
                 return
             row = rows[0]
             reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
@@ -571,7 +578,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def killTaskHandler(self):
         rows = self.taskTableHandler()
-        if rows == None:
+        if not rows:
             return
         choice = yesNoBox(self, "Confirm", "Really kill selected tasks?")
         if choice == QMessageBox.Yes:
@@ -593,7 +600,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def pauseTaskHandler(self):
         rows = self.taskTableHandler()
-        if rows == None:
+        if not rows:
             return
         choice = yesNoBox(self, "Confirm", "Really pause selected tasks?")
         if choice == QMessageBox.Yes:
@@ -615,7 +622,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def loadLogHandler(self):
         rows = self.taskTableHandler()
-        if rows == None:
+        if not rows:
             return
         if len(rows) > 1:
             choice = yesNoBox(self, "Open logs?", "Note, this will open a text editor for EACH task selected. Continue?")
