@@ -249,10 +249,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                         else:
                             command += " AND job_status <> '{0}'".format(checkboxKeys[i])
                             idx += 1
-        #TODO: Clean this up, have to check to see if owner is already in the
-        #the query instead of just checking to see if the query is default
-        if command == "WHERE":
+                            
+        if command.find("owner = ") < 0:
             if self.userFilter:
+                if command != "WHERE":
+                    command += " AND"
                 command += " owner = '{0}'".format(self.username)
             if not self.showArchivedFilter:
                 if command != "WHERE":
@@ -295,6 +296,15 @@ class FarmView(QMainWindow, Ui_FarmView):
                     self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
+                    
+            labelText = "Job List"
+            if self.filters:
+                labelText += " (Filtered)"
+            if self.userFilter:
+                labelText += " (This User Only)"
+            if not self.showArchivedFilter:
+                labelText += " (No Archived Jobs)"
+            self.jobTableLabel.setText(labelText + ":")
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
