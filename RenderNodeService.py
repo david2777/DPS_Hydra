@@ -9,9 +9,11 @@ import logging.handlers
 import logging
 
 from RenderNodeMain import *
+from NodeScheduler import *
+import NodeUtils
 from LoggingSetup import logger
  
-logger.setLevel(logging.INFO)
+#logger.setLevel(logging.INFO)
 
 class NoSQLFilter(logging.Filter):
     def filter(self, record):
@@ -49,18 +51,30 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
             except Exception, e:
                 logger.error(traceback.format_exc(e))
             
-            if win32event.WaitForSingleObject(self.hWaitStop, 5000) == win32event.WAIT_OBJECT_0:
+            if win32event.WaitForSingleObject(self.hWaitStop, interval) == win32event.WAIT_OBJECT_0:
                 logger.debug("heartbeatSVC Break")
                 break
  
     def main(self): 
         logger.info('Starting in {0}'.format(os.getcwd()))
         logger.info('arglist {0}'.format(sys.argv))
+        
         socketServer = RenderTCPServer()
         socketServer.createIdleLoop(5, socketServer.processRenderTasks)
+        logger.info("socketServer started!")
+        
         pulseThread = threading.Thread(target = self.heartbeatSVC, name = "heartbeatSVC", args = (60000,))
         pulseThread.start()
-        logger.info("Live! Live! Live!")
+        logger.info("pulseThread Started!")
+        
+        shedThreadSVCVar = threading.Thread(target = self.schedThreadSVC, name = "schedThreadSVC", args = (300000,))
+        #schedThreadSVCVar.start()
+        logger.info("schedThreadSVC Started!")
+        
+        logger.info("-------->Live!<--------")
+        logger.info("-------->Live!<--------")
+        logger.info("-------->Live!<--------")
+        
         while True:
             if win32event.WaitForSingleObject(self.hWaitStop, 5000) == win32event.WAIT_OBJECT_0:
                 socketServer.shutdown()

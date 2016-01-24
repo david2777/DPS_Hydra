@@ -45,6 +45,20 @@ CREATE TABLE `hydra_executable` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `hydra_holidays`
+--
+
+DROP TABLE IF EXISTS `hydra_holidays`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hydra_holidays` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `date` char(10) DEFAULT NULL COMMENT 'Date of a holiday, format is YEAR,MONTH,DAY ie. 2015,11,26',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `hydra_jobboard`
 --
 
@@ -95,6 +109,21 @@ CREATE TABLE `hydra_rendernode` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `hydra_schedules`
+--
+
+DROP TABLE IF EXISTS `hydra_schedules`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hydra_schedules` (
+  `id` int(11) NOT NULL COMMENT 'Schedule ID',
+  `startTime` char(8) DEFAULT NULL COMMENT 'Time for the node to wake up, format is HOUR,MINUTE,SECOND in 24 hour format ie. 06,30,00 or 18,45,30',
+  `endTime` char(8) DEFAULT NULL COMMENT 'Time for the node to go to sleep, format is HOUR,MINUTE,SECOND in 24 hour format ie. 06,30,00 or 18,45,30',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `hydra_taskboard`
 --
 
@@ -128,4 +157,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-01-23 21:57:11
+-- Dump completed on 2016-01-23 23:40:18

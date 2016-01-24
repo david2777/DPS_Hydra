@@ -6,12 +6,18 @@ import time
 #Hydra
 from LoggingSetup import logger
 import NodeUtils
-import NodeSchedules
+from MySQLSetup import hydra_schedules, hydra_holidays
 
 def schedThread(interval):
     #Do the stuff
     startTime, endTime, isStarted = getSchedule(NodeUtils.getThisNodeData())
-    holidays = NodeSchedules.HolidayList
+    holidayData = hydra_holidays.fetch()
+    holidays = []
+    for holiday in holidayData:
+        holidaySplit = holiday.date.split(",")
+        holidaySplit = [int(d) for d in holidaySplit]
+        holidays.append(datetime.date(holidaySplit[0], holidaySplit[1], holidaySplit[2]))
+        
     
     if startTime == None:
         return
@@ -60,6 +66,7 @@ def shutdownEvent(now, isStarted, endTime):
 
 def getSchedule(nodeOBJ):
     #Get isStarted via node status
+    logger.info("Getting Schedule")
     if nodeOBJ.status == "I" or nodeOBJ.status == "S":
         isStarted = True
     else:
@@ -68,14 +75,18 @@ def getSchedule(nodeOBJ):
     #Get the curent schedule for the node
     now = datetime.datetime.now()
     nodeSch = [None, None]
-    try:
-        timeList = NodeSchedules.ScheduleDict[nodeOBJ.schedule]
-    except KeyError:
-        logger.error("Invalid Schedule, update node's DB entry with a valid schedule entry")
-        logger.info("Setting node to manual control mode due to scheduling error")
-        return None, None, False
-    #If the start time is not None then it is probably a legit schedule
-    if timeList[0] != None:
+
+    [timeData] = hydra_schedules.fetch("WHERE id = '{0}'".format(nodeOBJ.schedule))
+    sTimeData = timeData.startTime.split(",")
+    sTimeData = [int(t) for t in sTimeData]
+    startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
+    
+    eTimeData = timeData.endTime.split(",")
+    eTimeData = [int(t) for t in eTimeData]
+    endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
+
+    if startTime != None:
+        timeList = [startTime, endTime]
         nodeSch = []
         nowDate = now.date()
         for time in timeList:
