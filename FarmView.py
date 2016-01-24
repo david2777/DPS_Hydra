@@ -89,20 +89,22 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Column widths on jobTable
         self.jobTable.setColumnWidth(0, 60)         #Job ID
-        self.jobTable.setColumnWidth(1, 60)         #Status
-        self.jobTable.setColumnWidth(2, 60)         #Priority
-        self.jobTable.setColumnWidth(4, 80)         #Tasks
+        self.jobTable.setColumnWidth(1, 60)         #Priority
+        self.jobTable.setColumnWidth(2, 60)         #Status
+        self.jobTable.setColumnWidth(4, 80)         #Owner
+        self.jobTable.setColumnWidth(4, 60)         #Tasks
         self.jobTable.sortItems(0, order = Qt.DescendingOrder)
 
         # Column widths on the taskTable
         self.taskTable.setColumnWidth(0, 60)        #ID
-        self.taskTable.setColumnWidth(1, 60)        #Frame
-        self.taskTable.setColumnWidth(2, 100)       #Host
-        self.taskTable.setColumnWidth(3, 60)        #Status
-        self.taskTable.setColumnWidth(4, 120)       #Start Time
-        self.taskTable.setColumnWidth(5, 120)       #End Time
-        self.taskTable.setColumnWidth(6, 120)       #Duration
-        self.taskTable.setColumnWidth(7, 120)       #Code
+        self.taskTable.setColumnWidth(1, 60)        #Priority
+        self.taskTable.setColumnWidth(2, 60)        #Frame
+        self.taskTable.setColumnWidth(3, 100)       #Host
+        self.taskTable.setColumnWidth(4, 60)        #Status
+        self.taskTable.setColumnWidth(5, 120)       #Start Time
+        self.taskTable.setColumnWidth(6, 120)       #End Time
+        self.taskTable.setColumnWidth(7, 120)       #Duration
+        self.taskTable.setColumnWidth(8, 120)       #Code
 
         #Get the global column count for later
         self.taskTableCols = self.taskTable.columnCount()
@@ -282,9 +284,9 @@ class FarmView(QMainWindow, Ui_FarmView):
                 else:
                     taskString = "0% (0/0)"
                 self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
-                self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
-                self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
-                self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(job.priority)))
+                self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(job.priority)))
+                self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(niceNames[job.job_status])))
+                self.jobTable.item(pos, 2).setBackgroundColor(niceColors[job.job_status])
                 self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
                 self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
                 self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
@@ -292,7 +294,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     self.jobTable.item(pos, 3).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
                 if job.archived == 1:
                     self.jobTable.item(pos, 0).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 2).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 1).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
@@ -322,15 +324,15 @@ class FarmView(QMainWindow, Ui_FarmView):
             else:
                 taskString = "0% (0/0)"
             self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
-            self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(niceNames[job.job_status])))
-            self.jobTable.item(pos, 1).setBackgroundColor(niceColors[job.job_status])
-            self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(job.priority)))
+            self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(job.priority)))
+            self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(niceNames[job.job_status])))
+            self.jobTable.item(pos, 2).setBackgroundColor(niceColors[job.job_status])
             self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
             self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
             self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
             if job.archived == 1:
                 self.jobTable.item(pos, 0).setBackgroundColor(QColor(220,220,220))
-                self.jobTable.item(pos, 2).setBackgroundColor(QColor(220,220,220))
+                self.jobTable.item(pos, 1).setBackgroundColor(QColor(220,220,220))
                 self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                 self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                 self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
@@ -509,15 +511,16 @@ class FarmView(QMainWindow, Ui_FarmView):
                 #Remove first and last "%", replace with ", "
                 reqsString = str(task.requirements)[1:-1].replace("%", ", ")
                 self.taskTable.setItem(pos, 0, TableWidgetItem_int(str(task.id)))
-                self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.startFrame)))
-                self.taskTable.setItem(pos, 2, TableWidgetItem(str(task.host)))
-                self.taskTable.setItem(pos, 3, TableWidgetItem(str(niceNames[task.status])))
-                self.taskTable.item(pos, 3).setBackgroundColor(niceColors[task.status])
-                self.taskTable.setItem(pos, 4, TableWidgetItem_dt(str(task.startTime)))
-                self.taskTable.setItem(pos, 5, TableWidgetItem_dt(str(task.endTime)))
-                self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(tdiff)))
-                self.taskTable.setItem(pos, 7, TableWidgetItem_int(str(task.exitCode)))
-                self.taskTable.setItem(pos, 8, TableWidgetItem_int(reqsString))
+                self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.priority)))
+                self.taskTable.setItem(pos, 2, TableWidgetItem_int(str(task.startFrame)))
+                self.taskTable.setItem(pos, 3, TableWidgetItem(str(task.host)))
+                self.taskTable.setItem(pos, 4, TableWidgetItem(str(niceNames[task.status])))
+                self.taskTable.item(pos, 4).setBackgroundColor(niceColors[task.status])
+                self.taskTable.setItem(pos, 5, TableWidgetItem_dt(str(task.startTime)))
+                self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(task.endTime)))
+                self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(tdiff)))
+                self.taskTable.setItem(pos, 8, TableWidgetItem_int(str(task.exitCode)))
+                self.taskTable.setItem(pos, 9, TableWidgetItem_int(reqsString))
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))

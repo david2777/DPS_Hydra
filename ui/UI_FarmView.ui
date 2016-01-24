@@ -192,12 +192,12 @@
               </column>
               <column>
                <property name="text">
-                <string>Status</string>
+                <string>Priority</string>
                </property>
               </column>
               <column>
                <property name="text">
-                <string>Priority</string>
+                <string>Status</string>
                </property>
               </column>
               <column>
@@ -303,6 +303,11 @@
               <column>
                <property name="text">
                 <string>Task ID</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Priority</string>
                </property>
               </column>
               <column>
