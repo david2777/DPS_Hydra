@@ -312,6 +312,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def updateJobRow(self, row):
         job_id = int(self.jobTable.item(row, 0).text())
+        JobUtils.updateJobTaskCount(job_id)
         try:
             [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
             pos = row
@@ -419,7 +420,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                JobUtils.updateJobTaskCount(job_id, tasks)
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
