@@ -44,13 +44,6 @@ class UberJobTicket:
         if len(self.compatabilityPattern) > 255:
             raise Exception("compatabilityPattern out of range! Must be less than 255 characters after conversion!")
 
-    def commandBuilder(self, startFrame, endFrame):
-        """Returns a command as a list for sending to subprocess.call on RenderNode"""
-        #Using -mr:v 5 to get a more verbose log, render should still use correct engine
-        taskFile = '"' + self.taskFile + '"'
-        return " ".join([self.execsDict[self.execName], self.baseCMD, '-mr:v', '5', '-s',
-                str(startFrame), '-e', str(endFrame), taskFile])
-
     def compatabilityBuilder(self, compatabilityList):
         """Sorts compatabilityList and joins it with "%"s"""
         compStr = "%".join(sorted(compatabilityList))
@@ -72,8 +65,8 @@ class UberJobTicket:
                             owner = self.owner,
                             creationTime = self.createTime,
                             requirements = self.compatabilityPattern,
-                            taskDone = 0,
-                            totalTask = self.frameCount,
+                            tasksComplete = 0,
+                            tasksTotal = self.frameCount,
                             maxNodes = self.maxNodes)
 
         with transaction() as t:
@@ -84,15 +77,12 @@ class UberJobTicket:
     def createTasks(self):
         """Function for creating and inserting tasks for a range of frames."""
         for frame in self.frameList:
-            command = self.commandBuilder(frame, frame)
-            logger.debug(command)
-            task = hydra_taskboard(command = command,
-                                  job_id = self.job_id,
+            task = hydra_taskboard(job_id = self.job_id,
                                   status = self.jobStatus,
                                   priority = self.priority,
-                                  createTime = self.createTime,
                                   requirements = self.compatabilityPattern,
-                                  frame = frame)
+                                  startFrame = frame,
+                                  endFrame = frame)
 
             with transaction() as t:
                 task.insert(transaction=t)
@@ -171,11 +161,11 @@ if __name__ == "__main__":
         compatabilityList = ["MentalRay", "Maya2015"]
 
         uberPhase01 = UberJobTicket("maya2015Render", baseCMD, startFrame, endFrame, byFrame, mayaFile,
-        priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityList)
+        priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityList, 0)
         uberPhase01.doSubmit()
 
         #uberPhase02 = UberJobTicket("maya2014Render", baseCMD, proj, startFrame, endFrame, 1, mayaFile,
-        #priority, 2, "U", niceName + "_PHASE_02", owner, compatabilityList)
+        #priority, 2, "U", niceName + "_PHASE_02", owner, compatabilityList, 0)
         #uberPhase02.doSubmit()
 
     raw_input("DONE...")

@@ -66,12 +66,12 @@ CREATE TABLE `hydra_jobboard` (
   `owner` varchar(45) DEFAULT 'HydraUser' COMMENT 'User name of the person who submitted the job',
   `requirements` varchar(255) DEFAULT NULL COMMENT 'Requirements for the job ie. RedShift, Fusion, MentalRay, Power',
   `creationTime` datetime DEFAULT NULL COMMENT 'Time the job was created',
-  `taskDone` int(6) DEFAULT '0' COMMENT 'Total tasks done, calculated and stored by FarmView and RenderNodeMain',
-  `totalTask` int(6) DEFAULT '0' COMMENT 'Total subtasks, to avoid querying the subtask DB all the time',
+  `tasksComplete` int(6) DEFAULT '0' COMMENT 'Total tasks done, calculated and stored by FarmView and RenderNodeMain',
+  `tasksTotal` int(6) DEFAULT '0' COMMENT 'Total subtasks, to avoid querying the subtask DB all the time',
   `maxNodes` int(4) DEFAULT '0' COMMENT 'Max nodes a job should run on',
   `archived` int(4) DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -104,9 +104,7 @@ DROP TABLE IF EXISTS `hydra_taskboard`;
 CREATE TABLE `hydra_taskboard` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'The task id for this task. Auto incremented and created on submission by DB. ',
   `job_id` int(11) NOT NULL COMMENT 'The job_id for this task. ',
-  `command` varchar(1000) DEFAULT NULL COMMENT 'The command to be called by subprocess',
   `status` char(1) DEFAULT NULL COMMENT 'Current task status',
-  `createTime` datetime DEFAULT NULL COMMENT 'Time the task was created',
   `startTime` datetime DEFAULT NULL COMMENT 'Time the task started',
   `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',
   `host` varchar(80) DEFAULT NULL COMMENT 'Host the task is running on',
@@ -114,9 +112,11 @@ CREATE TABLE `hydra_taskboard` (
   `logFile` varchar(100) DEFAULT NULL COMMENT 'Log file directory (Local)',
   `requirements` varchar(255) DEFAULT NULL COMMENT 'Requirements to run this task',
   `priority` int(4) DEFAULT NULL COMMENT 'Priority for the task',
-  `frame` int(6) DEFAULT NULL COMMENT 'The frame for this task',
+  `startFrame` int(6) DEFAULT '1' COMMENT 'The frame for this task',
+  `endFrame` int(6) DEFAULT '1',
+  `archived` int(4) DEFAULT '0' COMMENT 'A column for archiving tasks so they don''t get pickedup by RenderNodeMain',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -128,4 +128,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-01-09 21:21:41
+-- Dump completed on 2016-01-23 21:57:11

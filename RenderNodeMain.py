@@ -42,12 +42,17 @@ class RenderTCPServer(TCPServer):
 
         TCPServer.__init__(self, *arglist, **kwargs)
         
+        execs = hydra_executable.fetch()
+        self.execsDict = {ex.name: ex.path for ex in execs}
+        
         self.childProcess = None
         self.childKilled = False
         self.statusAfterDeath = None
+        
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         [thisNode] = hydra_rendernode.fetch ("WHERE host = '{0}'".format(Utils.myHostName()))
         if thisNode.task_id:
+            logger.info("Unsticking...")
             [task] = hydra_rendernode.fetch("WHERE id = '{0}'".format(thisNode.task_id))
             if thisNode.status == PENDING or thisNode.status == OFFLINE:
                 newStatus = OFFLINE
@@ -56,6 +61,7 @@ class RenderTCPServer(TCPServer):
             TaskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED,
                               host=thisNode.host, newHostStatus=newStatus)
             JobUtils.manageNodeLimit(task.job_id)
+            
         #Update current software version on the DB if necessary
         current_version = sys.argv[0]
         if thisNode.software_version != current_version:
@@ -90,6 +96,15 @@ class RenderTCPServer(TCPServer):
             if not render_tasks:
                 return
             render_task = render_tasks[0] 
+            [render_job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(render_task.job_id))
+            
+            self.taskFile = '"' + render_job.taskFile + '"'
+            self.renderCMD = " ".join([self.execsDict[render_job.execName],
+                                    render_job.baseCMD,
+                                    '-mr:v', '5',
+                                    '-s', str(render_task.startFrame),
+                                    '-e', str(render_task.endFrame),
+                                    self.taskFile])
                         
             #Create log for this task and update task entry in the DB
             if not os.path.isdir(Constants.RENDERLOGDIR):
@@ -111,11 +126,11 @@ class RenderTCPServer(TCPServer):
         try:
             log.write('Hydra log file {0} on {1}\n'.format(render_task.logFile, render_task.host))
             log.write('RenderNodeMain is {0}\n'.format(sys.argv))
-            log.write('Command: {0}\n\n'.format(render_task.command))
+            log.write('Command: {0}\n\n'.format(self.renderCMD))
             Utils.flushOut(log)
 
             #Run the job and keep track of the process
-            self.childProcess = subprocess.Popen(render_task.command,
+            self.childProcess = subprocess.Popen(self.renderCMD,
                                                 stdout = log,
                                                 stderr = subprocess.STDOUT)
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid, render_task.id))

@@ -54,5 +54,22 @@
 -[Done]Change UI to right click
     -[Done]Need to separate creation and activation of QMenus for toggles
         -Solved via class-wide variables instead
+        
+-[Done]Change Job/Task Ticketing System
+    -Try not to store the same information over and over
+    -RenderNodeMain will build command
+    -This will make it so we can do stuff like multiple frames on a multi GPU
+    node and multiple frames in a row in the future
+    
+    Taskboard:
+    	Remove command
+    	Remove createTime - Move to Job
+    	Remove frame
+    	Add startFrame
+    	Add endFrame
+
+    Jobboard:
+    	Change taskDone to tasksComplete
+    	Change totalTask to tasksTotal
 
 -Everything else

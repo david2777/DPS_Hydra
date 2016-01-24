@@ -446,7 +446,7 @@
       </widget>
       <widget class="QWidget" name="jobsTab">
        <attribute name="title">
-        <string>Recent Tasks</string>
+        <string>Recent Jobs</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout_5">
         <item row="0" column="0">

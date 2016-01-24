@@ -276,9 +276,9 @@ class FarmView(QMainWindow, Ui_FarmView):
             jobs = hydra_jobboard.fetch(command)
             self.jobTable.setRowCount(len(jobs))
             for pos, job in enumerate(jobs):
-                if job.totalTask > 0:
-                    percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
-                    taskString  = "{0} ({1}/{2})".format(percent, job.taskDone, job.totalTask)
+                if job.tasksTotal > 0:
+                    percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
+                    taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete, job.tasksTotal)
                 else:
                     taskString = "0% (0/0)"
                 self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
@@ -315,9 +315,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
             pos = row
-            if job.totalTask > 0:
-                percent = "{0:.0%}".format(float(job.taskDone / job.totalTask))
-                taskString  = "{0} ({1}/{2})".format(percent, job.taskDone, job.totalTask)
+            if job.tasksTotal > 0:
+                percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
+                taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete, job.tasksTotal)
             else:
                 taskString = "0% (0/0)"
             self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
@@ -509,7 +509,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 #Remove first and last "%", replace with ", "
                 reqsString = str(task.requirements)[1:-1].replace("%", ", ")
                 self.taskTable.setItem(pos, 0, TableWidgetItem_int(str(task.id)))
-                self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.frame)))
+                self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.startFrame)))
                 self.taskTable.setItem(pos, 2, TableWidgetItem(str(task.host)))
                 self.taskTable.setItem(pos, 3, TableWidgetItem(str(niceNames[task.status])))
                 self.taskTable.item(pos, 3).setBackgroundColor(niceColors[task.status])
@@ -943,7 +943,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             self.updateThisNodeInfo()
             self.updateRenderNodeTable()
-            self.updateRenderTaskGrid()
+            self.updateRenderJobGrid()
             self.updateJobTable()
             self.updateStatusBar()
         except sqlerror as err:
@@ -994,24 +994,25 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateCapabilitiesLabel(self, capabilities):
         self.capabilitiesLabel.setText(capabilities)
 
-    def updateRenderTaskGrid(self):
+    def updateRenderJobGrid(self):    
         columns = [
             labelFactory('id'),
-            labelFactory('status'),
-            buttonFactory('logFile', loadLog),
-            labelFactory('host'),
-            labelFactory('command'),
-            labelFactory('startTime'),
-            labelFactory('endTime'),
-            labelFactory('exitCode')]
-        command = "ORDER BY id DESC LIMIT {0}".format(self.limitSpinBox.value())
-        records = (hydra_taskboard.fetch(command))
-
-        for task in records:
-            if task.logFile:
-                if task.host:
-                    task.logFile = task.logFile.replace("C:", "\\\\" + task.host)
-                    
+            labelFactory('owner'),
+            labelFactory('niceName'),
+            labelFactory('taskFile'),
+            labelFactory('baseCMD'),
+            labelFactory('startFrame'),
+            labelFactory('endFrame'),
+            labelFactory('execName'),
+            labelFactory('phase'),
+            labelFactory('requirements'),
+            labelFactory('job_status'),
+            labelFactory('maxNodes'),
+            labelFactory('creationTime')
+        ]
+        command = "WHERE archived = '0' ORDER BY id DESC LIMIT {0}".format(self.limitSpinBox.value())
+        records = (hydra_jobboard.fetch(command))
+        
         clearLayout(self.taskGrid)
         setupDataGrid(records, columns, self.taskGrid)
 

@@ -358,7 +358,7 @@ class Ui_FarmView(object):
         item = self.renderNodeTable.horizontalHeaderItem(7)
         item.setText(_translate("FarmView", "Last heartbeat", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.renderNodesTab), _translate("FarmView", "Render Nodes", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.jobsTab), _translate("FarmView", "Recent Tasks", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.jobsTab), _translate("FarmView", "Recent Jobs", None))
         self.nodeNameLabelLabel.setText(_translate("FarmView", "Node name:", None))
         self.nodeStatusLabelLabel.setText(_translate("FarmView", "Node status:", None))
         self.taskIDLabelLabel.setText(_translate("FarmView", "Task ID:", None))
