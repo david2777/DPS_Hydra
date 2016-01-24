@@ -1,3 +1,4 @@
+#Standard
 import pythoncom 
 import win32serviceutil 
 import win32service 
@@ -7,10 +8,12 @@ import socket
 import sys
 import logging.handlers
 import logging
+import subprocess
+import os
+import signal
 
+#Hydra
 from RenderNodeMain import *
-from NodeScheduler import *
-import NodeUtils
 from LoggingSetup import logger
  
 #logger.setLevel(logging.INFO)
@@ -42,18 +45,6 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
                               (self._svc_name_,'')) 
         self.main()
         
-    def heartbeatSVC(self, interval = 5000):
-        host = Utils.myHostName()
-        while True:
-            try:
-                with transaction() as t:
-                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '{0}'".format(host))
-            except Exception, e:
-                logger.error(traceback.format_exc(e))
-            
-            if win32event.WaitForSingleObject(self.hWaitStop, interval) == win32event.WAIT_OBJECT_0:
-                logger.debug("heartbeatSVC Break")
-                break
  
     def main(self): 
         logger.info('Starting in {0}'.format(os.getcwd()))
@@ -63,21 +54,20 @@ class AppServerSvc (win32serviceutil.ServiceFramework):
         socketServer.createIdleLoop(5, socketServer.processRenderTasks)
         logger.info("socketServer started!")
         
-        pulseThread = threading.Thread(target = self.heartbeatSVC, name = "heartbeatSVC", args = (60000,))
-        pulseThread.start()
-        logger.info("pulseThread Started!")
+        self.externals = None
+        try:
+            command = sys.argv[0].replace("RenderNodeService.exe", "RenderNodeExternals.exe")
+            self.externals = subprocess.Popen(command)
+            logger.info("Externals Started @ {0}".format(command))
+        except Exception, e:
+            logger.error(e)
         
-        shedThreadSVCVar = threading.Thread(target = self.schedThreadSVC, name = "schedThreadSVC", args = (300000,))
-        #schedThreadSVCVar.start()
-        logger.info("schedThreadSVC Started!")
-        
-        logger.info("-------->Live!<--------")
-        logger.info("-------->Live!<--------")
         logger.info("-------->Live!<--------")
         
         while True:
             if win32event.WaitForSingleObject(self.hWaitStop, 5000) == win32event.WAIT_OBJECT_0:
                 socketServer.shutdown()
+                os.kill(self.externals.pid, signal.SIGTERM)
                 logger.info("RIP [*]")
                 sys.exit(0)
 
