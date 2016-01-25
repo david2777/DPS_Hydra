@@ -88,13 +88,27 @@ def killJob(job_id, newStatus = "K"):
     is sent to the host running it.
     @return: False if no errors while killing started tasks, else True"""
     tasks =  hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
-    no_errors = True
+    respnse = False
     for task in tasks:
         response = TaskUtils.killTask(task.id, newStatus)
-        if response == False:
-            no_errors = False
+        if response:
+            response = True
     updateJobTaskCount(job_id, tasks)
-    return no_errors
+    return response
+    
+def resetJob(job_id, newStatus = "U"):
+    """Resets every task associated with job_id. Reset jobs have the status code
+    set by newStatus.
+    @return: True means there was an error, false means there were not
+    any errors."""
+    tasks = hydra_taskboard.fetch("WHERE job_id = {0}".format(job_id))
+    returnCode = False
+    for task in tasks:
+        response = TaskUtils.resetTask(task.id, newStatus)
+        if response:
+            returnCode = True
+            
+    return returnCode
     
 def prioritizeJob(job_id, priority):
     with transaction() as t:

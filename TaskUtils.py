@@ -42,22 +42,24 @@ def startTask(task_id):
         task.update(t)
 
 def resetTask(task_id, newStatus = "U"):
-    """Resets a task and puts it back on the job board with a new status."""
+    """Resets a task and puts it back on the job board with a new status.
+    @return: True means there was an error, false means there was not"""
     with transaction() as t:
         [task] = hydra_taskboard.fetch("WHERE id = '{0}'".format(task_id))
         logger.info("Reseting Task {0}".format(task_id))
         if task.status == "S":
             if not killTask(task.id):
                 logger.error("Could not kill task, unable to reset!")
-                return
+                return True
         task.status = newStatus
         task.host = None
         task.startTime = None
         task.endTime = None
         task.logFile = None
         task.exitCode = None
-
         task.update(t)
+    
+    return False
 
 
 def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
@@ -94,20 +96,20 @@ def sendKillQuestion(renderhost, newStatus="K"):
 def killTask(task_id, newStatus = "K"):
     """Kills the task with the specified id. If the task has been started, a
     kill request is sent to the node running it.
-    @return: True if there were no errors killing the task, else False."""
+    @return: True if there were any errors, False if there were not."""
     [task] = hydra_taskboard.fetch("WHERE id = '{0}'".format(task_id))
     if task.status == newStatus:
-        return True
+        return False
     elif task.status == "R" or task.status == "U":
         task.status = newStatus
         with transaction() as t:
             task.update(t)
         #If we reach this point: transaction successful, no exception raised
-        return True
+        return False
     elif task.status == "S":
         killed = sendKillQuestion(task.host, newStatus)
         #If we reach this point: TCPconnection successful, no exception raised
         return killed
     elif task.status == "K" or task.status == "F":
-        return True
-    return False
+        return False
+    return True

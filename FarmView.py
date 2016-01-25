@@ -180,6 +180,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
+        addItem("Fetch", self.doFetch, "Fetch the latest information from the Database")
+        self.jobMenu.addSeparator()
         addItem("Start Jobs", self.startJobHandler, "Start all jobs selected in Job List")
         addItem("Pause Jobs", self.pauseJobHandler, "Pause all jobs selected in Job List")
         addItem("Kill Jobs", self.killJobHandler, "Kill all jobs selected in Job List")
@@ -213,6 +215,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             self.userFilter = True
         self.updateJobTable()
+        self.resetStatusBar()
 
     def archivedFilterActionHandler(self):
         if self.showArchivedFilter == True:
@@ -220,6 +223,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             self.showArchivedFilter = True
         self.updateJobTable()
+        self.resetStatusBar()
         
     def jobCommandBuilder(self):
         command = "WHERE"
@@ -370,14 +374,14 @@ class FarmView(QMainWindow, Ui_FarmView):
             try:
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    no_errors = True
-                    if not JobUtils.killJob(job_id):
-                        no_errors = False
+                    response = False
+                    if JobUtils.killJob(job_id):
+                        response = True
             except sqlerror as err:
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                if no_errors ==  False:
+                if response:
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
@@ -392,21 +396,20 @@ class FarmView(QMainWindow, Ui_FarmView):
             try:
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    no_errors = True
-                    if not JobUtils.killJob(job_id, "U"):
-                        no_errors = False
+                    response = False
+                    if JobUtils.killJob(job_id, "U"):
+                        response = True
             except sqlerror as err:
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                if no_errors ==  False:
+                if response:
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
     def resetJobHandler(self):
-        #TODO:Move function to a JobUtil
         rows = self.jobTableHandler()
         if not rows:
             return
@@ -415,9 +418,10 @@ class FarmView(QMainWindow, Ui_FarmView):
             try:
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
-                    for task in tasks:
-                        TaskUtils.resetTask(task.id, "U")
+                    response = JobUtils.resetJob(job_id, "U")
+                    if response:
+                        aboutBox(title = "Reset Job Error",
+                        msg = "Could not reset task(s) under job {0} becase of error(s) communicating with their host(s)".format(job_id))
             except sqlerror as err:
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
@@ -487,6 +491,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
+        addItem("Fetch", self.doFetch, "Fetch the latest information from the Database")
+        self.taskMenu.addSeparator()
         addItem("Start Tasks", self.startTaskHandler, "Start all tasks selected in the Task List")
         addItem("Pause Tasks", self.pauseTaskHandler, "Pause all tasks selected in the Task List")
         addItem("Kill Tasks", self.killTaskHandler, "Kill all tasks selected in the Task List")
@@ -560,7 +566,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         if choice == QMessageBox.Yes:
             for row in rows:
                 task_id = int(self.taskTable.item(row, 0).text())
-                TaskUtils.resetTask(task_id, "U")
+                response = TaskUtils.resetTask(task_id, "U")
+                if response:
+                    aboutBox(title = "Reset Task Error",
+                    msg = "Unable to reset task {0} because there was an error communicating with it's host.".format(task_id))
             self.reloadTaskTable()
 
     def callTestFrameBox(self):
