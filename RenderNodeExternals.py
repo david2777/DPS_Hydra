@@ -1,12 +1,12 @@
 #Standard
 import threading
+import datetime
 
 #Hydra
 from LoggingSetup import logger
-import Utils
-from MySQLSetup import transaction
+import NodeUtils
 from RenderNodeMain import heartbeat 
-from NodeScheduler import schedThread as scheduler
+import NodeScheduler
 
 if __name__ == "__main__":
     logger.info("Starting Render Node Externals")
@@ -14,16 +14,24 @@ if __name__ == "__main__":
         pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
         pulseThread.start()
         logger.info("Pulse Thread Started!")
-    except Exception, e:
+    except Exception as e:
         logger.error(e)
-        traceback.print_exc(e, log)
         raise
     
     try:
-        schedThread = threading.Thread(target = scheduler, name = "scheduler", args = (60,))
-        schedThread.start()
-        logger.info("Scheduler Thread Started!")
-    except Exception, e:
+        startTime, endTime, isStarted = NodeScheduler.getSchedule(NodeUtils.getThisNodeData())
+        if startTime:
+            holidayData = NodeScheduler.hydra_holidays.fetch()
+            holidays = []
+            for holiday in holidayData:
+                holidaySplit = holiday.date.split(",")
+                holidaySplit = [int(d) for d in holidaySplit]
+                holidays.append(datetime.date(holidaySplit[0], holidaySplit[1], holidaySplit[2]))
+            schedThread = threading.Thread(target = NodeScheduler.schedThread, name = "scheduler", args = (60, startTime, endTime, isStarted, holidays))
+            schedThread.start()
+            logger.info("Scheduler Thread Started!")
+        else:
+            logger.info("Running node in manual mode...")
+    except Exception as e:
         logger.error(e)
-        traceback.print_exc(e, log)
         raise

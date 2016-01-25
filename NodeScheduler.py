@@ -8,43 +8,34 @@ from LoggingSetup import logger
 import NodeUtils
 from MySQLSetup import hydra_schedules, hydra_holidays
 
-def schedThread(interval):
+def schedThread(interval, startTime, endTime, isStarted, holidays):
     #Do the stuff
-    startTime, endTime, isStarted = getSchedule(NodeUtils.getThisNodeData())
-    holidayData = hydra_holidays.fetch()
-    holidays = []
-    for holiday in holidayData:
-        holidaySplit = holiday.date.split(",")
-        holidaySplit = [int(d) for d in holidaySplit]
-        holidays.append(datetime.date(holidaySplit[0], holidaySplit[1], holidaySplit[2]))
-        
-    
     if startTime == None:
         return
     
     while True:
         now = datetime.datetime.now().replace(microsecond = 0)
-        print "Current time:\t\t" + str(now)
+        logger.info("Current time: {0}".format(str(now)))
 
         #If we're not started, check to see if we're in a condition to startup
         if not isStarted:
             #If it's a holiday, start it up!
             if datetime.date.today() in holidays:
-                print "Today is a holiday!"
+                logger.info("Today is a holiday!")
                 isStarted, startTime = startupEvent(now, isStarted, startTime)
             #If not, check the curent time against the expected start time
             else:
                 if startTime <= now:
                     isStarted, startTime = startupEvent(now, isStarted, startTime)
                 else:
-                    print "Waiting for start @:\t" + str(startTime) + "\n"
+                    logger.info("Waiting for start @: {0}".format(startTime))
 
         #If we are started, check to see if we're in a condition to shutdown
         elif isStarted:
             if endTime <= now:
                 isStarted, endTime = shutdownEvent(now. isStarted, endTime)
             else:
-                print "Waiting for end @:\t" + str(endTime) + "\n"
+                logger.info("Waiting for end @: {0}".format(endTime))
                 
         time.sleep(interval)
         
@@ -53,7 +44,7 @@ def startupEvent(now, isStarted, startTime):
     newDate = now.date() + datetime.timedelta(days = 1)
     newTime = startTime.time()
     startTime = datetime.datetime.combine(newDate, newTime)
-    print "\n\nTriggering Startup Event\n\n"
+    logger.info("Triggering Startup Event")
     return isStarted, startTime
 
 def shutdownEvent(now, isStarted, endTime):
@@ -61,7 +52,7 @@ def shutdownEvent(now, isStarted, endTime):
     newDate = now.date() + datetime.timedelta(days = 1)
     newTime = endTime.time()
     endTime = datetime.datetime.combine(newDate, newTime)
-    print "\n\nTriggering Shutdown Event\n\n"
+    logger.info("Triggering Shutdown Event")
     return isStarted, endTime
 
 def getSchedule(nodeOBJ):
@@ -98,8 +89,3 @@ def getSchedule(nodeOBJ):
 
     #Return the three things we need to run our loop
     return nodeSch[0], nodeSch[1], isStarted
-
-
-if __name__ == "__main__":
-    schedThread = threading.Thread(target = schedThread, name = "schedThread", args = (5,))
-    schedThread.start()
