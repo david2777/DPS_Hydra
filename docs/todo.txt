@@ -6,10 +6,10 @@
       -[Solution]If not, us os.kill()
     -Was caused by subprocess.kill() not working for some reason, using OS now
 
--[In Progress]Keep implementing new boards into farm View
+-[Done]Keep implementing new boards into farm View
     -[Mostly Done]Update button handlers
     -[Done]Figure out why table helpers don't like anything other than strings
-    -[In Progress]Organize FarmView button handlers
+    -[Done]Organize FarmView button handlers
     -[Done]Add NodeUtils for messing with nodes
     -[Done]Need to be able to see reqs in FarmView
     -[Done]Add button for viewing logs
@@ -27,7 +27,7 @@
      -Job should hold a base command, start frame, end frame, and Maya File
      -Tasks should be run using these and get a dedicated frame number on creation
 
--[In Progress]Overhaul FarmView commands
+-[Doneish]Overhaul FarmView commands
      -Maybe too many buttons
 
 -[In Progress]Add filters to JobTable in FarmView
@@ -35,7 +35,7 @@
 -[Done]Multi-select for Task View
     -Will require a lot of reworking of functions that modify tasks
 
--[Doneish]Make a Job Status
+-[Done]Make a Job Status
     -Done on demand via Farmview when loading shot data for specific shots
     -Mostly should be done by RenderNodemain when it changes status in DB
 
@@ -71,5 +71,9 @@
     Jobboard:
     	Change taskDone to tasksComplete
     	Change totalTask to tasksTotal
+      
+-[Todo]Edit node dialog
+
+-[Todo]Edit job dialog
 
 -Everything else
