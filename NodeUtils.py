@@ -1,3 +1,5 @@
+"""Useful utilities to get info on or modify nodes listed on the DB.
+Probably need to move the rest of the node utilities into here."""
 #3rd party
 from MySQLdb import Error as sqlerror
 

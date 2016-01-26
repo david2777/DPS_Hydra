@@ -1,4 +1,4 @@
-"""Setup for MySQL Transactions"""
+"""Setup for MySQL Transactions."""
 #Standard
 import MySQLdb
 import ConfigParser

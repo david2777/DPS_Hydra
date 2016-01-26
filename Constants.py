@@ -1,3 +1,4 @@
+"""Things that will remain constant. Also makes them easy to change in here..."""
 import os
 
 PORT = 3606

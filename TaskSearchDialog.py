@@ -1,3 +1,4 @@
+"""A dialog for searching for a task."""
 #Standard
 from PyQt4.QtGui import QDialog
 from PyQt4.QtCore import QObject, SIGNAL

@@ -1,4 +1,4 @@
-"""Registeres a node with the database"""
+"""Registers a node with the database."""
 #Standard
 import os
 import LoggingSetup

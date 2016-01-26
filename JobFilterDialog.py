@@ -1,3 +1,4 @@
+"""A dialog called in FarmView to filter the jobs loaded into the Job Table."""
 #Standard
 from PyQt4.QtGui import QDialog
 from PyQt4.QtCore import QObject, SIGNAL

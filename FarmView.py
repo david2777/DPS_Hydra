@@ -1,3 +1,4 @@
+"""The software for managing jobs, tasks, and nodes."""
 #Standard
 import sys
 import os

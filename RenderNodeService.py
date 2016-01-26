@@ -1,3 +1,5 @@
+"""Setup for running RenderNodeMain as a win32service. This calls RenderNodeExternals
+as a subprocess for reasons specified in that file's docstring."""
 #Standard
 import pythoncom 
 import win32serviceutil 
@@ -16,7 +18,7 @@ import signal
 from RenderNodeMain import *
 from LoggingSetup import logger
  
-#logger.setLevel(logging.INFO)
+logger.setLevel(logging.INFO)
 
 class NoSQLFilter(logging.Filter):
     def filter(self, record):

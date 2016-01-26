@@ -1,3 +1,4 @@
+"""Setups for various local servers"""
 #Standard
 import SocketServer
 import threading
@@ -8,7 +9,6 @@ import time
 #Hydra
 import Constants
 from LoggingSetup import logger
-#Note that this imports Questions at the bottom for some reason
 
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra

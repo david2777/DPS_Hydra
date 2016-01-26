@@ -1,3 +1,7 @@
+"""Functions for the scheduler. The scheduler will online and offline nodes
+at specific times of day. On limitation as of now is that it assumes
+the shutdown time is tomorrow so if a node goes offline before startup and
+comes online fater the startup time it will not startup until tomorrow."""
 #Standard
 import datetime
 import threading

@@ -1,3 +1,6 @@
+"""Setup for job and task tickets which are submitted to the DB. They should
+contain all necessary information to process a render task. Contains some
+untested functions for submitting arbitrary cmd jobs."""
 #Standard
 from datetime import datetime
 

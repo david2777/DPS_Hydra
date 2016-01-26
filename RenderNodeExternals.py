@@ -1,3 +1,7 @@
+"""Treaded functions that were too annoying to kill when running RenderNodeMain
+as a serivce (via RenderNodeService). It is much easier to run these as a 
+subprocess and kill them upon shutdown rather than trying to get the threads 
+to notice the shutdown signal."""
 #Standard
 import threading
 import datetime

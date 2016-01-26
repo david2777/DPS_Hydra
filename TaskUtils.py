@@ -1,3 +1,4 @@
+"""A collection of utilities to be run on Tasks (the children of Jobs)"""
 #Standard
 import sys
 
@@ -12,6 +13,8 @@ from Connections import TCPConnection
 import Utils
 
 def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
+    """Changes the status of a single task given a new status and an optional
+    list of old statuses to limit which statuses are to be changed."""
     if type(old_status_list) is not list:
         logger.error("Bad Old Status List in TaskUtils!")
         raise Exception("Please use a list for old statuses")
@@ -37,7 +40,6 @@ def startTask(task_id):
             task.status = "R"
         else:
             logger.info("Skipping...")
-            #resetTask(task_id, "R")
 
         task.update(t)
 
@@ -63,6 +65,9 @@ def resetTask(task_id, newStatus = "U"):
 
 
 def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
+    """Unsticks and rests a task. Particularly useful for a node that wakes up
+    with a task assinged to it that it has no memory of (like after an
+    unexpected shutdown or crash)."""
     with transaction() as t:
         if taskID:
             [task] = hydra_taskboard.fetch("WHERE id = {0}".format(taskID))
@@ -82,7 +87,8 @@ def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
             host.update(t)
 
 def sendKillQuestion(renderhost, newStatus="K"):
-    """Tries to kill the current task running on the renderhost. Returns True if successful, otherwise False"""
+    """Tries to kill the current task running on the renderhost.
+    @return True if successful, otherwise False"""
     logger.info('Kill task on {0}'.format(renderhost))
     connection = TCPConnection(hostname=renderhost)
     answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))

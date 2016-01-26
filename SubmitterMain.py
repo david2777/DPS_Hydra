@@ -1,3 +1,5 @@
+"""The software used for submitting jobs to the DB. Gather data, creates and 
+submits job tickets to the database."""
 #Standard
 import sys
 import os

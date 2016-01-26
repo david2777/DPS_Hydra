@@ -1,3 +1,5 @@
+"""Questions you can ask nodes, can probably be cleaned up a bit to get rid 
+of legacy stuff that isn't used anymore."""
 #Standard
 import time
 import subprocess
@@ -9,7 +11,8 @@ import datetime
 #Hydra
 from Answers import TimeAnswer, EchoAnswer, CMDAnswer, RenderAnswer, KillCurrentJobAnswer
 from MySQLSetup import hydra_taskboard
-import RenderNodeMain
+#Not needed?
+#import RenderNodeMain
 from Constants import RENDERLOGDIR
 
 #Authors: David Gladstein and Aaron Cohn
@@ -50,7 +53,7 @@ class RenderQuestion(Question):
         self.render_task_id = render_task_id
 
     def computeAnswer(self, server):
-        [render_tasks] = hydra_taskboard.fetch("where ")
+        [render_tasks] = hydra_taskboard.fetch("WHERE ")
         render_task = hydra_taskboard.fetch()
         render_task.host = os.getenv('COMPUTERNAME')
         if not os.path.isdir( RENDERLOGDIR ):

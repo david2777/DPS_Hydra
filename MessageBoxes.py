@@ -1,3 +1,4 @@
+"""Some useful message boxes to be use in FarmView and SubmitterMain."""
 #Standard
 from PyQt4.QtGui import QMessageBox, QInputDialog
 
