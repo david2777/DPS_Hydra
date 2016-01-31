@@ -45,21 +45,24 @@ class RenderTCPServer(TCPServer):
             sys.exit(1)
         if nInstances == 0 and not sys.argv[0].endswith('.py'):
             logger.warning("Can't find running RenderNodeMain.")
-
+        
+        #Initiate TCP Server
         TCPServer.__init__(self, *arglist, **kwargs)
         
+        #Setup class variables
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}
         
         self.childProcess = None
         self.childKilled = False
         self.statusAfterDeath = None
+        self.thisNodeName = Utils.myHostName()
         
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
-        [thisNode] = hydra_rendernode.fetch ("WHERE host = '{0}'".format(Utils.myHostName()))
+        [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
         if thisNode.task_id:
             logger.info("Unsticking...")
-            [task] = hydra_rendernode.fetch("WHERE id = '{0}'".format(thisNode.task_id))
+            [task] = hydra_taskboard.fetch("WHERE id = '{0}'".format(thisNode.task_id))
             if thisNode.status == PENDING or thisNode.status == OFFLINE:
                 newStatus = OFFLINE
             else:
@@ -78,7 +81,7 @@ class RenderTCPServer(TCPServer):
     def processRenderTasks(self):
         """The loop that looks for jobs on the DB and runs them if the node meets
         the job's requirements (Priority & Capabilities)"""
-        [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(Utils.myHostName()))
+        [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
         
         logger.debug("Host: {0} Status: {1} Capabilities {2}".format(thisNode.host, niceNames[thisNode.status], thisNode.capabilities))
         
@@ -92,19 +95,23 @@ class RenderTCPServer(TCPServer):
         #-Ready to be run and
         #-Has a high enough priority level for this particular node and
         #-Is able to meet to jobs required capabilities
-        queryString = ("WHERE status = '{0}' AND priority >= {1}".format(READY, thisNode.minPriority))
+        queryString = "WHERE status = '{0}'".format(READY)
+        queryString += "AND priority >= '{0}'".format(thisNode.minPriority)
         queryString += " AND '{0}' LIKE requirements".format(thisNode.capabilities) 
         queryString += " AND archived = '0'"
         queryString += " ORDER BY priority DESC, id ASC"
 
         with transaction() as t:
-            render_tasks = hydra_taskboard.fetch(queryString, limit=1, explicitTransaction=t)
+            render_tasks = hydra_taskboard.fetch(queryString,
+                                                limit = 1,
+                                                explicitTransaction = t)
             if not render_tasks:
                 return
             render_task = render_tasks[0] 
-            [render_job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(render_task.job_id))
+            [render_job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(render_task.job_id),
+                                                explicitTransaction = t)
             
-            self.taskFile = '"' + render_job.taskFile + '"'
+            self.taskFile = '"{0}"'.format(render_job.taskFile)
             self.renderCMD = " ".join([self.execsDict[render_job.execName],
                                     render_job.baseCMD,
                                     '-mr:v', '5',
@@ -116,7 +123,7 @@ class RenderTCPServer(TCPServer):
             if not os.path.isdir(Constants.RENDERLOGDIR):
                 os.makedirs(Constants.RENDERLOGDIR)
             render_task.logFile = os.path.join(Constants.RENDERLOGDIR,
-                                '%010d.log.txt' % render_task.id )
+                                            '{:0>10}.log.txt'.format(render_task.id))
             render_task.status = STARTED
             render_task.host = thisNode.host
             thisNode.status = STARTED
@@ -134,17 +141,24 @@ class RenderTCPServer(TCPServer):
             log.write('RenderNodeMain is {0}\n'.format(sys.argv))
             log.write('Command: {0}\n\n'.format(self.renderCMD))
             Utils.flushOut(log)
-
+            
             #Run the job and keep track of the process
             self.childProcess = subprocess.Popen(self.renderCMD,
                                                 stdout = log,
                                                 stderr = subprocess.STDOUT)
-            logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid, render_task.id))
+            logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
+                                                                render_task.id))
 
             #Wait until the job is finished or terminated
-            render_task.exitCode = self.childProcess.wait()
-
-            log.write('\nProcess exited with code {0}\n'.format(render_task.exitCode))
+            #NOTE: This lockes up the main thread!
+            #TODO:Communicate prevents deadlocking but seems to cause a window
+            #     to popup for a split second after rendering. Will check out later
+            self.childProcess.communicate()
+            render_task.exitCode = self.childProcess.returncode
+            logString = "\nProcess exited with code {0} at {1} on {2}\n"
+            log.write(logString.format(render_task.exitCode,
+                                        datetime.datetime.now(),
+                                        self.thisNodeName))
             return RenderAnswer()
 
         except Exception, e:
@@ -154,7 +168,8 @@ class RenderTCPServer(TCPServer):
         finally:
             #Get the latest info about this render node
             with transaction() as t:
-                [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(Utils.myHostName()), explicitTransaction=t)
+                [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName),
+                                                    explicitTransaction=t)
 
                 #Check if job was killed, update the job board accordingly
                 if self.childKilled:
@@ -220,6 +235,12 @@ class RenderTCPServer(TCPServer):
             self.statusAfterDeath = statusAfterDeath
         else:
             logger.warning("No process was running.")
+            
+    def monitorThread(self, interval):
+        """This will be a thread running to do things like check file output 
+        and watch for timeouts.
+        Note: Will need to be run by RenderNodeExternals for RenderNodeService"""
+        raise NotImplementedError
             
 
 def heartbeat(interval = 5):

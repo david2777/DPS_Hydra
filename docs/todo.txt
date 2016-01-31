@@ -76,4 +76,10 @@
 
 -[Todo]Edit job dialog
 
+-[Todo]Timeouts
+
+-Attempts?
+
+-Node does not pickup job it failed on in the past?
+
 -Everything else
