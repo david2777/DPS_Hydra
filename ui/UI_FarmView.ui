@@ -244,7 +244,7 @@
             <item row="0" column="0" colspan="2">
              <widget class="QLabel" name="taskTableLabel">
               <property name="text">
-               <string>Task List (Job ID: None)</string>
+               <string>Task List (Job ID: 0) (Node Limit: 0)</string>
               </property>
              </widget>
             </item>
@@ -464,8 +464,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>1250</width>
-             <height>614</height>
+             <width>98</width>
+             <height>52</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">

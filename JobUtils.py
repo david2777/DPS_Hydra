@@ -105,7 +105,7 @@ def killJob(job_id, newStatus = "K"):
     updateJobTaskCount(job_id, tasks)
     return response
     
-def resetJob(job_id, newStatus = "U"):
+def resetJob(job_id, newStatus = "R"):
     """Resets every task associated with job_id. Reset jobs have the status code
     set by newStatus.
     @return: True means there was an error, false means there were not
@@ -125,7 +125,7 @@ def prioritizeJob(job_id, priority):
         t.cur.execute("UPDATE hydra_jobboard SET priority = '{0}' WHERE id = '{1}'".format(priority, job_id))
         t.cur.execute("UPDATE hydra_taskboard SET priority = '{0}' WHERE job_id = '{1}'".format(priority, job_id))
                         
-def setupNodeLimit(job_id, hold_status = "U"):
+def setupNodeLimit(job_id, hold_status = "M"):
     """A function for setting up the node limit on a job. The node limiting system
     works by pausing tasks beyond the count of the limit. Ie if the limit is 3 
     nodes then the job will only have a maxiumum of 3 tasks ready or started 
@@ -143,11 +143,11 @@ def setupNodeLimit(job_id, hold_status = "U"):
     for task in startTasks:
         TaskUtils.startTask(task.id)
     
-    for task in holdTasks:
-        with transaction() as t:
-            t.cur.execute("UPDATE hydra_taskboard SET status = '{0}' WHERE id = '{1}'".format(hold_status, task.id))
+    with transaction() as t:
+        for task in holdTasks:
+            t.cur.execute("UPDATE hydra_taskboard SET status = '{0}' WHERE id = '{1}' AND status = '{2}'".format(hold_status, task.id, READY))
                         
-def manageNodeLimit(job_id, hold_status = "U"):
+def manageNodeLimit(job_id, hold_status = "M"):
     """The counterpart to setupNodeLimit. This is run by RenderNodeMain after
     every task. For more info see setupNodeLimit doc string."""
     [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))

@@ -157,7 +157,7 @@ class RenderTCPServer(TCPServer):
             render_task.exitCode = self.childProcess.returncode
             logString = "\nProcess exited with code {0} at {1} on {2}\n"
             log.write(logString.format(render_task.exitCode,
-                                        datetime.datetime.now(),
+                                        datetime.datetime.now().replace(microsecond=0),
                                         self.thisNodeName))
             return RenderAnswer()
 

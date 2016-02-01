@@ -43,7 +43,7 @@ def startTask(task_id):
 
         task.update(t)
 
-def resetTask(task_id, newStatus = "U"):
+def resetTask(task_id, newStatus = "R"):
     """Resets a task and puts it back on the job board with a new status.
     @return: True means there was an error, false means there was not"""
     with transaction() as t:

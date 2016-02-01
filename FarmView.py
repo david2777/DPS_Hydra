@@ -190,6 +190,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         addItem("Start Test Frames...", self.callTestFrameBox, "Open a dialog to start the first X frames in each job selected in the Job List")
         self.jobMenu.addSeparator()
         addItem("Toggle Archive", self.toggleArchiveHandler, "Toggle the Archived status on each job selected in he Job List")
+        addItem("Reset Node Limit", self.resetNodeManagementHandler, "Reset the number of tasks which are ready to match the limit of the number of concurant tasks.")
         self.jobMenu.addSeparator()
         #setJobPriorityHandler
         addItem("Set Job Priority...", self.setJobPriorityHandler, "Set priority on each job selected in the Job List")
@@ -430,6 +431,22 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.updateJobTable()
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
+                
+    def resetNodeManagementHandler(self):
+        rows = self.jobTableHandler()
+        if not rows:
+            return
+        cStr = "Are you sure you want to reset node managment on the selected Job?\n"
+        cStr += "This will hold all Tasks above the max node count set on the Job."
+        choice = yesNoBox(self, "Confirm", cStr)
+        if choice == QMessageBox.Yes:
+            for row in rows:
+                job_id = int(self.jobTable.item(row, 0).text())
+                JobUtils.setupNodeLimit(job_id)
+        
+        self.updateJobTable()
+        self.jobCellClickedHandler(rows[-1])
+        self.jobTable.setCurrentCell(rows[-1], 0)
 
     def setJobPriorityHandler(self):
         rows = self.jobTableHandler()
@@ -503,7 +520,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskMenu.popup(QCursor.pos())
 
     def updateTaskTable(self, job_id):
-        self.taskTableLabel.setText("Task List (Job ID: " + str(job_id) + ")")
+        with transaction() as t:
+            t.cur.execute("SELECT maxNodes FROM hydra_jobboard WHERE id = '{0}'".format(str(job_id)))
+            limit = t.cur.fetchall()[0][0]
+        sString = "Task List (Job ID: {0}) (Node Limit: {1})".format(str(job_id), int(limit)) 
+        self.taskTableLabel.setText(sString)
         try:
             tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
             self.taskTable.setRowCount(len(tasks))
@@ -679,7 +700,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         task_id = str(self.taskIDLineEdit.text())
         if task_id:
             with transaction() as t:
-                query = "SELECT job_id FROM hydra_taskboard WHERE id = {0}".format(task_id)
+                query = "SELECT job_id FROM hydra_taskboard WHERE id = '{0}'".format(task_id)
                 t.cur.execute(query)
                 job_id = t.cur.fetchall()
 
@@ -1266,7 +1287,7 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              CRASHED: QColor(220,90,90),        #Dark Red
              STARTED: QColor(200,220,240),      #Light Blue
              ERROR: QColor(220,90,90),          #Red
-             HOLD: QColor(255,255,255),         #White, placeholder
+             MANAGED: QColor(240,230,200),      #Light Orange
              IDLE: QColor(255,255,255),         #White
              OFFLINE: QColor(220,220,220),      #Gray
              PENDING: QColor(240,230,200),      #Orange

@@ -15,8 +15,8 @@ import Constants
 #Taken from Cogswell's Project Hydra
 
 #Statuses for jobs/tasks
-HOLD = 'H'
-PAUSED = 'U'                #Job was paused(let running jobs finish)
+MANAGED = 'M'               #Job is being managed by the max node manager
+PAUSED = 'U'                #Job was paused
 ERROR = 'E'                 #Job returned a non-zero exit code
 READY = 'R'                 #Ready to be run by a render node
 FINISHED = 'F'              #Job complete
@@ -41,7 +41,7 @@ niceNames = {PAUSED: 'Paused',
             PENDING: 'Pending',
             STARTED: 'Started',
             ERROR: 'Error',
-            HOLD: 'Hold',
+            MANAGED: 'Managed',
             }
 
 SETTINGS = Constants.SETTINGS
