@@ -1,15 +1,19 @@
 """Setup for MySQL Transactions."""
 #Standard
 import MySQLdb
-import ConfigParser
-import os
-import shutil
 import sys
+
+#QT
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+
+#HydraQT
+from LoginWidget import DatabaseLogin, getDbInfo
 
 #Hydra
 from LoggingSetup import logger
 import Utils
-import Constants
+
 
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
@@ -44,36 +48,7 @@ niceNames = {PAUSED: 'Paused',
             MANAGED: 'Managed',
             }
 
-SETTINGS = Constants.SETTINGS
-
-def getDbInfo():
-    # open config file
-    config = ConfigParser.RawConfigParser()
-    # creat a copy if it doesn't exist
-    if not os.path.exists(SETTINGS):
-        folder = os.path.dirname(SETTINGS)
-        logger.info('Check for folder {0}'.format(folder))
-        if os.path.exists(folder):
-            logger.info('{0} Exists'.format(folder))
-        else:
-            logger.info('Make {0}'.format(folder))
-            os.mkdir(folder)
-        cfgFile = os.path.join(os.path.dirname(sys.argv[0]), os.path.basename(SETTINGS))
-        logger.info('Copy {0}'.format(cfgFile))
-        shutil.copyfile(cfgFile, SETTINGS)
-
-    config.read(SETTINGS)
-
-    #Get server & db names
-    host = config.get(section="database", option="host")
-    db = config.get(section="database", option="db")
-    #Get Username and Password
-    username = config.get(section="database", option="username")
-    password = config.get(section="database", option="password")
-
-    return host, db, username, password
-
-db_host, db_name, db_username, db_password = getDbInfo()
+db_username = "UNKOWN"
 
 class AUTOINCREMENT:
     pass
@@ -170,10 +145,29 @@ class hydra_holidays(tupleObject):
 
 
 class transaction:
+    if DatabaseLogin.autoLogin:
+        _db_host, _db_name, _db_username, _db_password = getDbInfo()
+    else:
+        app = QApplication(sys.argv)
+        loginWin = DatabaseLogin()
+        loginWin.show()
+        retcode = app.exec_()
+        _db_host, _db_name, _db_username, _db_password  = loginWin.getValues()
+        if retcode != 0:
+            sys.exit(retcode)
+        if _db_host ==  None:
+            sys.exit(0)
+            
+        global db_username 
+        db_username = _db_username
+
     def __init__(self):
-        # open db connection
-        self.db = MySQLdb.connect(db_host, user=db_username, passwd = db_password, db=db_name)
-        self.cur = self.db.cursor ()
+        #Open DB Connection
+        self.db = MySQLdb.connect(transaction._db_host,
+                                    user=transaction._db_username,
+                                    passwd = transaction._db_password,
+                                    db=transaction._db_name)
+        self.cur = self.db.cursor()
         self.cur.execute("set autocommit = 1")
 
     def __enter__(self):

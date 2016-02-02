@@ -30,14 +30,23 @@ import TaskUtils
 import JobUtils
 import NodeUtils
 
+
 #Parts taken from Cogswell's Project Hydra by David Gladstein and Aaron Cohn
 
 logger.setLevel(logging.INFO)
+
+
+
+
+#------------------------------------------------------------------------------#
+#--------------------------------Farm View-------------------------------------#
+#------------------------------------------------------------------------------#
 
 class FarmView(QMainWindow, Ui_FarmView):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
+        
 
         #My UI Setup Functions
         self.setupTables()
@@ -72,6 +81,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         #And there was data
         #And Hydra saw the data
         #And it was(hopefully) good
+        
+    def closeEvent(self, event):
+        event.accept()
+        sys.exit(0)
 
 
     #---------------------------------------------------------------------#
@@ -1309,8 +1322,8 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+        
     window = FarmView()
-
     window.show()
     retcode = app.exec_()
     sys.exit(retcode)

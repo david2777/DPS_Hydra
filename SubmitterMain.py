@@ -9,6 +9,7 @@ import logging.handlers
 #QT
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+
 #HydraQT
 from UI_Submitter import Ui_MainWindow
 
@@ -34,6 +35,10 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         self.populateReqs()
         self.populateExecs()
         self.setupForms()
+    
+    def closeEvent(self, event):
+        event.accept()
+        sys.exit(0)
 
     #------------------------------------------------------------------------#
     #---------------------------UI Setup Functions---------------------------#
@@ -358,9 +363,10 @@ if __name__ == '__main__':
         sys.argv[1]
     except IndexError:
         sys.argv.append("")
+            
     app = QApplication(sys.argv)
+    
     window = SubmitterMain()
-
     window.show()
     retcode = app.exec_()
     sys.exit(retcode)
