@@ -120,6 +120,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.getOffThisNodeButton, SIGNAL("clicked()"),
                         self.getOffThisNodeHandler)
                         
+        #Connect basic filter checkboxKeys
+        QObject.connect(self.archivedCheckBox, SIGNAL("stateChanged(int)"),
+                        self.archivedFilterActionHandler)
+        QObject.connect(self.userFilterCheckbox, SIGNAL("stateChanged(int)"),
+                        self.userFilterActionHandler)
+                        
         #Connect actions in Job View
         QObject.connect(self.jobTable, SIGNAL ("cellClicked(int,int)"),
                 self.jobCellClickedHandler)
@@ -214,16 +220,20 @@ class FarmView(QMainWindow, Ui_FarmView):
     def userFilterActionHandler(self):
         if self.userFilter == True:
             self.userFilter = False
+            self.userFilterCheckbox.setChecked(0)
         else:
             self.userFilter = True
+            self.userFilterCheckbox.setChecked(2)
         self.updateJobTable()
         self.resetStatusBar()
 
     def archivedFilterActionHandler(self):
         if self.showArchivedFilter == True:
             self.showArchivedFilter = False
+            self.archivedCheckBox.setChecked(0)
         else:
             self.showArchivedFilter = True
+            self.archivedCheckBox.setChecked(2)
         self.updateJobTable()
         self.resetStatusBar()
         
