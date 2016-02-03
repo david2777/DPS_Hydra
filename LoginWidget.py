@@ -47,26 +47,24 @@ def getDbInfo():
 
 class DatabaseLogin(QWidget, Ui_Login):
     #Set autoLogin and get default DB info from .cfg
-    autoLogin = True
-    
     def __init__(self):
         QWidget.__init__(self)
         self.setupUi(self)
-        
+
         self._db_host, self._db_name, self._db_username, self._db_password = getDbInfo()
-        
+
         QObject.connect(self.loginButton, SIGNAL("clicked()"),
                         self.loginButtonHandler)
-                        
+
         self.loginSuccess = False
-            
-            
+
+
     def getValues(self):
         if self.loginSuccess:
             return self._db_host, self._db_name, self._db_username, self._db_password
         else:
             return None, None, None, None
-        
+
     def closeEvent(self, event):
         """Make it so when the user presses the X in the window it exits
         rather than just closing the login window and opening FarmView"""
@@ -74,15 +72,15 @@ class DatabaseLogin(QWidget, Ui_Login):
         if not self.loginSuccess:
             sys.exit(1)
 
-    
+
     def loginButtonHandler(self):
         self._db_username = str(self.user.text())
         self._db_password = str(self.password.text())
-        
+
         if self.remoteAccess.isChecked():
             #self.host = "REMOTE"
             pass
-            
+
         try:
             MySQLdb.connect(self._db_host,
                                         user=self._db_username,

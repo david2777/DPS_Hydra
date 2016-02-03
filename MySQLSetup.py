@@ -13,6 +13,13 @@ from LoginWidget import DatabaseLogin, getDbInfo
 #Hydra
 from LoggingSetup import logger
 import Utils
+from StoreSVCKeys import getPrivateData
+
+
+##########AUTO LOGIN##########
+autoLogin = True
+#Constants
+db_username = "UNKOWN"
 
 
 #Authors: David Gladstein and Aaron Cohn
@@ -48,7 +55,6 @@ niceNames = {PAUSED: 'Paused',
             MANAGED: 'Managed',
             }
 
-db_username = "UNKOWN"
 
 class AUTOINCREMENT:
     pass
@@ -130,23 +136,33 @@ class hydra_jobboard(tupleObject):
 class hydra_taskboard(tupleObject):
     autoColumn = 'id'
     primaryKey = 'id'
-    
+
 class hydra_capabilities(tupleObject):
     primaryKey = 'name'
-    
+
 class hydra_executable(tupleObject):
     primaryKey = 'name'
-    
+
 class hydra_schedules(tupleObject):
     primaryKey = 'id'
-    
+
 class hydra_holidays(tupleObject):
     primaryKey = 'id'
 
 
 class transaction:
-    if DatabaseLogin.autoLogin:
-        _db_host, _db_name, _db_username, _db_password = getDbInfo()
+    global autoLogin
+    if autoLogin:
+        _db_host = getPrivateData("_db_host")
+        _db_name = getPrivateData("_db_name")
+        _db_username = getPrivateData("_db_username")
+        _db_password = getPrivateData("_db_password")
+        returnList = [_db_host, _db_name, _db_username, _db_password]
+        if False in returnList:
+            logger.info("Could not find login info. Loading config...")
+            _db_host, _db_name, _db_username, _db_password = getDbInfo()
+        else:
+            logger.info("Retrieved login info from secure storage.")
     else:
         app = QApplication(sys.argv)
         loginWin = DatabaseLogin()
@@ -157,8 +173,9 @@ class transaction:
             sys.exit(retcode)
         if _db_host ==  None:
             sys.exit(0)
-            
-        global db_username 
+
+        #Set Global username for other stuff to use
+        global db_username
         db_username = _db_username
 
     def __init__(self):
