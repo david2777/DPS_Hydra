@@ -143,9 +143,6 @@ class hydra_capabilities(tupleObject):
 class hydra_executable(tupleObject):
     primaryKey = 'name'
 
-class hydra_schedules(tupleObject):
-    primaryKey = 'id'
-
 class hydra_holidays(tupleObject):
     primaryKey = 'id'
 

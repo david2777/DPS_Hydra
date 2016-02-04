@@ -44,16 +44,6 @@ LOCK TABLES `hydra_holidays` WRITE;
 INSERT INTO `hydra_holidays` VALUES (1,'2015,11,26'),(2,'2015,12,24'),(3,'2015,12,25');
 /*!40000 ALTER TABLE `hydra_holidays` ENABLE KEYS */;
 UNLOCK TABLES;
-
---
--- Dumping data for table `hydra_schedules`
---
-
-LOCK TABLES `hydra_schedules` WRITE;
-/*!40000 ALTER TABLE `hydra_schedules` DISABLE KEYS */;
-INSERT INTO `hydra_schedules` VALUES (0,NULL,NULL),(1,'18,30,00','06,30,00');
-/*!40000 ALTER TABLE `hydra_schedules` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -64,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-01-23 23:40:57
+-- Dump completed on 2016-02-03 22:50:41

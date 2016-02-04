@@ -10,7 +10,7 @@ import time
 #Hydra
 from LoggingSetup import logger
 import NodeUtils
-from MySQLSetup import hydra_schedules, hydra_holidays
+from MySQLSetup import hydra_rendernode, hydra_holidays
 
 def schedThread(interval, startTime, endTime, isStarted, holidays):
     #Do the stuff
@@ -26,6 +26,10 @@ def schedThread(interval, startTime, endTime, isStarted, holidays):
             #If it's a holiday, start it up!
             if datetime.date.today() in holidays:
                 logger.info("Today is a holiday!")
+                isStarted, startTime = startupEvent(now, isStarted, startTime)
+            #If it's a weekend, start it up!
+            elif datetime.date.today().isoweekday() in range(6, 8):
+                logger.info("Today is a weekend!")
                 isStarted, startTime = startupEvent(now, isStarted, startTime)
             #If not, check the curent time against the expected start time
             else:
@@ -62,6 +66,9 @@ def shutdownEvent(now, isStarted, endTime):
 def getSchedule(nodeOBJ):
     #Get isStarted via node status
     logger.info("Getting Schedule")
+    if not nodeOBJ.onlineTime or not nodeOBJ.offlineTime:
+        return None, None, None
+        
     if nodeOBJ.status == "I" or nodeOBJ.status == "S":
         isStarted = True
     else:
@@ -69,27 +76,23 @@ def getSchedule(nodeOBJ):
 
     #Get the curent schedule for the node
     now = datetime.datetime.now()
-    nodeSch = [None, None]
 
-    [timeData] = hydra_schedules.fetch("WHERE id = '{0}'".format(nodeOBJ.schedule))
-    sTimeData = timeData.startTime.split(",")
+    sTimeData = nodeOBJ.onlineTime.split(",")
     sTimeData = [int(t) for t in sTimeData]
     startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
     
-    eTimeData = timeData.endTime.split(",")
+    eTimeData = nodeOBJ.offlineTime.split(",")
     eTimeData = [int(t) for t in eTimeData]
     endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
 
-    if startTime != None:
-        timeList = [startTime, endTime]
-        nodeSch = []
-        nowDate = now.date()
-        for time in timeList:
-            nodeSch.append(datetime.datetime.combine(nowDate, time))
+    
+    nowDate = now.date()
+    startDT = datetime.datetime.combine(nowDate, startTime)
+    endDT = datetime.datetime.combine(nowDate, endTime)
 
-        #Add one day to end time
-        #This is assuming the the start time is before midnight and the end time is after midnight
-        nodeSch[1] = nodeSch[1] + datetime.timedelta(days = 1)
+    #Add one day to end time
+    #This is assuming the the start time is before midnight and the end time is after midnight
+    endDT += datetime.timedelta(days = 1)
 
     #Return the three things we need to run our loop
-    return nodeSch[0], nodeSch[1], isStarted
+    return startDT, endDT, isStarted
