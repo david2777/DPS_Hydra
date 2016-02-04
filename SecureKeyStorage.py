@@ -1,3 +1,4 @@
+"""Turns out you need admin to read/write to LSA"""
 #Standard
 import sys
 
@@ -13,7 +14,12 @@ from LoggingSetup import logger
 from MessageBoxes import aboutBox
 
 def storePrivateData(key, data):
-    policy_handle = win32security.GetPolicyHandle('',win32security.POLICY_ALL_ACCESS)
+    try:
+        policy_handle = win32security.GetPolicyHandle('',win32security.POLICY_ALL_ACCESS)
+    except WIN32ERROR:
+        logger.error("Error! It looks like you don't have the right permissions to store data in LSA.")
+        return False
+    
     win32security.LsaStorePrivateData(policy_handle, key, data)
 
     #Make sure the data was stored correctly
@@ -27,7 +33,11 @@ def storePrivateData(key, data):
         return False
 
 def getPrivateData(key):
-    policy_handle = win32security.GetPolicyHandle('',win32security.POLICY_ALL_ACCESS)
+    try:
+        policy_handle = win32security.GetPolicyHandle('',win32security.POLICY_ALL_ACCESS)
+    except WIN32ERROR:
+        logger.error("Error! It looks like you don't have the right permissions to read data from LSA.")
+        return False
     try:
         data = win32security.LsaRetrievePrivateData(policy_handle, key)
         win32security.LsaClose(policy_handle)
@@ -38,7 +48,11 @@ def getPrivateData(key):
         return False
 
 def deletePrivateData(key):
-    policy_handle = win32security.GetPolicyHandle('',win32security.POLICY_ALL_ACCESS)
+    try:
+        policy_handle = win32security.GetPolicyHandle('',win32security.POLICY_ALL_ACCESS)
+    except WIN32ERROR:
+        logger.error("Error! It looks like you don't have the right permissions to delete data in LSA.")
+        return False
     win32security.LsaStorePrivateData(policy_handle, key, None)
     win32security.LsaClose(policy_handle)
     return True
@@ -63,7 +77,7 @@ if __name__ == "__main__":
             deletePrivateData("_db_name")
             deletePrivateData("_db_username")
             deletePrivateData("_db_password")
-            aboutBox(loginWin, "Error Setting Values!", "An error occured while setting the values. All values were deleted.")
+            aboutBox(loginWin, "Error Setting Values!", "An error occured while setting the values. All values were deleted. Read the output for more info.")
             sys.exit(retcode)
         else:
             aboutBox(loginWin, "Success!", "Values were stored successfully!")

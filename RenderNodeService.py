@@ -18,7 +18,7 @@ import signal
 #Hydra
 from RenderNodeMain import *
 from LoggingSetup import logger
-from StoreSVCKeys import getPrivateData
+from SecureKeyStorage import getPrivateData
 
 logger.setLevel(logging.INFO)
 

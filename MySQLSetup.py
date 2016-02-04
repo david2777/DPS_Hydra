@@ -13,7 +13,7 @@ from LoginWidget import DatabaseLogin, getDbInfo
 #Hydra
 from LoggingSetup import logger
 import Utils
-from StoreSVCKeys import getPrivateData
+from SecureKeyStorage import getPrivateData
 
 
 ##########AUTO LOGIN##########
