@@ -6,7 +6,6 @@ import win32serviceutil
 import win32service
 import win32event
 import win32security
-import win32ts
 import servicemanager
 import socket
 import sys
@@ -44,17 +43,6 @@ class AppServerSvc(win32serviceutil.ServiceFramework):
         win32event.SetEvent(self.hWaitStop)
 
     def SvcDoRun(self):
-        try:
-            win32ts.WTSSendMessage(Server = win32ts.WTS_CURRENT_SERVER_HANDLE,
-                                    SessionId = win32ts.WTSGetActiveConsoleSessionId(),
-                                    Title = "Test Window",
-                                    Message = "This is just a test. There is nothing to worry about, human.",
-                                    Style = 1,
-                                    Timeout = 10,
-                                    Wait = True)
-        except:
-            logger.error("Exception caught: {0}".format(traceback.format_exc()))
-            raise
 
         self.ReportServiceStatus(win32service.SERVICE_RUNNING)
         servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE,
