@@ -1322,7 +1322,6 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-        
     window = FarmView()
     window.show()
     retcode = app.exec_()
