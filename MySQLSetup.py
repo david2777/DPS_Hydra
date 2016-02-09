@@ -13,8 +13,6 @@ from LoginWidget import DatabaseLogin, getDbInfo
 #Hydra
 from LoggingSetup import logger
 import Utils
-from SecureKeyStorage import getPrivateData
-
 
 ##########AUTO LOGIN##########
 autoLogin = True
@@ -150,16 +148,8 @@ class hydra_holidays(tupleObject):
 class transaction:
     global autoLogin
     if autoLogin:
-        _db_host = getPrivateData("_db_host")
-        _db_name = getPrivateData("_db_name")
-        _db_username = getPrivateData("_db_username")
-        _db_password = getPrivateData("_db_password")
-        returnList = [_db_host, _db_name, _db_username, _db_password]
-        if False in returnList:
-            logger.info("Could not find login info. Loading config...")
-            _db_host, _db_name, _db_username, _db_password = getDbInfo()
-        else:
-            logger.info("Retrieved login info from secure storage.")
+        logger.info("Auto login enabled.")
+        _db_host, _db_name, _db_username, _db_password = getDbInfo()
     else:
         app = QApplication(sys.argv)
         loginWin = DatabaseLogin()
@@ -171,9 +161,9 @@ class transaction:
         if _db_host ==  None:
             sys.exit(0)
 
-        #Set Global username for other stuff to use
-        global db_username
-        db_username = _db_username
+    #Set Global username for other stuff to use
+    global db_username
+    db_username = _db_username
 
     def __init__(self):
         #Open DB Connection
