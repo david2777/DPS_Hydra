@@ -13,20 +13,22 @@ from LoggingSetup import logger
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
+
 class Server:
     def createIdleLoop(self, interval, function):
         self.idleThread = threading.Thread(target = self.idleLoop,
-                                            name = "idle thread",
-                                            args = (interval, function)
-                                            )
+                                            name = "Idle Thread",
+                                            args = (interval, function))
         self.idleThread.start()
+        #Without this sleep it returns True even if the server isn't started
+        time.sleep(.1)
+        if not self.idleThread.isAlive():
+            raise Exception
 
     def idleLoop(self, interval, function):
-        while True:
-            try:
-                function()
-            except Exception, e:
-                logger.error("Idle loop exception: {0}".format(traceback.format_exc(e)))
+        """Class calling this must have self.threadVar set to True"""
+        while self.threadVar:
+            function()
             time.sleep(interval)
 
 class LocalServer(Server):
@@ -36,21 +38,23 @@ class MySocketServer(SocketServer.TCPServer):
     allow_reuse_address = True
 
 class TCPServer(Server):
-    def __init__( self,
-                  port = Constants.PORT,
-                  ):
-
+    def __init__(self, port = Constants.PORT):
         MyTCPHandler.TCPserver = self
         logger.info('Open TCPServer Socket @ Port {0}'.format(port))
+        self.threadVar = True
         self.serverObject = MySocketServer(("", port), MyTCPHandler)
         self.serverThread = threading.Thread(target = runTheServer,
-                                              name = "server thread",
-                                              args = (self.serverObject,)
-                                              )
+                                              name = "Server Thread",
+                                              args = (self.serverObject,))
         self.serverThread.start()
+        if not self.serverThread.isAlive():
+            raise
+        
+        return self
 
     def shutdown(self):
-        logger.debug("Shutting down TCPServer...")
+        logger.info("Shutting down TCPServer...")
+        self.threadVar = False
         self.serverObject.shutdown()
 
 def runTheServer(serverObject):
@@ -71,4 +75,4 @@ class MyTCPHandler(SocketServer.StreamRequestHandler):
             answerBytes = pickle.dumps( answer )
             self.wfile.write( answerBytes )
         except:
-            logger.error("Exception caught: {0}".format(traceback.format_exc()))
+            logger.error("Exception caught in Servers: {0}".format(traceback.format_exc()))

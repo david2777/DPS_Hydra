@@ -32,12 +32,9 @@ logger.setLevel(logging.INFO)
 
 class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):
-        #Check for another instance of RenderNodeMain.exe or RenderNodeService.exe
+        #Check for another instance of RenderNodeMain.exe
         nInstances = len(filter(lambda line: 'RenderNodeMain' in line,
                                   subprocess.check_output('tasklist').split('\n')))
-        serviceInstances = len(filter(lambda line: 'RenderNodeService' in line,
-                                  subprocess.check_output('tasklist').split('\n')))
-        nInstances += serviceInstances
         logger.info("{0} RenderNodeMain instances running.".format(nInstances))
         if nInstances > 1:
             logger.error("Blocked RenderNodeMain from running because another"
@@ -47,7 +44,7 @@ class RenderTCPServer(TCPServer):
             logger.warning("Can't find running RenderNodeMain.")
         
         #Initiate TCP Server
-        TCPServer.__init__(self, *arglist, **kwargs)
+        self.renderServ = TCPServer.__init__(self, *arglist, **kwargs)
         
         #Setup class variables
         execs = hydra_executable.fetch()
@@ -77,6 +74,9 @@ class RenderTCPServer(TCPServer):
             thisNode.software_version = current_version
             with transaction() as t:
                 thisNode.update(t)
+    
+    def shutdownCMD(self):
+        self.renderServ.shutdown()
 
     def processRenderTasks(self):
         """The loop that looks for jobs on the DB and runs them if the node meets
