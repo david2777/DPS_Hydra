@@ -32,13 +32,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
-        
-        #Partical functions for convenience
-        self.sqlErrorBox = (
-            functools.partial(aboutBox, parent=self, title="Error",
-                        msg="There was a problem while trying to fetch info"
-                        " from the database. Check the FarmView log file for"
-                        " more details about the error."))
 
         logger.info('Starting in {0}'.format(os.getcwd()))
         logger.info('arglist {0}'.format(sys.argv))
@@ -49,40 +42,40 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.nonePixmap = QPixmap("images/status/none.png")
         self.notStartedPixmap = QPixmap("images/status/notStarted.png")
         self.RIcon = QIcon('images/RIcon.png')
-        
+
         self.thisNode = None
         try:
             self.thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.error(str(err))
             self.sqlErrorBox()
-        
+
         self.buildUI()
         self.connectButtons()
         self.updateThisNodeInfo()
         self.startupServers()
-        
-        
+
+
     def buildUI(self):
         self.renderServerPixmap.setPixmap(self.notStartedPixmap)
         self.scheduleThreadPixmap.setPixmap(self.nonePixmap)
         self.pulseThreadPixmap.setPixmap(self.notStartedPixmap)
         self.setWindowIcon(self.RIcon)
-        
+
         #Setup tray icon
         self.icon=QSystemTrayIcon()
         self.iconBool = self.icon.isSystemTrayAvailable()
         if self.iconBool:
             self.icon.setIcon(self.RIcon)
             self.icon.show()
-            self.icon.setVisible(True)        
+            self.icon.setVisible(True)
             self.icon.activated.connect(self.activate)
         else:
             aboutBox(self,
                     "Tray Icon Error",
                     "Could not create tray icon. Minimizing to tray has been disabled.")
             self.trayButton.setEnabled(False)
-            
+
     def connectButtons(self):
         QObject.connect(self.trayButton, SIGNAL("clicked()"),
                         self.sendToTrayHandler)
@@ -94,31 +87,33 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                         self.getoffThisNodeHandler)
         if not self.iconBool:
             self.trayButton.setEnabled(False)
-            
+
     def closeEvent(self, event):
         choice = yesNoBox(self, "Confirm", "Really exit the RenderNodeMain server?")
         if choice == QMessageBox.Yes:
             logger.info("Shutting down...")
-            self.pulseProc.terminate()
-            self.renderServer.shutdownCMD()
+            if self.pulseProcStatus:
+                self.pulseProc.terminate()
+            if self.renderServerStatus:
+                self.renderServer.shutdownCMD()
             self.icon.hide()
             event.accept()
             sys.exit(0)
         else:
             event.ignore()
-        
+
     def activate(self, reason):
         if reason==2:
             self.show()
-            
+
     def __icon_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:
-            self.show()  
+            self.show()
 
     def sendToTrayHandler(self):
         self.icon.show()
         self.hide()
-        
+
     def onlineThisNodeHandler(self):
         if self.thisNode:
             try:
@@ -127,7 +122,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             except sqlerror as err:
                 logger.error(str(err))
                 self.sqlErrorBox()
-                
+
     def offlineThisNodeHandler(self):
        if self.thisNode:
            try:
@@ -138,22 +133,27 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                self.sqlErrorBox()
 
     def getoffThisNodeHandler(self):
-        aboutBox(self, "Oops", "Not Implemeted") 
-        
+        aboutBox(self, "Oops", "Not Implemeted")
+
     def startupServers(self):
         #Startup Pulse thread
         self.pulseProcStatus = False
-        self.pulseProc = Process(target = RenderNode.heartbeat, 
+        """
+        self.pulseProc = Process(target = RenderNode.heartbeat,
                                         name = "heartbeat",
                                         args = (60,))
         try:
             self.pulseProc.start()
+            self.pulseProc.join()
             self.pulseProcStatus = True
             self.pulseThreadPixmap.setPixmap(self.donePixmap)
+            logger.info("Pulse proc started")
         except Exception, e:
-            logger.error("Exception caught: {0}".format(traceback.format_exc()))
+            logger.error("Exception caught in RenderNodeMain: {0}".format(traceback.format_exc()))
             self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
-            
+        """
+
+
         #Start Render Server
         self.renderServerStatus = False
         try:
@@ -164,7 +164,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         except Exception, e:
             logger.error("Exception caught in RenderNodeMain: {0}".format(traceback.format_exc()))
             self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
-        
+
     def updateThisNodeInfo(self):
         """Updates widgets on the "This Node" tab with the most recent
         information available."""
@@ -187,10 +187,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 "not registered on the render farm. You may continue to use"
                 " Farm View, but it must be restarted after this node is "
                 "registered if you wish to see this node's information.")
-                
-                
-        
-        
+
+
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = RenderNodeMainUI()

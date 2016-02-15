@@ -31,5 +31,5 @@ setup(options = {
                              "w9xpopen.exe"]
             }
       },
-      console=["RenderNodeMain.py"],
+      windows=["RenderNodeMain.py"],
       zipfile = None)
