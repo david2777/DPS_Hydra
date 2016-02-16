@@ -18,9 +18,11 @@ from MessageBoxes import aboutBox, yesNoBox
 #Hydra
 from MySQLSetup import *
 from LoggingSetup import logger
+from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
 import RenderNode
 import NodeUtils
+import TaskUtils
 
 class NoSQLFilter(logging.Filter):
     def filter(self, record):
@@ -35,6 +37,11 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         logger.info('Starting in {0}'.format(os.getcwd()))
         logger.info('arglist {0}'.format(sys.argv))
+        if sys.argv[0].split(".")[-1] == "exe":
+            logger.info("Running as exe!")
+            logger.propagate = False
+            logfileName = os.path.join(BASELOGDIR, "RenderNodeMainERR" + '.txt')
+            sys.stderr = open(logfileName, 'w')
         #Get Pixmaps and Icon
         self.donePixmap = QPixmap("images/status/done.png")
         self.inProgPixmap = QPixmap("images/status/inProgress.png")
@@ -48,6 +55,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.error(str(err))
+            self.onlineButton.setEnabled(False)
+            self.offlineButton.setEnabled(False)
+            self.getoffButton.setEnabled(False)
             self.sqlErrorBox()
 
         self.buildUI()
@@ -133,7 +143,30 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                self.sqlErrorBox()
 
     def getoffThisNodeHandler(self):
-        aboutBox(self, "Oops", "Not Implemeted")
+        if self.thisNode:
+            self.updateThisNodeInfo()
+            task_id = self.thisNode.task_id
+            self.offlineThisNodeHandler()
+            if task_id:
+                try:
+                    killed = TaskUtils.killTask(task_id)
+                    if not killed:
+                        aboutBox(self,
+                                "Error",
+                                "Task couldn't be killed for some reason.")
+                except socketerror as err:
+                    logger.error(str(err))
+                    aboutBox(self, "Error", "Task couldn't be killed because "
+                    "there was a problem communicating with the host running "
+                    "it.")
+                except sqlerror as err:
+                    logger.error(str(err))
+                    aboutBox(self, "SQL Error", str(err))
+            else:
+                aboutBox(self,
+                        "Task Kill Error",
+                        "No tasks found on current node. Set status to Offline.")
+
 
     def startupServers(self):
         #Startup Pulse thread
@@ -150,8 +183,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             logger.error("Exception caught in RenderNodeMain: {0}".format(traceback.format_exc()))
             self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
         
-
-
         #Start Render Server
         self.renderServerStatus = False
         try:
@@ -166,8 +197,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def updateThisNodeInfo(self):
         """Updates widgets on the "This Node" tab with the most recent
         information available."""
-        #Get the most current info from the database
+        #Update thisNode if it is already set (so we don't error over and over)
         if self.thisNode:
+            #Get the most current info from the database
+            self.thisNode = NodeUtils.getThisNodeData()
             #Update the labels
             if self.thisNode.task_id:
                 self.taskIDLabel.setText(str(self.thisNode.task_id))
