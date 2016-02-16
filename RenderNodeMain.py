@@ -4,7 +4,7 @@ import os
 import logging
 import traceback
 import functools
-from multiprocessing import Process
+import threading
 
 #Third Party
 from MySQLdb import Error as sqlerror
@@ -92,8 +92,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         choice = yesNoBox(self, "Confirm", "Really exit the RenderNodeMain server?")
         if choice == QMessageBox.Yes:
             logger.info("Shutting down...")
-            if self.pulseProcStatus:
-                self.pulseProc.terminate()
+            if self.pulseThreadStatus:
+                self.pulseThreadVar = False
             if self.renderServerStatus:
                 self.renderServer.shutdownCMD()
             self.icon.hide()
@@ -137,21 +137,19 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
     def startupServers(self):
         #Startup Pulse thread
-        self.pulseProcStatus = False
-        """
-        self.pulseProc = Process(target = RenderNode.heartbeat,
-                                        name = "heartbeat",
+        self.pulseThreadStatus = False
+        self.pulseThread = threading.Thread(target = self.pulse,
+                                        name = "Pulse Thread",
                                         args = (60,))
         try:
-            self.pulseProc.start()
-            self.pulseProc.join()
-            self.pulseProcStatus = True
+            self.pulseThread.start()
+            self.pulseThreadStatus = True
             self.pulseThreadPixmap.setPixmap(self.donePixmap)
-            logger.info("Pulse proc started")
+            logger.info("Pulse Thread started")
         except Exception, e:
             logger.error("Exception caught in RenderNodeMain: {0}".format(traceback.format_exc()))
             self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
-        """
+        
 
 
         #Start Render Server
@@ -187,6 +185,16 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 "not registered on the render farm. You may continue to use"
                 " Farm View, but it must be restarted after this node is "
                 "registered if you wish to see this node's information.")
+                
+    def pulse(interval = 5):
+        host = Utils.myHostName()
+        while self.pulseThreadVar:
+            try:
+                with transaction() as t:
+                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '{0}'".format(host))
+            except Exception, e:
+                logger.error(traceback.format_exc(e))
+            time.sleep(interval)
 
 
 
