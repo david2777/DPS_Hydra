@@ -4,7 +4,6 @@ submits job tickets to the database."""
 import sys
 import os
 import getopt
-import logging.handlers
 
 #QT
 from PyQt4.QtGui import *
@@ -20,8 +19,6 @@ from MessageBoxes import aboutBox, yesNoBox
 from JobTicket import UberJobTicket
 import JobUtils
 import Constants
-
-logger.setLevel(logging.INFO)
 
 class SubmitterMain(QMainWindow, Ui_MainWindow):
     def __init__(self):

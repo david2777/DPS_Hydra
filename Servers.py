@@ -58,7 +58,7 @@ class TCPServer(Server):
         self.serverObject.shutdown()
 
 def runTheServer(serverObject):
-    logger.info ("Off to the races")
+    logger.info ("Off to the races!")
     serverObject.serve_forever()
         
 class MyTCPHandler(SocketServer.StreamRequestHandler):

@@ -8,20 +8,14 @@ from sys import argv
 #Project Hydra
 from Constants import BASELOGDIR
 
-#Author: David Gladstein
+#Originally By : David Gladstein
 #Taken from Cogswell's Project Hydra
 
-#Global logger instance
 logger = logging.getLogger()
-
-#Log messages of all severities
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.NOTSET)
 
 if argv[0]:
-    #Get the file name of the currently running process
     appname = argv[0].split('\\')[-1]
-    
-    #Discard the file extension
     appname = os.path.splitext(appname)[0]
 else:
     appname = "interpreter_output"
@@ -29,17 +23,27 @@ else:
 if not os.path.isdir(BASELOGDIR):
     os.makedirs(BASELOGDIR)
 
-#Set the log file path to BASELOGDIR\appname.txt
 logfileName = os.path.join(BASELOGDIR, appname + '.txt')
 
-for handler in [logging.StreamHandler(), logging.handlers.TimedRotatingFileHandler(logfileName, when='midnight'),]:
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(levelname)-9s%(message)s\n"
-                                  "%(pathname)s line %(lineno)s\n"
-                                  "%(asctime)s\n")
+complexFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
+                                      "%(pathname)s line %(lineno)s\n"
+                                      "%(asctime)s\n")
 
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+simpleFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
+                                      "%(asctime)s\n")
+
+#Console Logger
+h1 = logging.StreamHandler()
+h1.setLevel(logging.DEBUG)
+h1.setFormatter(complexFormatter)
+logger.addHandler(h1)
+
+#File Logger
+h2 = logging.handlers.TimedRotatingFileHandler(logfileName, when='midnight')
+h2.setLevel(logging.INFO)
+h2.setFormatter(simpleFormatter)
+logger.addHandler(h2)
+
 
 #'application' code
 if __name__ == '__main__':

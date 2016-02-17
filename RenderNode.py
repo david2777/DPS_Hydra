@@ -13,7 +13,6 @@ import datetime
 import traceback
 import subprocess
 import signal
-import logging.handlers
 
 #3rd Party
 import psutil
@@ -27,8 +26,6 @@ import Constants
 import Utils
 import JobUtils
 import TaskUtils
-
-logger.setLevel(logging.INFO)
 
 class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):

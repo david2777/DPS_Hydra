@@ -9,7 +9,6 @@ import datetime
 import functools
 import re
 from socket import error as socketerror
-import logging.handlers
 
 #3rd party
 from MySQLdb import Error as sqlerror
@@ -32,8 +31,6 @@ import NodeUtils
 
 
 #Parts taken from Cogswell's Project Hydra by David Gladstein and Aaron Cohn
-
-logger.setLevel(logging.INFO)
 
 
 

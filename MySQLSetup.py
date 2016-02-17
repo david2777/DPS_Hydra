@@ -81,7 +81,7 @@ class tupleObject:
         orderClause = "" if order is None else " " + order + " "
         limitClause = "" if limit is None else " LIMIT {0} ".format(limit)
         select = "SELECT * FROM {0} {1} {2} {3}".format(cls.tableName(), whereClause, orderClause, limitClause)
-        logger.info(select)
+        logger.debug(select)
 
         def doFetch(t):
             t.cur.execute(select)
@@ -106,7 +106,7 @@ class tupleObject:
         valueStringSimple = ", ".join([str(val) for val in values])
         query = "INSERT INTO %s (%s) VALUES (%s)" % (self.tableName(), nameString, valueString)
         queryRepr = "INSERT INTO %s (%s) VALUES (%s)" % (self.tableName(), nameString, valueStringSimple)
-        logger.info(queryRepr)
+        logger.debug(queryRepr)
         transaction.cur.executemany(query, [values])
         if self.autoColumn:
             transaction.cur.execute("SELECT last_insert_id()")
@@ -121,7 +121,7 @@ class tupleObject:
         values = ([getattr(self, name) for name in names] + [getattr(self, self.primaryKey)])
         assignments = ", ".join(["%s = %%s" % name for name in names])
         query = "UPDATE %s SET %s WHERE %s = %%s" % (self.tableName(), assignments, self.primaryKey)
-        logger.info((query, values))
+        logger.debug((query, values))
         transaction.cur.executemany(query, [values])
 
 class hydra_rendernode(tupleObject):
@@ -148,7 +148,7 @@ class hydra_holidays(tupleObject):
 class transaction:
     global autoLogin
     if autoLogin:
-        logger.info("Auto login enabled.")
+        logger.debug("Auto login enabled.")
         _db_host, _db_name, _db_username, _db_password = getDbInfo()
     else:
         app = QApplication(sys.argv)
