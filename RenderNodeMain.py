@@ -14,7 +14,7 @@ from MySQLdb import Error as sqlerror
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from UI_RenderNodeMain import Ui_RenderNodeMainWindow
-from MessageBoxes import aboutBox, yesNoBox
+from MessageBoxes import aboutBox, yesNoBox, strBox
 
 #Logging
 from LoggingSetup import logger, simpleFormatter
@@ -23,7 +23,7 @@ if sys.argv[0].split(".")[-1] == "exe":
     logger.removeHandler(logger.handlers[0])
     logger.propagate = False
     logger.debug("Running as exe!")
-    
+
 #Import after logging setup
 #Hydra
 from MySQLSetup import *
@@ -38,7 +38,7 @@ class EmittingStream(QObject):
     textWritten = pyqtSignal(str)
     def write(self, text):
         self.textWritten.emit(str(text))
-        
+
 class Blackhole(object):
     def write(self,text):
         pass
@@ -49,7 +49,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
-    
+
         #Add handlers
         handler = logging.StreamHandler(EmittingStream(textWritten=self.normalOutputWritten))
         handler.setLevel(logging.INFO)
@@ -84,7 +84,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.updateThisNodeInfo()
         self.startupServers()
         logger.info("LIVE LIVE LIVE")
-        
+
     def __del__(self):
         #sys.stdout = sys.__stdout__
         pass
@@ -214,14 +214,24 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                         "Task Kill Error",
                         "No tasks found on current node. Set status to Offline.")
 
+    def runCommands(self):
+        reply = strBox(self, "Eval", "Eval this code:")
+        if reply[1]:
+            command = str(reply[0])
+            value = eval(command)
+            logger.info(value)
+
+    def clearOutput(self):
+         self.outputTextEdit.clear()
+         logger.info("Output cleared")
 
     def startupServers(self):
         #Startup Pulse thread
         self.pulseThreadStatus = False
         self.pulseThreadVar = True
         self.pulseThread = threading.Thread(target = self.pulse,
-                                        name = "Pulse Thread",
-                                        args = (60,))
+                                            name = "Pulse Thread",
+                                            args = (60,))
         try:
             #self.pulseThread.start()
             self.pulseThreadStatus = True
@@ -230,7 +240,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         except Exception, e:
             logger.error("Exception caught in RenderNodeMain: {0}".format(traceback.format_exc()))
             self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
-        
+
         #Start Render Server
         self.renderServerStatus = False
         try:
@@ -267,7 +277,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 "not registered on the render farm. You may continue to use"
                 " Farm View, but it must be restarted after this node is "
                 "registered if you wish to see this node's information.")
-                
+
     def pulse(self, interval = 5):
         host = Utils.myHostName()
         while self.pulseThreadVar:
