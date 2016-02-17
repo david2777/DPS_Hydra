@@ -50,6 +50,11 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
+        inst = RenderNode.checkRenderNodeInstances()
+        if not inst:
+            aboutBox(self, "Error!", "More than one RenderNode found! You cannot run more than one RenderNode at the same time")
+            sys.exit(1)
+
         #Add handlers
         handler = logging.StreamHandler(EmittingStream(textWritten=self.normalOutputWritten))
         handler.setLevel(logging.INFO)
@@ -84,10 +89,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.updateThisNodeInfo()
         self.startupServers()
         logger.info("LIVE LIVE LIVE")
-
-    def __del__(self):
-        #sys.stdout = sys.__stdout__
-        pass
 
     def normalOutputWritten(self, text):
         """Append text to the QTextEdit."""
@@ -285,11 +286,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 "registered if you wish to see this node's information.")
 
     def pulse(self, interval = 5):
-        host = Utils.myHostName()
         while self.pulseThreadVar:
             try:
                 with transaction() as t:
-                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '{0}'".format(host))
+                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '{0}'".format(self.thisNode.host))
             except Exception, e:
                 logger.error(traceback.format_exc(e))
             time.sleep(interval)

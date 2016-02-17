@@ -30,16 +30,9 @@ import TaskUtils
 class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):
         #Check for another instance of RenderNodeMain.exe
-        nInstances = len(filter(lambda line: 'RenderNode' in line,
-                                  subprocess.check_output('tasklist').split('\n')))
-        logger.info("{0} RenderNodeMain instances running.".format(nInstances))
-        if nInstances > 1:
-            logger.error("Blocked RenderNodeMain from running because another"
-                        " instance already exists.")
+        inst = checkRenderNodeInstances()
+        if not inst:
             sys.exit(1)
-        if nInstances == 0 and not sys.argv[0].endswith('.py'):
-            logger.warning("Can't find running RenderNodeMain.")
-
         #Initiate TCP Server
         self.renderServ = TCPServer.__init__(self, *arglist, **kwargs)
 
@@ -249,6 +242,21 @@ def heartbeat(interval = 5):
         except Exception, e:
             logger.error(traceback.format_exc(e))
         time.sleep(interval)
+
+def checkRenderNodeInstances():
+    nInstances = len(filter(lambda line: 'RenderNode' in line,
+                              subprocess.check_output('tasklist').split('\n')))
+    logger.info("{0} RenderNode instances running.".format(nInstances))
+
+    if nInstances > 1:
+        logger.error("Blocked RenderNodeMain from running because another"
+                    " instance already exists.")
+        return False
+
+    elif nInstances == 0 and not sys.argv[0].endswith('.py'):
+        logger.warning("Can't find running RenderNodeMain.")
+
+    return True
 
 def main():
     logger.info('Starting in {0}'.format(os.getcwd()))
