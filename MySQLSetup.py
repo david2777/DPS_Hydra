@@ -95,7 +95,10 @@ class tupleObject:
                 return doFetch(t)
 
     def attributes(self):
-        return filter(Utils.nonFlanged, self.__dict__.keys ())
+        return filter(Utils.nonFlanged, self.__dict__.keys())
+
+    def vals(self):
+        return self.__dict__
 
     def insert(self, transaction):
         names = self.attributes()

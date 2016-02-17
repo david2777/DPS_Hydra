@@ -128,6 +128,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                         self.offlineThisNodeHandler)
         QObject.connect(self.getoffButton, SIGNAL("clicked()"),
                         self.getOffThisNodeHandler)
+        QObject.connect(self.clearButton, SIGNAL("clicked()"),
+                        self.clearOutputHandler)
+        QObject.connect(self.runCmdButton, SIGNAL("clicked()"),
+                        self.runCommandHandler)
         if not self.iconBool:
             self.trayButton.setEnabled(False)
 
@@ -214,16 +218,18 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                         "Task Kill Error",
                         "No tasks found on current node. Set status to Offline.")
 
-    def runCommands(self):
+    def runCommandHandler(self):
         reply = strBox(self, "Eval", "Eval this code:")
         if reply[1]:
             command = str(reply[0])
             value = eval(command)
             logger.info(value)
 
-    def clearOutput(self):
-         self.outputTextEdit.clear()
-         logger.info("Output cleared")
+    def clearOutputHandler(self):
+        choice = yesNoBox(self, "Confirm", "Really clear output?")
+        if choice == QMessageBox.Yes:
+            self.outputTextEdit.clear()
+            logger.info("Output cleared")
 
     def startupServers(self):
         #Startup Pulse thread
