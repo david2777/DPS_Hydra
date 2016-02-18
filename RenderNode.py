@@ -36,6 +36,9 @@ class RenderTCPServer(TCPServer):
         #Initiate TCP Server
         self.renderServ = TCPServer.__init__(self, *arglist, **kwargs)
 
+        self.si = subprocess.STARTUPINFO()
+        self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
         #Setup class variables
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}
@@ -135,7 +138,8 @@ class RenderTCPServer(TCPServer):
             #Run the job and keep track of the process
             self.childProcess = subprocess.Popen(self.renderCMD,
                                                 stdout = log,
-                                                stderr = subprocess.STDOUT)
+                                                stderr = subprocess.STDOUT,
+                                                startupinfo = self.si)
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
                                                                 render_task.id))
 
