@@ -72,6 +72,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.needsAttentionPixmap = QPixmap("images/status/needsAttention.png")
         self.nonePixmap = QPixmap("images/status/none.png")
         self.notStartedPixmap = QPixmap("images/status/notStarted.png")
+        self.refreshPixmap = QPixmap("images/refresh.png")
+        self.refreshIcon = QIcon()
+        self.refreshIcon.addPixmap(self.refreshPixmap)
         self.RIcon = QIcon('images/RIcon.png')
 
         self.thisNode = None
@@ -100,19 +103,39 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
 
     def buildUI(self):
+        self.refreshButton.setIcon(self.refreshIcon)
+
         self.renderServerPixmap.setPixmap(self.notStartedPixmap)
         self.scheduleThreadPixmap.setPixmap(self.nonePixmap)
         self.pulseThreadPixmap.setPixmap(self.notStartedPixmap)
         self.setWindowIcon(self.RIcon)
 
         #Setup tray icon
-        self.icon=QSystemTrayIcon()
-        self.iconBool = self.icon.isSystemTrayAvailable()
-        if self.iconBool:
-            self.icon.setIcon(self.RIcon)
-            self.icon.show()
-            self.icon.setVisible(True)
-            self.icon.activated.connect(self.activate)
+        self.trayIcon=QSystemTrayIcon()
+        self.trayIconBool = self.trayIcon.isSystemTrayAvailable()
+        if self.trayIconBool:
+            self.trayIcon.setIcon(self.RIcon)
+            self.trayIcon.show()
+            self.trayIcon.setVisible(True)
+            self.trayIcon.activated.connect(self.activate)
+
+            self.taskIconMenu = QMenu(self)
+
+            def addItem(name, handler, statusTip):
+                action = QAction(name, self)
+                action.setStatusTip(statusTip)
+                action.triggered.connect(handler)
+                self.taskIconMenu.addAction(action)
+
+            addItem("Open", self.showWindowHandler, "Show the RenderNodeMain Window")
+            self.taskIconMenu.addSeparator()
+            addItem("Update", self.updateThisNodeInfo, "Fetch the latest information from the Database")
+            self.taskIconMenu.addSeparator()
+            addItem("Online", self.onlineThisNodeHandler, "Online this node")
+            addItem("Offline", self.offlineThisNodeHandler, "Offline this node")
+            addItem("GetOff!", self.getOffThisNodeHandler, "Kill the current task and offline this node")
+
+            self.trayIcon.setContextMenu(self.taskIconMenu)
         else:
             logger.error("Tray Icon Error! Could not create tray icon.")
             aboutBox(self,
@@ -133,7 +156,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                         self.clearOutputHandler)
         QObject.connect(self.runCmdButton, SIGNAL("clicked()"),
                         self.runCommandHandler)
-        if not self.iconBool:
+        QObject.connect(self.refreshButton, SIGNAL("clicked()"),
+                        self.updateThisNodeInfo)
+        if not self.trayIconBool:
             self.trayButton.setEnabled(False)
 
     def closeEvent(self, event):
@@ -153,22 +178,26 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 self.renderServer.shutdownCMD()
             if isTask:
                 self.onlineThisNodeHandler()
-            self.icon.hide()
+            self.trayIcon.hide()
             event.accept()
             sys.exit(0)
         else:
             event.ignore()
 
+    def showWindowHandler(self):
+        self.show()
+        self.updateThisNodeInfo()
+
     def activate(self, reason):
         if reason==2:
-            self.show()
+            self.showWindowHandler()
 
     def __icon_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:
             self.show()
 
     def sendToTrayHandler(self):
-        self.icon.show()
+        self.trayIcon.show()
         self.hide()
 
     def onlineThisNodeHandler(self):
@@ -269,14 +298,21 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.thisNode = NodeUtils.getThisNodeData()
             #Update the labels
             if self.thisNode.task_id:
-                self.taskIDLabel.setText(str(self.thisNode.task_id))
+                taskText = str(self.thisNode.task_id)
             else:
-                self.taskIDLabel.setText("None")
+                taskText = "None"
+            self.taskIDLabel.setText(taskText)
             self.nodeNameLabel.setText(self.thisNode.host)
             self.nodeStatusLabel.setText(niceNames[self.thisNode.status])
             self.nodeVersionLabel.setText(getSoftwareVersionText(self.thisNode.software_version))
             self.minPriorityLabel.setText(str(self.thisNode.minPriority))
             self.capabilitiesLabel.setText(str(self.thisNode.capabilities))
+
+            if self.trayIconBool:
+                iconStatus = "Hydra RenderNodeMain\nNode: {0}\nStatus: {1}\nTask: {2}"
+                self.trayIcon.setToolTip(iconStatus.format(self.thisNode.host,
+                                                        niceNames[self.thisNode.status],
+                                                        taskText))
 
         else:
             aboutBox(self, "Notice",
