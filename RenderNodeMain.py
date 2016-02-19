@@ -52,11 +52,13 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         inst = RenderNode.checkRenderNodeInstances()
         if not inst:
-            aboutBox(self, "Error!", "More than one RenderNode found! You cannot run more than one RenderNode at the same time")
+            aboutBox(self, "Error!", "More than one RenderNode found!"
+                    "You cannot run more than one RenderNode at the same time")
             sys.exit(1)
 
         #Add handlers
-        handler = logging.StreamHandler(EmittingStream(textWritten=self.normalOutputWritten))
+        emStream = EmittingStream(textWritten=self.normalOutputWritten)
+        handler = logging.StreamHandler(emStream)
         handler.setLevel(logging.INFO)
         handler.setFormatter(simpleFormatter)
         logger.addHandler(handler)
@@ -158,7 +160,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             logger.error("Tray Icon Error! Could not create tray icon.")
             aboutBox(self,
                     "Tray Icon Error",
-                    "Could not create tray icon. Minimizing to tray has been disabled.")
+                    "Could not create tray icon. Minimizing to tray has been"
+                    " disabled.")
             self.trayButton.setEnabled(False)
 
     def connectButtons(self):
@@ -260,9 +263,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                         logger.info("Node Got Off current task!")
                 except socketerror as err:
                     logger.error(str(err))
-                    self.aboutBoxHidden("Error", "Task couldn't be killed because "
-                    "there was a problem communicating with the host running "
-                    "it.")
+                    self.aboutBoxHidden("Error", "Task couldn't be killed "
+                    "because there was a problem communicating with the "
+                    "host running it.")
                 except sqlerror as err:
                     logger.error(str(err))
                     self.aboutBoxHidden("SQL Error", str(err))
@@ -296,19 +299,20 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.pulseThreadPixmap.setPixmap(self.donePixmap)
             logger.info("Pulse Thread started!")
         except Exception, e:
-            logger.error("Exception caught in RenderNodeMain: {0}".format(traceback.format_exc()))
+            logger.error("Exception: {0}".format(traceback.format_exc()))
             self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
 
         #Start Render Server
         self.renderServerStatus = False
         try:
             self.renderServer = RenderNode.RenderTCPServer()
-            self.renderServer.createIdleLoop(5, self.renderServer.processRenderTasks)
+            self.renderServer.createIdleLoop(5,
+                                            self.renderServer.processRenderTasks)
             self.renderServerStatus = True
             self.renderServerPixmap.setPixmap(self.donePixmap)
             logger.info("Render Server Started!")
         except Exception, e:
-            logger.error("Exception caught in RenderNodeMain: {0}".format(traceback.format_exc()))
+            logger.error("Exception: {0}".format(traceback.format_exc()))
             self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
 
     def updateThisNodeInfo(self):
@@ -325,15 +329,17 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 taskText = "None"
             self.taskIDLabel.setText(taskText)
             self.nodeNameLabel.setText(self.thisNode.host)
-            self.nodeStatusLabel.setText(niceNames[self.thisNode.status])
-            self.nodeVersionLabel.setText(getSoftwareVersionText(self.thisNode.software_version))
+            niceStatus = niceNames[self.thisNode.status]
+            self.nodeStatusLabel.setText(niceStatus)
+            vText = getSoftwareVersionText(self.thisNode.software_version)
+            self.nodeVersionLabel.setText(vText)
             self.minPriorityLabel.setText(str(self.thisNode.minPriority))
             self.capabilitiesLabel.setText(str(self.thisNode.capabilities))
 
             if self.trayIconBool:
                 iconStatus = "Hydra RenderNodeMain\nNode: {0}\nStatus: {1}\nTask: {2}"
                 self.trayIcon.setToolTip(iconStatus.format(self.thisNode.host,
-                                                        niceNames[self.thisNode.status],
+                                                        niceStatus,
                                                         taskText))
 
         else:
@@ -347,7 +353,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         while self.pulseThreadVar:
             try:
                 with transaction() as t:
-                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '{0}'".format(self.thisNode.host))
+                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
+                                "WHERE host = '{0}'".format(self.thisNode.host))
             except Exception, e:
                 logger.error(traceback.format_exc(e))
             time.sleep(interval)
