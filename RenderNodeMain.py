@@ -103,6 +103,14 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
 
     def buildUI(self):
+        def addItem(name, handler, statusTip, menu):
+            action = QAction(name, self)
+            action.setStatusTip(statusTip)
+            action.triggered.connect(handler)
+            menu.addAction(action)
+        
+        self.isVisable = True    
+        
         self.refreshButton.setIcon(self.refreshIcon)
 
         self.renderServerPixmap.setPixmap(self.notStartedPixmap)
@@ -119,22 +127,32 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.trayIcon.setVisible(True)
             self.trayIcon.activated.connect(self.activate)
 
+            #Tray Icon Context Menu
             self.taskIconMenu = QMenu(self)
-
-            def addItem(name, handler, statusTip):
-                action = QAction(name, self)
-                action.setStatusTip(statusTip)
-                action.triggered.connect(handler)
-                self.taskIconMenu.addAction(action)
-
-            addItem("Open", self.showWindowHandler, "Show the RenderNodeMain Window")
+            
+            addItem("Open",
+                    self.showWindowHandler,
+                    "Show the RenderNodeMain Window",
+                    self.taskIconMenu)
             self.taskIconMenu.addSeparator()
-            addItem("Update", self.updateThisNodeInfo, "Fetch the latest information from the Database")
+            addItem("Update",
+                    self.updateThisNodeInfo,
+                    "Fetch the latest information from the Database",
+                    self.taskIconMenu)
             self.taskIconMenu.addSeparator()
-            addItem("Online", self.onlineThisNodeHandler, "Online this node")
-            addItem("Offline", self.offlineThisNodeHandler, "Offline this node")
-            addItem("GetOff!", self.getOffThisNodeHandler, "Kill the current task and offline this node")
-
+            addItem("Online",
+                    self.onlineThisNodeHandler,
+                    "Online this node",
+                    self.taskIconMenu)
+            addItem("Offline",
+                    self.offlineThisNodeHandler,
+                    "Offline this node",
+                    self.taskIconMenu)
+            addItem("GetOff!",
+                    self.getOffThisNodeHandler,
+                    "Kill the current task and offline this node",
+                    self.taskIconMenu)
+                    
             self.trayIcon.setContextMenu(self.taskIconMenu)
         else:
             logger.error("Tray Icon Error! Could not create tray icon.")
@@ -164,8 +182,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def closeEvent(self, event):
         choice = yesNoBox(self, "Confirm", "Really exit the RenderNodeMain server?")
         if choice == QMessageBox.Yes:
-            #Not sure why but this breaks output field logging
             logger.info("Shutting down...")
+            logger.info("Please wait, this may take up to 60 seconds...")
+            #Force update UI
+            app.processEvents()
             if self.pulseThreadStatus:
                 #This can take up to 60 seconds, so do it first
                 self.pulseThreadVar = False
@@ -176,6 +196,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 self.getOffThisNodeHandler()
             if self.renderServerStatus:
                 self.renderServer.shutdownCMD()
+                #Wait to make sure the render server is dead
+                time.sleep(5)
             if isTask:
                 self.onlineThisNodeHandler()
             self.trayIcon.hide()
@@ -185,6 +207,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             event.ignore()
 
     def showWindowHandler(self):
+        self.isVisable = True
         self.show()
         self.updateThisNodeInfo()
 
@@ -194,9 +217,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
     def __icon_activated(self, reason):
         if reason == QSystemTrayIcon.DoubleClick:
-            self.show()
+            self.showWindowHandler()
 
     def sendToTrayHandler(self):
+        self.isVisable = False
         self.trayIcon.show()
         self.hide()
 
@@ -230,22 +254,20 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                     killed = TaskUtils.killTask(task_id)
                     if not killed:
                         logger.error("Node could not kill for some reason!")
-                        aboutBox(self,
-                                "Error",
-                                "Task couldn't be killed for some reason.")
+                        self.aboutBoxHidden("Error",
+                                    "Task couldn't be killed for some reason.")
                     else:
                         logger.info("Node Got Off current task!")
                 except socketerror as err:
                     logger.error(str(err))
-                    aboutBox(self, "Error", "Task couldn't be killed because "
+                    self.aboutBoxHidden("Error", "Task couldn't be killed because "
                     "there was a problem communicating with the host running "
                     "it.")
                 except sqlerror as err:
                     logger.error(str(err))
-                    aboutBox(self, "SQL Error", str(err))
+                    self.aboutBoxHidden("SQL Error", str(err))
             else:
-                aboutBox(self,
-                        "Task Kill Error",
+                self.aboutBoxHidden("Task Kill Error",
                         "No tasks found on current node. Set status to Offline.")
 
     def runCommandHandler(self):
@@ -329,9 +351,17 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             except Exception, e:
                 logger.error(traceback.format_exc(e))
             time.sleep(interval)
+            
+    def aboutBoxHidden(self, title="", msg=""):
+        """Creates a window that has been minimzied to the tray"""
+        QMessageBox.about(self, title, msg)
+        #Work around...
+        self.show()
+        self.hide()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.quitOnLastWindowClosed = False
     window = RenderNodeMainUI()
     window.show()
     retcode = app.exec_()
