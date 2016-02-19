@@ -92,7 +92,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.buildUI()
         self.connectButtons()
         self.updateThisNodeInfo()
-        self.startupServers()
+        try:
+            self.startupServers()
+        except Exception, e:
+            logger.error(traceback.format_exc(e))
         logger.info("LIVE LIVE LIVE")
 
     def normalOutputWritten(self, text):
@@ -110,9 +113,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             action.setStatusTip(statusTip)
             action.triggered.connect(handler)
             menu.addAction(action)
-        
-        self.isVisable = True    
-        
+
+        self.isVisable = True
+
         self.refreshButton.setIcon(self.refreshIcon)
 
         self.renderServerPixmap.setPixmap(self.notStartedPixmap)
@@ -131,7 +134,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
             #Tray Icon Context Menu
             self.taskIconMenu = QMenu(self)
-            
+
             addItem("Open",
                     self.showWindowHandler,
                     "Show the RenderNodeMain Window",
@@ -154,7 +157,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                     self.getOffThisNodeHandler,
                     "Kill the current task and offline this node",
                     self.taskIconMenu)
-                    
+
             self.trayIcon.setContextMenu(self.taskIconMenu)
         else:
             logger.error("Tray Icon Error! Could not create tray icon.")
@@ -186,13 +189,13 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         choice = yesNoBox(self, "Confirm", "Really exit the RenderNodeMain server?")
         if choice == QMessageBox.Yes:
             logger.info("Shutting down...")
-            logger.info("Please wait, this may take up to 60 seconds...")
             #Force update UI
             app.processEvents()
             if self.pulseThreadStatus:
-                #This can take up to 60 seconds, so do it first
                 self.pulseThreadVar = False
+                self.pulseThread.terminate()
             self.updateThisNodeInfo()
+            app.processEvents()
             isTask = False
             if self.thisNode.task_id:
                 isTask = True
@@ -290,11 +293,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         #Startup Pulse thread
         self.pulseThreadStatus = False
         self.pulseThreadVar = True
-        self.pulseThread = threading.Thread(target = self.pulse,
-                                            name = "Pulse Thread",
-                                            args = (60,))
+        self.pulseThread = stoppableThread(pulse, 5, "Pulse")
         try:
-            #self.pulseThread.start()
+            self.pulseThread.start()
             self.pulseThreadStatus = True
             self.pulseThreadPixmap.setPixmap(self.donePixmap)
             logger.info("Pulse Thread started!")
@@ -349,22 +350,44 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 " Farm View, but it must be restarted after this node is "
                 "registered if you wish to see this node's information.")
 
-    def pulse(self, interval = 5):
-        while self.pulseThreadVar:
-            try:
-                with transaction() as t:
-                    t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
-                                "WHERE host = '{0}'".format(self.thisNode.host))
-            except Exception, e:
-                logger.error(traceback.format_exc(e))
-            time.sleep(interval)
-            
     def aboutBoxHidden(self, title="", msg=""):
         """Creates a window that has been minimzied to the tray"""
         QMessageBox.about(self, title, msg)
         #Work around...
         self.show()
         self.hide()
+
+class stoppableThread(threading.Thread):
+    def __init__(self, targetFunction, interval, tName):
+        self.targetFunction = targetFunction
+        self.interval = interval
+        self.tName = tName
+        self._flag = False
+        self.stop = threading.Event()
+        threading.Thread.__init__(self, target = self.tgt)
+
+    def tgt(self):
+        try:
+            while (not self.stop.wait(1)):
+                self._flag = True
+                self.targetFunction()
+                self.stop.wait(self.interval)
+        finally:
+            self._flag = False
+
+    def terminate(self):
+        logger.info("Killing {0} Thread...".format(self.tName))
+        self.stop.set()
+
+
+def pulse():
+    host = Utils.myHostName()
+    try:
+        with transaction() as t:
+            t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
+                        "WHERE host = '{0}'".format(host))
+    except Exception, e:
+        logger.error(traceback.format_exc(e))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
