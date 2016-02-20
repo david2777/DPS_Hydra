@@ -44,6 +44,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         QMainWindow.__init__(self)
         self.setupUi(self)
         
+        self.thisHostName = Utils.myHostName()
 
         #My UI Setup Functions
         self.setupTables()
@@ -64,14 +65,30 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Partial applications for convenience
         self.sqlErrorBox = (
-            functools.partial(aboutBox, parent=self, title="Error",
-                        msg="There was a problem while trying to fetch info"
-                        " from the database. Check the FarmView log file for"
-                        " more details about the error."))
+            functools.partial(
+                aboutBox,
+                parent = self,
+                title = "Error",
+                msg = "There was a problem while trying to fetch info"
+                " from the database. Check the FarmView log file for"
+                " more details about the error."))
         self.noneCheckedBox = (
-            functools.partial(aboutBox, parent=self, title="None checked",
-                        msg= "No nodes have been selected. Use the check boxes"
-                        " to make a selection from the table."))
+            functools.partial(
+                aboutBox,
+                parent = self,
+                title = "None checked",
+                msg = "No nodes have been selected. Use the check boxes"
+                " to make a selection from the table."))
+                        
+        self.nodeDoesNotExistBox = (
+            functools.partial(
+                aboutBox,
+                parent = self,
+                title = "Notice",
+                msg = "Information about this node cannot be displayed because "
+                "it is not registered on the render farm. You may continue to "
+                "use Farm View, but it must be restarted after this node is "
+                "registered if you wish to see this node's information."))
 
         #And Hydra said "Let there be data"
         self.doFetch()
@@ -338,11 +355,10 @@ class FarmView(QMainWindow, Ui_FarmView):
             aboutBox(self, "SQL error", str(err))
         self.jobTable.setSortingEnabled(True)
 
-    def updateJobRow(self, row):
-        job_id = int(self.jobTable.item(row, 0).text())
-        JobUtils.updateJobTaskCount(job_id)
+    def updateJobRow(self, job, row, tasks):
         try:
-            [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
+            job_id = job.id
+            JobUtils.updateJobTaskCount(job_id, tasks = tasks, commit = True)
             pos = row
             if job.tasksTotal > 0:
                 percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
@@ -539,11 +555,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         addItem("Load LogFile", self.loadLogHandler, "Load the log file for all tasks selected in the Task List")
         self.taskMenu.popup(QCursor.pos())
 
-    def updateTaskTable(self, job_id):
-        with transaction() as t:
-            t.cur.execute("SELECT maxNodes FROM hydra_jobboard WHERE id = '{0}'".format(str(job_id)))
-            limit = t.cur.fetchall()[0][0]
-        sString = "Task List (Job ID: {0}) (Node Limit: {1})".format(str(job_id), int(limit)) 
+    def updateTaskTable(self, job_id, row):
+        [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
+        sString = "Task List (Job ID: {0}) (Node Limit: {1})".format(str(job_id), int(job.maxNodes)) 
         self.taskTableLabel.setText(sString)
         try:
             tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
@@ -569,6 +583,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 8, TableWidgetItem_int(str(task.exitCode)))
                 self.taskTable.setItem(pos, 9, TableWidgetItem_int(reqsString))
+                
+            self.updateJobRow(job, row, tasks)
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
@@ -576,8 +592,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def jobCellClickedHandler(self, row):
         item = self.jobTable.item(row, 0)
         job_id = int(item.text())
-        self.updateTaskTable(job_id)
-        self.updateJobRow(row)
+        self.updateTaskTable(job_id, row)
 
     def reloadTaskTable(self):
         row = self.jobTable.selectionModel().selectedRows()[0].row()
@@ -689,7 +704,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not rows:
             return
         if len(rows) > 1:
-            choice = yesNoBox(self, "Open logs?", "Note, this will open a text editor for EACH task selected. Continue?")
+            choice = yesNoBox(self,
+                            "Open logs?",
+                            "Note, this will open a text editor for EACH task "
+                            "selected. Continue?")
             if choice == QMessageBox.Yes:
                 for row in rows:
                     task_id = int(self.taskTable.item(row, 0).text())
@@ -772,7 +790,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         
         self.nodeMenu.popup(QCursor.pos())
         
-    def updateRenderNodeTable(self):
+    def updateRenderNodeTable(self, nodes):
         #Clear the table(note: this is done to avoid duplication of items)
         self.renderNodeTable.clearContents()
         self.renderNodeTable.setRowCount(0)
@@ -780,10 +798,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Prevent rows from being sorted while table is populating
         self.renderNodeTable.setSortingEnabled(False)
 
-        nodes = hydra_rendernode.fetch(order="order by host")
         self.renderNodeTable.setRowCount(len(nodes))
-        
-        
         for pos, node in enumerate(nodes):
             self.renderNodeTable.setItem(pos, 0, TableWidgetItem_check())
             self.renderNodeTable.setItem(pos, 1, TableWidgetItem_int(str(node.host)))
@@ -795,7 +810,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             nodeVersion  = getSoftwareVersionText(node.software_version)
             self.renderNodeTable.setItem(pos, 6, TableWidgetItem(str(nodeVersion)))
             self.renderNodeTable.setItem(pos, 7, TableWidgetItem_dt(node.pulse))
-            if node.host == Utils.myHostName():
+            if node.host == self.thisHostName:
                 self.renderNodeTable.item(pos, 1).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
 
         self.renderNodeTable.setSortingEnabled(True)
@@ -995,46 +1010,44 @@ class FarmView(QMainWindow, Ui_FarmView):
     def doFetch(self):
         """Aggregate method for updating all of the widgets."""
         try:
-            self.updateThisNodeInfo()
-            self.updateRenderNodeTable()
+            #Node setup and updaters
+            self.thisNodeExists = False
+            allNodes = hydra_rendernode.fetch(order = "ORDER BY host")
+            thisNode = None
+            for node in allNodes:
+                if node.host == self.thisHostName:
+                    thisNode = node
+                    
+            if thisNode:
+                self.thisNodeExists = True
+            
+            if self.thisNodeExists:
+                self.updateThisNodeInfo(thisNode)
+            else:
+                self.nodeDoesNotExistBox()
+                self.setThisNodeButtonsEnabled(False)
+                
+            self.updateRenderNodeTable(allNodes)
+            self.updateStatusBar(thisNode)
+            
+            #TODO: Move fetch for this tab to a new button
             self.updateRenderJobGrid()
+            
+            
             self.updateJobTable()
-            self.updateStatusBar()
         except sqlerror as err:
             logger.error(str(err))
             self.sqlErrorBox()
 
-    def updateThisNodeInfo(self):
+    def updateThisNodeInfo(self, thisNode):
         """Updates widgets on the "This Node" tab with the most recent
         information available."""
-        #If the buttons are disabled, don't bother
-        if not self.thisNodeButtonsEnabled:
-            return
-
-        #Get the most current info from the database
-        thisNode = None
-        try:
-            thisNode = NodeUtils.getThisNodeData()
-        except sqlerror as err:
-            logger.error(str(err))
-            self.sqlErrorBox()
-
-        if thisNode:
-            #Update the labels
-            self.nodeNameLabel.setText(thisNode.host)
-            self.nodeStatusLabel.setText(niceNames[thisNode.status])
-            self.updateTaskIDLabel(thisNode.task_id)
-            self.nodeVersionLabel.setText(getSoftwareVersionText(thisNode.software_version))
-            self.updateMinPriorityLabel(thisNode.minPriority)
-            self.updateCapabilitiesLabel(thisNode.capabilities)
-
-        else:
-            QMessageBox.about(self, "Notice",
-                "Information about this node cannot be displayed because it is "
-                "not registered on the render farm. You may continue to use"
-                " Farm View, but it must be restarted after this node is "
-                "registered if you wish to see this node's information.")
-            self.setThisNodeButtonsEnabled(False)
+        self.nodeNameLabel.setText(thisNode.host)
+        self.nodeStatusLabel.setText(niceNames[thisNode.status])
+        self.updateTaskIDLabel(thisNode.task_id)
+        self.nodeVersionLabel.setText(getSoftwareVersionText(thisNode.software_version))
+        self.updateMinPriorityLabel(thisNode.minPriority)
+        self.updateCapabilitiesLabel(thisNode.capabilities)
 
     def updateTaskIDLabel(self, task_id):
         if task_id:
@@ -1070,11 +1083,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         clearLayout(self.taskGrid)
         setupDataGrid(records, columns, self.taskGrid)
 
-    def updateStatusBar(self):
+    def updateStatusBar(self, thisNode):
         with transaction() as t:
             t.cur.execute ("SELECT count(status), status FROM hydra_rendernode GROUP BY status")
             counts = t.cur.fetchall()
-        thisNode = NodeUtils.getThisNodeData()
         logger.debug("Counts = " + str(counts))
         countString = ", ".join (["{0} {1}".format(count, niceNames[status]) for (count, status) in counts])
         if thisNode:
@@ -1168,12 +1180,17 @@ def loadLog(record):
     logFile = record.logFile
     if logFile:
         logFile = os.path.abspath(logFile)
+        lSplit = logFile.split("\\")
+        lSplit[0] = "\\\\{0}".format(record.host)
+        logFile = "\\".join(lSplit)
+        logFile = os.path.abspath(logFile)
         if os.path.exists(logFile):
             logger.info("Opening Log File @ {0}".format(str(logFile)))
             webbrowser.open(logFile)
         else:
             aboutBox(title = "Invalid Log File Path", msg = "Invalid log file path for task: {0}".format(record.id))
             logger.error("Invalid log file path for task: {0}".format(record.id))
+            logger.error(logFile)
     else:
         aboutBox(title = "No Log on File", msg = "No log on file for task: {0}\nJob was probably never started or was recently reset.".format(record.id))
         logger.warning("No log file on record for task: {0}".format(record.id))
