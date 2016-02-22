@@ -1,4 +1,4 @@
-"""The software used for submitting jobs to the DB. Gather data, creates and 
+"""The software used for submitting jobs to the DB. Gather data, creates and
 submits job tickets to the database."""
 #Standard
 import sys
@@ -32,7 +32,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         self.populateReqs()
         self.populateExecs()
         self.setupForms()
-    
+
     def closeEvent(self, event):
         event.accept()
         sys.exit(0)
@@ -92,9 +92,9 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             QObject.connect(self.finalCheckBox, SIGNAL("stateChanged(int)"),
                             self.toggleFinalBoxes)
             QObject.connect(self.sceneButton, SIGNAL("clicked()"),
-                            self.sceneButtonHandler)            
+                            self.sceneButtonHandler)
             QObject.connect(self.projButton, SIGNAL("clicked()"),
-                            self.projButtonHandler)  
+                            self.projButtonHandler)
 
     def populateReqs(self):
         #Get requirements master list from the DB
@@ -112,11 +112,11 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                 col = 0
             else:
                 col += 1
-            
+
             #Set args passed from Maya to the Reqs
             if item in self.settingsDict["-c"]:
                 c.setCheckState(2)
-                
+
             self.reqChecks.append(c)
 
     def populateExecs(self):
@@ -127,7 +127,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         for execute in execs:
             newItem = self.executableComboBox.addItem(execute.name)
-            
+
         #Set the executeable to the value passed from Maya
         index = self.executableComboBox.findText(self.settingsDict["-x"])
         if index > 0:
@@ -137,15 +137,15 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         self.sceneLineEdit.setText(self.scene)
         self.projLineEdit.setText(self.settingsDict["-p"])
         self.niceNameLineEdit.setText(self.settingsDict["-n"])
-        self.startSpinBox.setValue(int(self.settingsDict["-s"]))
-        self.endSpinBox.setValue(int(self.settingsDict["-e"]))
+        self.startSpinBox.setValue(int(float(self.settingsDict["-s"])))
+        self.endSpinBox.setValue(int(float(self.settingsDict["-e"])))
         self.renderLayersLineEdit.setText(self.settingsDict["-r"])
         self.cmdLineEdit.setText(self.settingsDict["-m"])
 
     #------------------------------------------------------------------------#
     #----------------------------Button Handlers-----------------------------#
     #------------------------------------------------------------------------#
-    
+
     def submitButtonHandler(self):
         #TODO:Error check this data!
         #Getting data in same order as JobTicket
@@ -163,19 +163,19 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         compatabilityList = self.getReqs()
         testNodesP1 = int(self.testNodesP1SpinBox.value())
         testNodesP2 = int(self.testNodesP2SpinBox.value())
-        
+
         #Stuff not in JobTicket
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
         if renderLayers != "":
             baseCMD += " -rl {0}".format(renderLayers)
-            
+
         proj = str(self.projLineEdit.text())
         if len(proj) < 5:
             aboutBox(title = "Please set Project Directory!", msg = "Project Directory must be more than 5 characters long.")
             raise Exception("Please set Project Directory! Project Directory must be more than 5 characters long.")
         else:
             baseCMD += " -proj {0}".format(proj)
-            
+
         #Error Checking
         if len(baseCMD) > 1000:
             aboutBox(title = "baseCMD too long!", msg = "baseCMD must be less than 1000 characters!")
@@ -201,8 +201,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         if len(owner) > 45:
             aboutBox(title = "Owner out of range!", msg = "Owner must be less than 45 characters!")
             raise Exception("Owner out of range! Owner must be less than 45 characters!")
-        
-        
+
+
         phase01Status = False
         if self.testCheckBox.isChecked():
             logger.info("Building Phase 01")
@@ -224,13 +224,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             owner,
                                             compatabilityList,
                                             testNodesP1)
-        
+
             p1_job_id = phase01Ticket.doSubmit()
             if jobStatus == "R":
                 JobUtils.setupNodeLimit(p1_job_id)
             logger.info("Phase 01 submitted with id: {0}".format(p1_job_id))
             phase01Status = True
-            
+
         if self.finalCheckBox.isChecked():
             logger.info("Building Phase 02")
             #Phase specific overrides
@@ -254,16 +254,16 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             owner,
                                             compatabilityList,
                                             testNodesP2)
-        
+
             p2_job_id = phase02Ticket.doSubmit()
             if jobStatusOverride == "R":
                 JobUtils.setupNodeLimit(p2_job_id)
             logger.info("Phase 02 submitted with id: {0}".format(p2_job_id))
-        
+
         self.submitButton.setEnabled(False)
-        self.submitButton.setText("Job Submitted! Please close window.")    
+        self.submitButton.setText("Job Submitted! Please close window.")
         #aboutBox(title = "Submitted!", msg = "Job and Tasks have been submitted!\nCheck FarmView to view the status of your Jobs!")
-    
+
     def browseFileButtonHandler(self, QTTarget, startDir, caption, fileFilter):
         returnDir = QFileDialog.getOpenFileName(
             parent = self,
@@ -276,13 +276,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                 returnDir = str(returnDir).split('/')
                 returnDir.pop()
                 returnDir = '/'.join(returnDir) + '/'
-            
+
             QTTarget.setText(returnDir)
             return returnDir
-        
+
         else:
             return False
-            
+
     def sceneButtonHandler(self):
         currentDir = str(self.sceneLineEdit.text())
         startDir = None
@@ -294,7 +294,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                 startDir = projDir
         else:
             startDir = currentDir
-            
+
         sceneFile = self.browseFileButtonHandler(self.sceneLineEdit,
                                                 startDir,
                                                 "Find maya scene file...",
@@ -302,7 +302,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         if sceneFile and str(self.niceNameLineEdit.text()) == "":
             defName = sceneFile.split("/")[-1]
             self.niceNameLineEdit.setText(defName)
-        
+
     def projButtonHandler(self):
         currentDir = str(self.projLineEdit.text())
         startDir = None
@@ -322,7 +322,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                     startDir,
                                     "Find maya workspace.mel in project directory...",
                                     "workspace.mel;;All Files(*)")
-    
+
     def toggleTestBoxes(self):
         if self.testFramesSpinBox.isEnabled():
             self.testFramesSpinBox.setEnabled(False)
@@ -330,7 +330,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         else:
             self.testFramesSpinBox.setEnabled(True)
             self.testNodesP1SpinBox.setEnabled(True)
-    
+
     def toggleFinalBoxes(self):
         if self.testNodesP2SpinBox.isEnabled():
             self.testNodesP2SpinBox.setEnabled(False)
@@ -339,16 +339,16 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
     #------------------------------------------------------------------------#
     #----------------------------Get/Modify Data-----------------------------#
     #------------------------------------------------------------------------#
-    
+
     def getReqs(self):
         reqList = []
         for check in self.reqChecks:
             if check.isChecked():
                 reqList.append(str(check.text()))
-        
+
         #Job Ticket takes a list and sorts and formats it
         return reqList
-        
+
     def getJobStatus(self):
         if self.startStatusRadioButton.isChecked():
             return "R"
@@ -360,9 +360,9 @@ if __name__ == '__main__':
         sys.argv[1]
     except IndexError:
         sys.argv.append("")
-            
+
     app = QApplication(sys.argv)
-    
+
     window = SubmitterMain()
     window.show()
     retcode = app.exec_()
