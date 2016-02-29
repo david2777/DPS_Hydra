@@ -71,6 +71,10 @@
     Jobboard:
     	Change taskDone to tasksComplete
     	Change totalTask to tasksTotal
+      
+-[Done]Attempts
+
+-[Done]Node does not pickup job it failed on in the past
 
 -[Todo]Auto update on things like FarmView and RenderNodeMain UI
 
@@ -85,9 +89,5 @@
 -[Todo]Edit job dialog
 
 -[Todo]Timeouts
-
--Attempts?
-
--Node does not pickup job it failed on in the past?
 
 -Everything else

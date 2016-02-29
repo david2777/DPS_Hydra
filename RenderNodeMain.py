@@ -257,7 +257,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.offlineThisNodeHandler()
             if task_id:
                 try:
-                    killed = TaskUtils.killTask(task_id)
+                    killed = TaskUtils.killTask(task_id, "R")
                     if not killed:
                         logger.error("Node could not kill for some reason!")
                         self.aboutBoxHidden("Error",
@@ -293,7 +293,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         #Startup Pulse thread
         self.pulseThreadStatus = False
         self.pulseThreadVar = True
-        self.pulseThread = stoppableThread(pulse, 5, "Pulse")
+        self.pulseThread = stoppableThread(pulse, 60, "Pulse")
         try:
             self.pulseThread.start()
             self.pulseThreadStatus = True
@@ -354,8 +354,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         """Creates a window that has been minimzied to the tray"""
         QMessageBox.about(self, title, msg)
         #Work around...
-        self.show()
-        self.hide()
+        if not self.isVisable():
+            self.show()
+            self.hide()
 
 class stoppableThread(threading.Thread):
     def __init__(self, targetFunction, interval, tName):

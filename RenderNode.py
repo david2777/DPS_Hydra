@@ -92,6 +92,7 @@ class RenderTCPServer(TCPServer):
         queryString += "AND priority >= '{0}'".format(thisNode.minPriority)
         queryString += " AND '{0}' LIKE requirements".format(thisNode.capabilities)
         queryString += " AND archived = '0'"
+        queryString += " AND failures NOT LIKE '%{0}%'".format(thisNode.host)
         queryString += " ORDER BY priority DESC, id ASC"
 
         with transaction() as t:
@@ -176,11 +177,27 @@ class RenderTCPServer(TCPServer):
                     #Report that the job was finished if exit code is 0
                     if render_task.exitCode == 0:
                         render_task.status = FINISHED
+                        render_task.endTime = datetime.datetime.now()
                     #Else, report error
                     else:
-                        render_task.status = ERROR
-                    #Get the datetime
-                    render_task.endTime = datetime.datetime.now()
+                        render_task.attempts += 1
+                        
+                        if render_task.failures == None:
+                            render_task.failures = thisNode.host
+                        else:
+                            render_task.failures += " {0}".format(thisNode.host)
+                        
+                        if render_task.attempts >= render_task.maxAttempts:
+                            render_task.status = ERROR
+                            render_task.endTime = datetime.datetime.now()
+                        else:
+                            render_task.status = READY
+                            render_task.host = None
+                            render_task.logFile = None
+                            render_task.startTime = None
+                            render_task.endTime = None
+                            render_task.exitCode = None
+                    
 
                 #Return to 'IDLE' IF current status is 'STARTED'
                 if thisNode.status == STARTED:
@@ -222,8 +239,12 @@ class RenderTCPServer(TCPServer):
                     logger.error("Could not kill PID {0} due to a WindowsError")
                     logger.error(str(err))
             #Log and kill the main child process
-            logger.info("Killing main task with PID of {0}".format(self.childProcess.pid))
-            os.kill(self.childProcess.pid, signal.SIGTERM)
+            try:
+                logger.info("Killing main task with PID of {0}".format(self.childProcess.pid))
+                os.kill(self.childProcess.pid, signal.SIGTERM)
+            except WindowsError as err:
+                logger.error("Could not kill PID {0} due to a WindowsError")
+                logger.error(str(err))
             #Set status as killed
             self.childKilled = True
             self.statusAfterDeath = statusAfterDeath

@@ -130,6 +130,9 @@ CREATE TABLE `hydra_taskboard` (
   `startFrame` int(6) DEFAULT '1' COMMENT 'The frame for this task',
   `endFrame` int(6) DEFAULT '1',
   `archived` int(4) DEFAULT '0' COMMENT 'A column for archiving tasks so they don''t get pickedup by RenderNodeMain',
+  `attempts` int(4) DEFAULT '0' COMMENT 'Number of times the task has been attempted',
+  `maxAttempts` int(4) DEFAULT '3' COMMENT 'Maximum number of attempts allowed',
+  `failures` varchar(80) DEFAULT NULL COMMENT 'List of nodes where this task has already failed seperated by spaces',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -143,4 +146,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-02-03 22:50:09
+-- Dump completed on 2016-02-28 21:56:25

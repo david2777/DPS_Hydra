@@ -888,8 +888,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     if thisNode.task_id:
                         task_id = thisNode.task_id
                         try:
-                            response = TaskUtils.killTask(task_id)
-                            TaskUtils.startTask(task_id)
+                            response = TaskUtils.killTask(task_id, "R")
                             if not response:
                                 logger.warning("Problem killing task durring GetOff")
                                 aboutBox(self, "Error", "There was a problem killing the task during GetOff!")

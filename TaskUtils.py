@@ -108,6 +108,11 @@ def killTask(task_id, newStatus = "K"):
         return False
     elif task.status == "R" or task.status == "U":
         task.status = newStatus
+        task.host = None
+        task.startTime = None
+        task.endTime = None
+        task.logFile = None
+        task.exitCode = None
         with transaction() as t:
             task.update(t)
         #If we reach this point: transaction successful, no exception raised
@@ -116,6 +121,6 @@ def killTask(task_id, newStatus = "K"):
         killed = sendKillQuestion(task.host, newStatus)
         #If we reach this point: TCPconnection successful, no exception raised
         return killed
-    elif task.status == "K" or task.status == "F":
+    elif task.status == "K" or task.status == "F" or task.status == "U":
         return False
     return True
