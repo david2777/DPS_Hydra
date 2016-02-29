@@ -8,6 +8,7 @@ from exceptions import NotImplementedError
 import datetime
 import functools
 import re
+import time
 from socket import error as socketerror
 
 #3rd party
@@ -56,12 +57,16 @@ class FarmView(QMainWindow, Ui_FarmView):
         #Get user
         self.username = getDbInfo()[2]
 
-        #Globals for filters
+        #Globals
         self.filters = None
         self.userFilter = False
         self.showArchivedFilter = False
         
         self.statusMsg = ""
+        
+        self.autoUpdate = True
+        self.autoUpdateThread = workerSignalThread("run", 5)
+        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doFetch)
 
         #Partial applications for convenience
         self.sqlErrorBox = (
@@ -90,11 +95,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "use Farm View, but it must be restarted after this node is "
                 "registered if you wish to see this node's information."))
 
-        #And Hydra said "Let there be data"
-        self.doFetch()
-        #And there was data
-        #And Hydra saw the data
-        #And it was(hopefully) good
+        #Start thread which should load inital data
+        self.autoUpdateThread.start()
         
     def closeEvent(self, event):
         event.accept()
@@ -146,6 +148,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.offlineThisNodeHandler)
         QObject.connect(self.getOffThisNodeButton, SIGNAL("clicked()"),
                         self.getOffThisNodeHandler)
+        QObject.connect(self.autoUpdateCheckbox, SIGNAL("stateChanged(int)"),
+                        self.autoUpdateHandler)
                         
         #Connect basic filter checkboxKeys
         QObject.connect(self.archivedCheckBox, SIGNAL("stateChanged(int)"),
@@ -930,6 +934,15 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     #----------------------THIS NODE BUTTON HANDLERS----------------------#
     #---------------------------------------------------------------------#
+    
+    def autoUpdateHandler(self):
+        """Toggles Auto Updater"""
+        if self.autoUpdate == True:
+            self.autoUpdateThread.terminate()
+            self.autoUpdate = False
+        else:
+            self.autoUpdateThread.start()
+            self.autoUpdate = True
                     
     def onlineThisNodeHandler(self):
         """Changes the local render node's status to online if it was offline,
@@ -1315,6 +1328,22 @@ class TableWidgetItem_dt(TableWidgetItem):
             return True
         else:
             return False
+            
+class workerSignalThread(QThread):
+    def __init__(self, target, interval):
+        QThread.__init__(self)
+        self.target = target
+        self.interval = interval
+        logger.info("INIT")
+    
+    def __del__(self):
+        self.wait()
+        
+    def run(self):
+        while True:
+            logger.info("Running...")
+            self.emit(SIGNAL(self.target))
+            time.sleep(self.interval)
 
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              READY: QColor(255,255,255),        #White
