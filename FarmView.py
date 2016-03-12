@@ -68,7 +68,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.currentJobSel = None
         
         self.autoUpdate = True
-        self.autoUpdateThread = workerSignalThread("run", 5)
+        self.autoUpdateThread = workerSignalThread("run", 10)
         QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
 
         #Partial applications for convenience
@@ -143,30 +143,23 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskTableCols = self.taskTable.columnCount()
 
     def connectButtons(self):
+        #Connect tab switch data update
+        self.tabWidget.currentChanged.connect(self.doUpdate)
         #Connect buttons in This Node tab
-        QObject.connect(self.fetchButton, SIGNAL("clicked()"),
-                        self.doFetch)
-        QObject.connect(self.onlineThisNodeButton, SIGNAL("clicked()"),
-                        self.onlineThisNodeHandler)
-        QObject.connect(self.offlineThisNodeButton, SIGNAL("clicked()"),
-                        self.offlineThisNodeHandler)
-        QObject.connect(self.getOffThisNodeButton, SIGNAL("clicked()"),
-                        self.getOffThisNodeHandler)
-        QObject.connect(self.updateButton, SIGNAL("clicked()"),
-                        self.doUpdate)
-        QObject.connect(self.autoUpdateCheckbox, SIGNAL("stateChanged(int)"),
-                        self.autoUpdateHandler)
+        self.fetchButton.clicked.connect(self.doFetch)
+        self.onlineThisNodeButton.clicked.connect(self.onlineThisNodeHandler)
+        self.offlineThisNodeButton.clicked.connect(self.offlineThisNodeHandler)
+        self.getOffThisNodeButton.clicked.connect(self.getOffThisNodeHandler)
+        self.updateButton.clicked.connect(self.doUpdate)
+        self.autoUpdateCheckbox.stateChanged.connect(self.autoUpdateHandler)
                         
         #Connect basic filter checkboxKeys
-        QObject.connect(self.archivedCheckBox, SIGNAL("stateChanged(int)"),
-                        self.archivedFilterActionHandler)
-        QObject.connect(self.userFilterCheckbox, SIGNAL("stateChanged(int)"),
-                        self.userFilterActionHandler)
+        self.archivedCheckBox.stateChanged.connect(self.archivedFilterActionHandler)
+        self.userFilterCheckbox.stateChanged.connect(self.userFilterActionHandler)
                         
         #Connect actions in Job View
-        QObject.connect(self.jobTable, SIGNAL ("cellClicked(int,int)"),
-                self.jobCellClickedHandler)
-        
+        self.jobTable.cellClicked.connect(self.jobCellClickedHandler)
+
         #Connect Context Menus
         self.centralwidget.setContextMenuPolicy(Qt.CustomContextMenu) 
         self.centralwidget.customContextMenuRequested.connect(self.centralContextHandler)
@@ -1096,9 +1089,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.updateRenderNodeTable(allNodes)
             self.updateStatusBar(thisNode)
             
-            #TODO: Move fetch for this tab to a new button
             self.updateRenderJobGrid()
-            
             
             self.initJobTable()
         except sqlerror as err:
