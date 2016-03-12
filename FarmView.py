@@ -138,6 +138,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskTable.setColumnWidth(6, 120)       #End Time
         self.taskTable.setColumnWidth(7, 120)       #Duration
         self.taskTable.setColumnWidth(8, 120)       #Code
+        
+        #Set Job List splitter size 
+        #These numbers are really high so that they work proportionally
+        #The 10000 makes it so that the 8500 is 85%
+        self.splitter_jobList.setSizes([8500, 10000])
 
         #Get the global column count for later
         self.taskTableCols = self.taskTable.columnCount()
@@ -318,7 +323,6 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def initJobTable(self):
         self.jobTable.clearSelection()
-        self.lastJTUpdate = datetime.datetime.now()
         self.jobTable.setSortingEnabled(False)
         command = self.jobCommandBuilder()
         try:
@@ -388,14 +392,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                     self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
                     self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
-            labelText = "Job List"
-            if self.filters:
-                labelText += " (Filtered)"
-            if self.userFilter:
-                labelText += " (This User Only)"
-            if not self.showArchivedFilter:
-                labelText += " (No Archived Jobs)"
-            self.jobTableLabel.setText(labelText + ":")
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
