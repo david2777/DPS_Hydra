@@ -64,9 +64,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         
         self.statusMsg = ""
         
+        self.lastJTUpdate = False
+        self.currentJobSel = None
+        
         self.autoUpdate = True
         self.autoUpdateThread = workerSignalThread("run", 5)
-        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doFetch)
+        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
 
         #Partial applications for convenience
         self.sqlErrorBox = (
@@ -95,7 +98,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "use Farm View, but it must be restarted after this node is "
                 "registered if you wish to see this node's information."))
 
-        #Start thread which should load inital data
+        self.doFetch()
         self.autoUpdateThread.start()
         
     def closeEvent(self, event):
@@ -141,13 +144,16 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def connectButtons(self):
         #Connect buttons in This Node tab
-        QObject.connect(self.fetchButton, SIGNAL("clicked()"), self.doFetch)
+        QObject.connect(self.fetchButton, SIGNAL("clicked()"),
+                        self.doFetch)
         QObject.connect(self.onlineThisNodeButton, SIGNAL("clicked()"),
                         self.onlineThisNodeHandler)
         QObject.connect(self.offlineThisNodeButton, SIGNAL("clicked()"),
                         self.offlineThisNodeHandler)
         QObject.connect(self.getOffThisNodeButton, SIGNAL("clicked()"),
                         self.getOffThisNodeHandler)
+        QObject.connect(self.updateButton, SIGNAL("clicked()"),
+                        self.doUpdate)
         QObject.connect(self.autoUpdateCheckbox, SIGNAL("stateChanged(int)"),
                         self.autoUpdateHandler)
                         
@@ -255,7 +261,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             self.userFilter = True
             self.userFilterCheckbox.setChecked(2)
-        self.updateJobTable()
+        self.initJobTable()
         self.resetStatusBar()
 
     def archivedFilterActionHandler(self):
@@ -265,7 +271,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             self.showArchivedFilter = True
             self.archivedCheckBox.setChecked(2)
-        self.updateJobTable()
+        self.initJobTable()
         self.resetStatusBar()
         
     def jobCommandBuilder(self):
@@ -317,8 +323,9 @@ class FarmView(QMainWindow, Ui_FarmView):
             
         return command
 
-
-    def updateJobTable(self):
+    def initJobTable(self):
+        self.jobTable.clearSelection()
+        self.lastJTUpdate = datetime.datetime.now()
         self.jobTable.setSortingEnabled(False)
         command = self.jobCommandBuilder()
         try:
@@ -358,7 +365,48 @@ class FarmView(QMainWindow, Ui_FarmView):
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
         self.jobTable.setSortingEnabled(True)
-
+        
+        
+    def updateJobTable(self):
+        #Need to update the status of each job
+        newestJobID = int(self.jobTable.item(0, 0).text())
+        try:
+            newJobs = hydra_jobboard.fetch("WHERE id > '{0}'".format(newestJobID))
+            for job in newJobs:
+                self.jobTable.insertRow(0)
+                pos = 0
+                if job.tasksTotal > 0:
+                    percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
+                    taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete, job.tasksTotal)
+                else:
+                    taskString = "0% (0/0)"
+                self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
+                self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(job.priority)))
+                self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(niceNames[job.job_status])))
+                self.jobTable.item(pos, 2).setBackgroundColor(niceColors[job.job_status])
+                self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
+                self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
+                self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
+                if job.owner == self.username:
+                    self.jobTable.item(pos, 3).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
+                if job.archived == 1:
+                    self.jobTable.item(pos, 0).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 1).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
+                    self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
+            labelText = "Job List"
+            if self.filters:
+                labelText += " (Filtered)"
+            if self.userFilter:
+                labelText += " (This User Only)"
+            if not self.showArchivedFilter:
+                labelText += " (No Archived Jobs)"
+            self.jobTableLabel.setText(labelText + ":")
+        except sqlerror as err:
+            logger.debug(str(err))
+            aboutBox(self, "SQL error", str(err))
+        
     def updateJobRow(self, job, row, tasks):
         try:
             job_id = job.id
@@ -403,7 +451,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
             JobUtils.startJob(job_id)
-        self.updateJobTable()
+        self.initJobTable()
         self.jobCellClickedHandler(rows[-1])
         self.jobTable.setCurrentCell(rows[-1], 0)
 
@@ -425,7 +473,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             finally:
                 if response:
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
-                self.updateJobTable()
+                self.initJobTable()
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
@@ -447,7 +495,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             finally:
                 if response:
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
-                self.updateJobTable()
+                self.initJobTable()
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
@@ -468,7 +516,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                self.updateJobTable()
+                self.initJobTable()
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
                 
@@ -484,7 +532,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 job_id = int(self.jobTable.item(row, 0).text())
                 JobUtils.setupNodeLimit(job_id)
         
-        self.updateJobTable()
+        self.initJobTable()
         self.jobCellClickedHandler(rows[-1])
         self.jobTable.setCurrentCell(rows[-1], 0)
 
@@ -501,7 +549,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 JobUtils.prioritizeJob(job_id, reply[0])
             else:
                 logger.info("prioritizeJob skipped on {0}".format(job_id))
-        self.updateJobTable()
+        self.initJobTable()
         self.jobTable.setCurrentCell(rows[-1], 0)
 
     def toggleArchiveHandler(self):
@@ -532,7 +580,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                self.updateJobTable()
+                self.initJobTable()
                 
     #---------------------------------------------------------------------#
     #---------------------------TASK HANDLERS-----------------------------#
@@ -559,8 +607,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         addItem("Load LogFile", self.loadLogHandler, "Load the log file for all tasks selected in the Task List")
         self.taskMenu.popup(QCursor.pos())
 
-    def updateTaskTable(self, job_id, row):
+    def initTaskTable(self, job_id, row):
         [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
+        self.currentJobSel = job.id
         sString = "Task List (Job ID: {0}) (Node Limit: {1})".format(str(job_id), int(job.maxNodes)) 
         self.taskTableLabel.setText(sString)
         try:
@@ -592,11 +641,16 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
+            
+    def updateTaskTable(self):
+        if self.currentJobSel:
+            #Update here 
+            pass
 
     def jobCellClickedHandler(self, row):
         item = self.jobTable.item(row, 0)
         job_id = int(item.text())
-        self.updateTaskTable(job_id, row)
+        self.initTaskTable(job_id, row)
 
     def reloadTaskTable(self):
         row = self.jobTable.selectionModel().selectedRows()[0].row()
@@ -651,7 +705,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
                     job.job_status = "S"
                     job.update(t)
-                self.updateJobTable()
+                self.initJobTable()
                 self.jobCellClickedHandler(row)
                 self.jobTable.setCurrentCell(row, 0)
             else:
@@ -731,7 +785,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.filters = JobFilterDialog.create(self.filters)
         #logger.debug(self.filters)
         logger.info(self.jobCommandBuilder())
-        self.updateJobTable()
+        self.initJobTable()
 
     def searchByTaskID(self):
         """Given a task id, finds the job, selects it in the job table, and
@@ -1046,10 +1100,26 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.updateRenderJobGrid()
             
             
-            self.updateJobTable()
+            self.initJobTable()
         except sqlerror as err:
             logger.error(str(err))
             self.sqlErrorBox()
+            
+    def doUpdate(self):
+        curTab = self.tabWidget.currentIndex()
+        if curTab == 0:
+            #Job List
+            self.updateJobTable()
+            self.updateTaskTable()
+        elif curTab == 1:
+            #Render Node
+            pass
+        elif curTab == 2:
+            #Recent Jobs
+            pass
+        elif curTab == 4:
+            #This Node
+            pass
 
     def updateThisNodeInfo(self, thisNode):
         """Updates widgets on the "This Node" tab with the most recent

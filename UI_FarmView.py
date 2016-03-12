@@ -33,6 +33,9 @@ class Ui_FarmView(object):
         self.horizontalLayout_fetchButton = QtGui.QHBoxLayout()
         self.horizontalLayout_fetchButton.setSpacing(6)
         self.horizontalLayout_fetchButton.setObjectName(_fromUtf8("horizontalLayout_fetchButton"))
+        self.updateButton = QtGui.QPushButton(self.centralwidget)
+        self.updateButton.setObjectName(_fromUtf8("updateButton"))
+        self.horizontalLayout_fetchButton.addWidget(self.updateButton)
         self.fetchButton = QtGui.QPushButton(self.centralwidget)
         font = QtGui.QFont()
         font.setPointSize(8)
@@ -226,7 +229,7 @@ class Ui_FarmView(object):
         self.scrollArea_recentTasks.setWidgetResizable(True)
         self.scrollArea_recentTasks.setObjectName(_fromUtf8("scrollArea_recentTasks"))
         self.scrollAreaWidgetContents_recentTasks = QtGui.QWidget()
-        self.scrollAreaWidgetContents_recentTasks.setGeometry(QtCore.QRect(0, 0, 98, 52))
+        self.scrollAreaWidgetContents_recentTasks.setGeometry(QtCore.QRect(0, 0, 63, 52))
         self.scrollAreaWidgetContents_recentTasks.setObjectName(_fromUtf8("scrollAreaWidgetContents_recentTasks"))
         self.gridLayout_2 = QtGui.QGridLayout(self.scrollAreaWidgetContents_recentTasks)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
@@ -311,6 +314,7 @@ class Ui_FarmView(object):
 
     def retranslateUi(self, FarmView):
         FarmView.setWindowTitle(_translate("FarmView", "FarmView", None))
+        self.updateButton.setText(_translate("FarmView", "Soft Update", None))
         self.fetchButton.setText(_translate("FarmView", "Fetch", None))
         self.autoUpdateCheckbox.setText(_translate("FarmView", "Auto Update", None))
         self.onlineThisNodeButton.setToolTip(_translate("FarmView", "<html><head/><body><p>Allow this node to accept render tasks</p></body></html>", None))
