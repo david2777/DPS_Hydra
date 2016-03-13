@@ -66,6 +66,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         
         self.lastJTUpdate = False
         self.currentJobSel = None
+        self.newestJobID = 0
         
         self.autoUpdate = True
         self.autoUpdateThread = workerSignalThread("run", 10)
@@ -362,13 +363,13 @@ class FarmView(QMainWindow, Ui_FarmView):
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
         self.jobTable.setSortingEnabled(True)
-        
+        self.newestJobID = max([job.id for job in jobs])
         
     def updateJobTable(self):
         #Need to update the status of each job
-        newestJobID = int(self.jobTable.item(0, 0).text())
+        self.jobTable.setSortingEnabled(False)
         try:
-            newJobs = hydra_jobboard.fetch("WHERE id > '{0}'".format(newestJobID))
+            newJobs = hydra_jobboard.fetch("WHERE id > '{0}'".format(self.newestJobID))
             for job in newJobs:
                 self.jobTable.insertRow(0)
                 pos = 0
@@ -395,6 +396,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
+        if newJobs:
+            self.newestJobID = max([job.id for job in newJobs])
+        self.jobTable.setSortingEnabled(True)
         
     def updateJobRow(self, job, row, tasks):
         try:
@@ -1398,7 +1402,7 @@ class workerSignalThread(QThread):
         
     def run(self):
         while True:
-            logger.info("Running...")
+            #logger.info("Running...")
             self.emit(SIGNAL(self.target))
             time.sleep(self.interval)
 
