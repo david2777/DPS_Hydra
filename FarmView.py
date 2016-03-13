@@ -45,7 +45,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         QMainWindow.__init__(self)
         self.setupUi(self)
         
-        self.thisHostName = Utils.myHostName()
+        self.thisNodeName = Utils.myHostName()
 
         #My UI Setup Functions
         self.setupTables()
@@ -346,8 +346,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
+        if jobs:
+            self.newestJobID = max([job.id for job in jobs])
         self.jobTable.setSortingEnabled(True)
-        self.newestJobID = max([job.id for job in jobs])
         
     def updateJobTable(self):
         #Need to update the status of each job
@@ -522,9 +523,9 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
         for row in rows:
             job_id = int(self.jobTable.item(row, 0).text())
+            job_priority = int(self.jobTable.item(row, 1).text())
             msgString = "Priority for job {0}:".format(job_id)
-            #TODO:Get current priority
-            reply = intBox(self, "Set Job Priority", msgString , 50)
+            reply = intBox(self, "Set Job Priority", msgString , job_priority)
             if reply[1]:
                 JobUtils.prioritizeJob(job_id, reply[0])
             else:
@@ -828,30 +829,45 @@ class FarmView(QMainWindow, Ui_FarmView):
         
         self.nodeMenu.popup(QCursor.pos())
         
-    def updateRenderNodeTable(self, nodes):
-        #Clear the table(note: this is done to avoid duplication of items)
-        self.renderNodeTable.clearContents()
-        self.renderNodeTable.setRowCount(0)
-
-        #Prevent rows from being sorted while table is populating
+    def initRenderNodeTable(self, nodes):
         self.renderNodeTable.setSortingEnabled(False)
-
         self.renderNodeTable.setRowCount(len(nodes))
-        for pos, node in enumerate(nodes):
-            self.renderNodeTable.setItem(pos, 0, TableWidgetItem_check())
-            self.renderNodeTable.setItem(pos, 1, TableWidgetItem_int(str(node.host)))
-            self.renderNodeTable.setItem(pos, 2, TableWidgetItem(str(niceNames[node.status])))
-            self.renderNodeTable.item(pos, 2).setBackgroundColor(niceColors[node.status])
-            self.renderNodeTable.setItem(pos, 3, TableWidgetItem(str(node.task_id)))
-            self.renderNodeTable.setItem(pos, 4, TableWidgetItem(str(node.minPriority)))
-            self.renderNodeTable.setItem(pos, 5, TableWidgetItem(str(node.capabilities)))
+        for row, node in enumerate(nodes):
+            self.renderNodeTable.setItem(row, 0, TableWidgetItem_check())
+            self.renderNodeTable.setItem(row, 1, TableWidgetItem_int(str(node.host)))
+            self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(niceNames[node.status])))
+            self.renderNodeTable.item(row, 2).setBackgroundColor(niceColors[node.status])
+            self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(node.task_id)))
+            self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(node.minPriority)))
+            self.renderNodeTable.setItem(row, 5, TableWidgetItem(str(node.capabilities)))
             nodeVersion  = getSoftwareVersionText(node.software_version)
-            self.renderNodeTable.setItem(pos, 6, TableWidgetItem(str(nodeVersion)))
-            self.renderNodeTable.setItem(pos, 7, TableWidgetItem_dt(node.pulse))
-            if node.host == self.thisHostName:
-                self.renderNodeTable.item(pos, 1).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
+            self.renderNodeTable.setItem(row, 6, TableWidgetItem(str(nodeVersion)))
+            self.renderNodeTable.setItem(row, 7, TableWidgetItem_dt(node.pulse))
+            if node.host == self.thisNodeName:
+                self.renderNodeTable.item(row, 1).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
 
         self.renderNodeTable.setSortingEnabled(True)
+        
+    def updateRenderNodeTable(self):
+        rows = self.renderNodeTable.rowCount()
+        try:
+            with transaction() as t:
+                query = "SELECT host, status, task_id, pulse FROM hydra_rendernode"
+                t.cur.execute(query)
+                nodeData = t.cur.fetchall()
+        except sqlerror as err:
+            logger.error(str(err))
+            self.sqlErrorBox()
+        
+        nodeDict = {node:[status, task_id, pulse] for node, status, task_id, pulse in nodeData}
+        for row in range(rows):
+            nodeName = str(self.renderNodeTable.item(row, 1).text())
+            status, task_id, pulse = nodeDict[nodeName]
+            self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(niceNames[status])))
+            self.renderNodeTable.item(row, 2).setBackgroundColor(niceColors[status])
+            self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(task_id)))
+            self.renderNodeTable.setItem(row, 7, TableWidgetItem_dt(pulse))
+            
 
     def onlineRenderNodesHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
@@ -1061,22 +1077,23 @@ class FarmView(QMainWindow, Ui_FarmView):
             allNodes = hydra_rendernode.fetch(order = "ORDER BY host")
             thisNode = None
             for node in allNodes:
-                if node.host == self.thisHostName:
+                if node.host == self.thisNodeName:
                     thisNode = node
                     
             if thisNode:
                 self.thisNodeExists = True
             
             if self.thisNodeExists:
-                self.updateThisNodeInfo(thisNode)
+                #self.updateThisNodeInfo(thisNode)
+                pass
             else:
                 self.nodeDoesNotExistBox()
                 self.setThisNodeButtonsEnabled(False)
                 
-            self.updateRenderNodeTable(allNodes)
+            self.initRenderNodeTable(allNodes)
             self.updateStatusBar(thisNode)
             
-            self.updateRenderJobGrid()
+            #self.updateRenderJobGrid()
             
             self.initJobTable()
         except sqlerror as err:
@@ -1085,19 +1102,26 @@ class FarmView(QMainWindow, Ui_FarmView):
             
     def doUpdate(self):
         curTab = self.tabWidget.currentIndex()
-        if curTab == 0:
-            #Job List
-            self.updateJobTable()
-            self.updateTaskTable()
-        elif curTab == 1:
-            #Render Node
-            pass
-        elif curTab == 2:
-            #Recent Jobs
-            pass
-        elif curTab == 4:
-            #This Node
-            pass
+        try:
+            [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
+            self.updateStatusBar(thisNode)
+            if curTab == 0:
+                #Job List
+                self.updateJobTable()
+                self.updateTaskTable()
+            elif curTab == 1:
+                #Render Node
+                self.updateRenderNodeTable()
+            elif curTab == 2:
+                #Recent Jobs
+                self.updateRenderJobGrid()
+            elif curTab == 3:
+                #This Node
+                if self.thisNodeExists:
+                    self.updateThisNodeInfo(thisNode)
+        except sqlerror as err:
+            logger.error(str(err))
+            self.sqlErrorBox()
 
     def updateThisNodeInfo(self, thisNode):
         """Updates widgets on the "This Node" tab with the most recent
@@ -1147,7 +1171,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         with transaction() as t:
             t.cur.execute ("SELECT count(status), status FROM hydra_rendernode GROUP BY status")
             counts = t.cur.fetchall()
-        logger.debug("Counts = " + str(counts))
+        #logger.debug("Counts = " + str(counts))
         countString = ", ".join (["{0} {1}".format(count, niceNames[status]) for (count, status) in counts])
         if thisNode:
             countString += ", {0} {1}".format(thisNode.host, niceNames[thisNode.status])
