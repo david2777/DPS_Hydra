@@ -351,7 +351,34 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTable.setSortingEnabled(True)
         
     def updateJobTable(self):
-        #Need to update the status of each job
+        #Update job statuses
+        rows = self.jobTable.rowCount()
+        try:
+            with transaction() as t:
+                query = "SELECT id, tasksComplete, tasksTotal, job_status FROM hydra_jobboard WHERE archived = '0'"
+                t.cur.execute(query)
+                jobData = t.cur.fetchall()
+        except sqlerror as err:
+            logger.error(str(err))
+            self.sqlErrorBox()
+        
+        jobDict = {job_id:[tasksComplete, tasksTotal, job_status] for job_id, tasksComplete, tasksTotal, job_status in jobData}
+        for row in range(rows):
+            thisJob_id = str(self.jobTable.item(row, 0).text())
+            try:
+                tasksComplete, tasksTotal, job_status = jobDict[thisJob_id]
+                if job.tasksTotal > 0:
+                    percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
+                    taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete, job.tasksTotal)
+                else:
+                    taskString = "0% (0/0)"
+                self.jobTable.setItem(row, 2, TableWidgetItem_int(str(niceNames[job_status])))
+                self.jobTable.item(row, 2).setBackgroundColor(niceColors[job_status])
+                self.jobTable.setItem(row, 4, TableWidgetItem(taskString))
+            except:
+                pass
+        
+        #Add new jobs
         self.jobTable.setSortingEnabled(False)
         command = self.jobCommandBuilder(True)
         try:
