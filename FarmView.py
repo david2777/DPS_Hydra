@@ -273,7 +273,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.initJobTable()
         self.resetStatusBar()
         
-    def jobCommandBuilder(self):
+    def jobCommandBuilder(self, update = False):
         command = "WHERE"
         if self.filters != None:
             checkboxKeys = ["C", "E", "F", "K", "R", "S", "U"]
@@ -313,6 +313,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                 if command != "WHERE":
                     command += " AND"
                 command += " archived = 0"
+                
+        if update:
+            if command != "WHERE":
+                command += " AND"
+            command += " id > '{0}'".format(self.newestJobID)
 
         if self.filters != None:
             command += " LIMIT 0,{0}".format(limit)
@@ -323,34 +328,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         return command
 
     def initJobTable(self):
-        self.jobTable.clearSelection()
         self.jobTable.setSortingEnabled(False)
         command = self.jobCommandBuilder()
         try:
             jobs = hydra_jobboard.fetch(command)
             self.jobTable.setRowCount(len(jobs))
-            for pos, job in enumerate(jobs):
-                if job.tasksTotal > 0:
-                    percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
-                    taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete, job.tasksTotal)
-                else:
-                    taskString = "0% (0/0)"
-                self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
-                self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(job.priority)))
-                self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(niceNames[job.job_status])))
-                self.jobTable.item(pos, 2).setBackgroundColor(niceColors[job.job_status])
-                self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
-                self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
-                self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
-                if job.owner == self.username:
-                    self.jobTable.item(pos, 3).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
-                if job.archived == 1:
-                    self.jobTable.item(pos, 0).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 1).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
-                    
+            for row, job in enumerate(jobs):
+                self.insertJobTableItem(job, row)
             labelText = "Job List"
             if self.filters:
                 labelText += " (Filtered)"
@@ -368,37 +352,40 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateJobTable(self):
         #Need to update the status of each job
         self.jobTable.setSortingEnabled(False)
+        command = self.jobCommandBuilder(True)
         try:
-            newJobs = hydra_jobboard.fetch("WHERE id > '{0}'".format(self.newestJobID))
+            newJobs = hydra_jobboard.fetch(command)
             for job in newJobs:
                 self.jobTable.insertRow(0)
-                pos = 0
-                if job.tasksTotal > 0:
-                    percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
-                    taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete, job.tasksTotal)
-                else:
-                    taskString = "0% (0/0)"
-                self.jobTable.setItem(pos, 0, TableWidgetItem_int(str(job.id)))
-                self.jobTable.setItem(pos, 1, TableWidgetItem_int(str(job.priority)))
-                self.jobTable.setItem(pos, 2, TableWidgetItem_int(str(niceNames[job.job_status])))
-                self.jobTable.item(pos, 2).setBackgroundColor(niceColors[job.job_status])
-                self.jobTable.setItem(pos, 3, TableWidgetItem(str(job.owner)))
-                self.jobTable.setItem(pos, 4, TableWidgetItem(taskString))
-                self.jobTable.setItem(pos, 5, TableWidgetItem(str(job.niceName)))
-                if job.owner == self.username:
-                    self.jobTable.item(pos, 3).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
-                if job.archived == 1:
-                    self.jobTable.item(pos, 0).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 1).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 3).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 4).setBackgroundColor(QColor(220,220,220))
-                    self.jobTable.item(pos, 5).setBackgroundColor(QColor(220,220,220))
+                self.insertJobTableItem(job, 0)
         except sqlerror as err:
             logger.debug(str(err))
             aboutBox(self, "SQL error", str(err))
         if newJobs:
             self.newestJobID = max([job.id for job in newJobs])
         self.jobTable.setSortingEnabled(True)
+        
+    def insertJobTableItem(self, job, row):
+        if job.tasksTotal > 0:
+            percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
+            taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete, job.tasksTotal)
+        else:
+            taskString = "0% (0/0)"
+        self.jobTable.setItem(row, 0, TableWidgetItem_int(str(job.id)))
+        self.jobTable.setItem(row, 1, TableWidgetItem_int(str(job.priority)))
+        self.jobTable.setItem(row, 2, TableWidgetItem_int(str(niceNames[job.job_status])))
+        self.jobTable.item(row, 2).setBackgroundColor(niceColors[job.job_status])
+        self.jobTable.setItem(row, 3, TableWidgetItem(str(job.owner)))
+        self.jobTable.setItem(row, 4, TableWidgetItem(taskString))
+        self.jobTable.setItem(row, 5, TableWidgetItem(str(job.niceName)))
+        if job.owner == self.username:
+            self.jobTable.item(row, 3).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
+        if job.archived == 1:
+            self.jobTable.item(row, 0).setBackgroundColor(QColor(220,220,220))
+            self.jobTable.item(row, 1).setBackgroundColor(QColor(220,220,220))
+            self.jobTable.item(row, 3).setBackgroundColor(QColor(220,220,220))
+            self.jobTable.item(row, 4).setBackgroundColor(QColor(220,220,220))
+            self.jobTable.item(row, 5).setBackgroundColor(QColor(220,220,220))
         
     def updateJobRow(self, job, row, tasks):
         try:
