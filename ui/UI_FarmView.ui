@@ -35,7 +35,20 @@
          </font>
         </property>
         <property name="text">
-         <string>Fetch</string>
+         <string>Full Update</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="autoUpdateCheckbox">
+        <property name="text">
+         <string>Auto Update</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -51,19 +64,6 @@
          </size>
         </property>
        </spacer>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="autoUpdateCheckbox">
-        <property name="text">
-         <string>Auto Update</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
       </item>
       <item>
        <widget class="QPushButton" name="onlineThisNodeButton">

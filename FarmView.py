@@ -192,7 +192,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.centralMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
-        addItem("Fetch", self.doFetch, "Fetch the latest information from the Database")
+        addItem("Soft Update", self.doUpdate, "Update with the most important information from the Database")
+        addItem("Full Update", self.doFetch, "Update all of the latest information from the Database")
         self.centralMenu.addSeparator()
         onAct = addItem("Online This Node", self.onlineThisNodeHandler, "Online This Node")
         offAct = addItem("Offline This Node", self.offlineThisNodeHandler, "Wait for the current job to finish then offline this node")
@@ -223,7 +224,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
-        addItem("Fetch", self.doFetch, "Fetch the latest information from the Database")
+        addItem("Soft Update", self.doUpdate, "Update with the most important information from the Database")
+        addItem("Full Update", self.doFetch, "Update all of the latest information from the Database")
         self.jobMenu.addSeparator()
         addItem("Start Jobs", self.startJobHandler, "Start all jobs selected in Job List")
         addItem("Pause Jobs", self.pauseJobHandler, "Pause all jobs selected in Job List")
@@ -605,7 +607,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
-        addItem("Fetch", self.doFetch, "Fetch the latest information from the Database")
+        addItem("Soft Update", self.doUpdate, "Update with the most important information from the Database")
+        addItem("Full Update", self.doFetch, "Update all of the latest information from the Database")
         self.taskMenu.addSeparator()
         addItem("Start Tasks", self.startTaskHandler, "Start all tasks selected in the Task List")
         addItem("Pause Tasks", self.pauseTaskHandler, "Pause all tasks selected in the Task List")
@@ -843,6 +846,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.nodeMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
         
+        addItem("Soft Update", self.doUpdate, "Update with the most important information from the Database")
+        addItem("Full Update", self.doFetch, "Update all of the latest information from the Database")
+        self.nodeMenu.addSeparator()
         addItem("Online Nodes", self.onlineRenderNodesHandler, "Online all checked nodes")
         addItem("Offline Nodes", self.offlineRenderNodesHandler, "Offline all checked nodes without killing their current task")
         addItem("Get Off Nodes", self.getOffRenderNodesHandler, "Kill task then offline all checked nodes")
