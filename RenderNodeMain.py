@@ -29,6 +29,7 @@ if sys.argv[0].split(".")[-1] == "exe":
 from MySQLSetup import *
 from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
+from NodeScheduler import schedulerMain, getSchedule
 import RenderNode
 import NodeUtils
 import TaskUtils
@@ -119,7 +120,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.refreshButton.setIcon(self.refreshIcon)
 
         self.renderServerPixmap.setPixmap(self.notStartedPixmap)
-        self.scheduleThreadPixmap.setPixmap(self.nonePixmap)
+        self.scheduleThreadPixmap.setPixmap(self.notStartedPixmap)
         self.pulseThreadPixmap.setPixmap(self.notStartedPixmap)
         self.setWindowIcon(self.RIcon)
 
@@ -191,8 +192,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             logger.info("Shutting down...")
             #Force update UI
             app.processEvents()
+            if self.schedThreadStatus:
+                self.schedThread.terminate()
+            app.processEvents()
             if self.pulseThreadStatus:
-                self.pulseThreadVar = False
                 self.pulseThread.terminate()
             self.updateThisNodeInfo()
             app.processEvents()
@@ -292,7 +295,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def startupServers(self):
         #Startup Pulse thread
         self.pulseThreadStatus = False
-        self.pulseThreadVar = True
         self.pulseThread = stoppableThread(pulse, 60, "Pulse")
         try:
             self.pulseThread.start()
@@ -315,6 +317,18 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         except Exception, e:
             logger.error("Exception: {0}".format(traceback.format_exc()))
             self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
+                
+        #Start Schedule Thread
+        self.schedThreadStatus = False
+        try:
+            self.schedThread = schedulerThread(60)
+            #self.schedThread.start()
+            #self.schedThreadStatus = True
+            self.scheduleThreadPixmap.setPixmap(self.donePixmap)
+            logger.info("Schedule Thread started!")
+        except Exception, e:
+            logger.error("Exception: {0}".format(traceback.format_exc()))
+            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
 
     def updateThisNodeInfo(self):
         """Updates widgets on the "This Node" tab with the most recent
@@ -372,6 +386,34 @@ class stoppableThread(threading.Thread):
             while (not self.stop.wait(1)):
                 self._flag = True
                 self.targetFunction()
+                self.stop.wait(self.interval)
+        finally:
+            self._flag = False
+
+    def terminate(self):
+        logger.info("Killing {0} Thread...".format(self.tName))
+        self.stop.set()
+        
+class schedulerThread(threading.Thread):
+    def __init__(self, interval):
+        self.interval = interval
+        self._flag = False
+        self.tName = "Scheduler Thread"
+        self.stop = threading.Event()
+        threading.Thread.__init__(self, target = self.tgt)
+
+    def tgt(self):
+        try:
+            host = Utils.myHostName()
+            [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(host)) 
+            startTime, endTime, isStarted = getSchedule(thisNode)
+            holidays = []
+            while (not self.stop.wait(1)):
+                self._flag = True
+                startTime, endTime, isStarted, holidays = schedulerMain(startTime,
+                                                                        endTime,
+                                                                        isStarted,
+                                                                        holidays)
                 self.stop.wait(self.interval)
         finally:
             self._flag = False

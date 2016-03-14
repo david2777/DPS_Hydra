@@ -4,7 +4,6 @@ the shutdown time is tomorrow so if a node goes offline before startup and
 comes online fater the startup time it will not startup until tomorrow."""
 #Standard
 import datetime
-import threading
 import time
 
 #Hydra
@@ -12,40 +11,39 @@ from LoggingSetup import logger
 import NodeUtils
 from MySQLSetup import hydra_rendernode, hydra_holidays
 
-def schedThread(interval, startTime, endTime, isStarted, holidays):
+def schedulerMain(startTime, endTime, isStarted, holidays):
     #Do the stuff
     if startTime == None:
         return
     
-    while True:
-        now = datetime.datetime.now().replace(microsecond = 0)
-        logger.info("Current time: {0}".format(str(now)))
+    now = datetime.datetime.now().replace(microsecond = 0)
+    logger.info("Current time: {0}".format(str(now)))
 
-        #If we're not started, check to see if we're in a condition to startup
-        if not isStarted:
-            #If it's a holiday, start it up!
-            if datetime.date.today() in holidays:
-                logger.info("Today is a holiday!")
+    #If we're not started, check to see if we're in a condition to startup
+    if not isStarted:
+        #If it's a holiday, start it up!
+        if datetime.date.today() in holidays:
+            logger.info("Today is a holiday!")
+            isStarted, startTime = startupEvent(now, isStarted, startTime)
+        #If it's a weekend, start it up!
+        elif datetime.date.today().isoweekday() in range(6, 8):
+            logger.info("Today is a weekend!")
+            isStarted, startTime = startupEvent(now, isStarted, startTime)
+        #If not, check the curent time against the expected start time
+        else:
+            if startTime <= now:
                 isStarted, startTime = startupEvent(now, isStarted, startTime)
-            #If it's a weekend, start it up!
-            elif datetime.date.today().isoweekday() in range(6, 8):
-                logger.info("Today is a weekend!")
-                isStarted, startTime = startupEvent(now, isStarted, startTime)
-            #If not, check the curent time against the expected start time
             else:
-                if startTime <= now:
-                    isStarted, startTime = startupEvent(now, isStarted, startTime)
-                else:
-                    logger.info("Waiting for start @: {0}".format(startTime))
+                logger.info("Waiting for start @: {0}".format(startTime))
 
-        #If we are started, check to see if we're in a condition to shutdown
-        elif isStarted:
-            if endTime <= now:
-                isStarted, endTime = shutdownEvent(now. isStarted, endTime)
-            else:
-                logger.info("Waiting for end @: {0}".format(endTime))
-                
-        time.sleep(interval)
+    #If we are started, check to see if we're in a condition to shutdown
+    elif isStarted:
+        if endTime <= now:
+            isStarted, endTime = shutdownEvent(now. isStarted, endTime)
+        else:
+            logger.info("Waiting for end @: {0}".format(endTime))
+            
+    return startTime, endTime, isStarted, holidays
         
 def startupEvent(now, isStarted, startTime):
     isStarted = True
