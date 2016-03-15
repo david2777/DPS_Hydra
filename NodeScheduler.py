@@ -15,7 +15,7 @@ def schedulerMain(startTime, endTime, isStarted, holidays):
     #Do the stuff
     if startTime == None:
         return
-    
+
     now = datetime.datetime.now().replace(microsecond = 0)
     logger.info("Current time: {0}".format(str(now)))
 
@@ -39,12 +39,12 @@ def schedulerMain(startTime, endTime, isStarted, holidays):
     #If we are started, check to see if we're in a condition to shutdown
     elif isStarted:
         if endTime <= now:
-            isStarted, endTime = shutdownEvent(now. isStarted, endTime)
+            isStarted, endTime = shutdownEvent(now, isStarted, endTime)
         else:
             logger.info("Waiting for end @: {0}".format(endTime))
-            
+
     return startTime, endTime, isStarted, holidays
-        
+
 def startupEvent(now, isStarted, startTime):
     isStarted = True
     newDate = now.date() + datetime.timedelta(days = 1)
@@ -66,7 +66,7 @@ def getSchedule(nodeOBJ):
     logger.info("Getting Schedule")
     if not nodeOBJ.onlineTime or not nodeOBJ.offlineTime:
         return None, None, None
-        
+
     if nodeOBJ.status == "I" or nodeOBJ.status == "S":
         isStarted = True
     else:
@@ -78,12 +78,12 @@ def getSchedule(nodeOBJ):
     sTimeData = nodeOBJ.onlineTime.split(",")
     sTimeData = [int(t) for t in sTimeData]
     startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
-    
+
     eTimeData = nodeOBJ.offlineTime.split(",")
     eTimeData = [int(t) for t in eTimeData]
     endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
 
-    
+
     nowDate = now.date()
     startDT = datetime.datetime.combine(nowDate, startTime)
     endDT = datetime.datetime.combine(nowDate, endTime)

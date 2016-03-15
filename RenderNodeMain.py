@@ -317,13 +317,13 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         except Exception, e:
             logger.error("Exception: {0}".format(traceback.format_exc()))
             self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
-                
+
         #Start Schedule Thread
         self.schedThreadStatus = False
         try:
             self.schedThread = schedulerThread(60)
-            #self.schedThread.start()
-            #self.schedThreadStatus = True
+            self.schedThread.start()
+            self.schedThreadStatus = True
             self.scheduleThreadPixmap.setPixmap(self.donePixmap)
             logger.info("Schedule Thread started!")
         except Exception, e:
@@ -393,7 +393,7 @@ class stoppableThread(threading.Thread):
     def terminate(self):
         logger.info("Killing {0} Thread...".format(self.tName))
         self.stop.set()
-        
+
 class schedulerThread(threading.Thread):
     def __init__(self, interval):
         self.interval = interval
@@ -405,7 +405,7 @@ class schedulerThread(threading.Thread):
     def tgt(self):
         try:
             host = Utils.myHostName()
-            [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(host)) 
+            [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(host))
             startTime, endTime, isStarted = getSchedule(thisNode)
             holidays = []
             while (not self.stop.wait(1)):
