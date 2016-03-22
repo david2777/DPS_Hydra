@@ -321,7 +321,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         #Start Schedule Thread
         self.schedThreadStatus = False
         try:
-            self.schedThread = schedulerThread(60)
+            self.schedThread = schedulerThread(900)
             self.schedThread.start()
             self.schedThreadStatus = True
             self.scheduleThreadPixmap.setPixmap(self.donePixmap)
