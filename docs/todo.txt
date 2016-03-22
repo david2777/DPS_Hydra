@@ -71,12 +71,12 @@
     Jobboard:
     	Change taskDone to tasksComplete
     	Change totalTask to tasksTotal
-      
+
 -[Done]Attempts
 
 -[Done]Node does not pickup job it failed on in the past
 
--[Todo]Auto update on things like FarmView and RenderNodeMain UI
+-[Done on FarmView]Auto update on things like FarmView and RenderNodeMain UI
 
 -[Todo]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
@@ -84,10 +84,12 @@
 
 -[Todo]Detect GPUs and render one job on each GPU
 
--[Todo]Edit node dialog
+-[Done]Edit node dialog
 
 -[Todo]Edit job dialog
 
 -[Todo]Timeouts
+
+-[Todo]Change checkbox model on RenderNode tab
 
 -Everything else

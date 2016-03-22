@@ -20,6 +20,7 @@ from PyQt4.QtCore import *
 from UI_FarmView import Ui_FarmView
 from TaskSearchDialog import TaskSearchDialog
 from JobFilterDialog import JobFilterDialog
+from NodeEditorDialog import NodeEditorDialog
 
 #Hydra
 from MySQLSetup import *
@@ -30,11 +31,7 @@ import TaskUtils
 import JobUtils
 import NodeUtils
 
-
 #Parts taken from Cogswell's Project Hydra by David Gladstein and Aaron Cohn
-
-
-
 
 #------------------------------------------------------------------------------#
 #--------------------------------Farm View-------------------------------------#
@@ -44,7 +41,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
-        
+
         self.thisNodeName = Utils.myHostName()
 
         #My UI Setup Functions
@@ -61,13 +58,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.filters = None
         self.userFilter = False
         self.showArchivedFilter = False
-        
+
         self.statusMsg = ""
-        
+
         self.lastJTUpdate = False
         self.currentJobSel = None
         self.newestJobID = 0
-        
+
         self.autoUpdate = True
         self.autoUpdateThread = workerSignalThread("run", 10)
         QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
@@ -88,7 +85,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 title = "None checked",
                 msg = "No nodes have been selected. Use the check boxes"
                 " to make a selection from the table."))
-                        
+
         self.nodeDoesNotExistBox = (
             functools.partial(
                 aboutBox,
@@ -101,7 +98,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.doFetch()
         self.autoUpdateThread.start()
-        
+
     def closeEvent(self, event):
         event.accept()
         sys.exit(0)
@@ -139,8 +136,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskTable.setColumnWidth(6, 120)       #End Time
         self.taskTable.setColumnWidth(7, 120)       #Duration
         self.taskTable.setColumnWidth(8, 120)       #Code
-        
-        #Set Job List splitter size 
+
+        #Set Job List splitter size
         #These numbers are really high so that they work proportionally
         #The 10000 makes it so that the 8500 is 85%
         self.splitter_jobList.setSizes([8500, 10000])
@@ -158,27 +155,28 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.getOffThisNodeButton.clicked.connect(self.getOffThisNodeHandler)
         self.updateButton.clicked.connect(self.doUpdate)
         self.autoUpdateCheckbox.stateChanged.connect(self.autoUpdateHandler)
-                        
+        self.editThisNodeButton.clicked.connect(self.nodeEditorHandler)
+
         #Connect basic filter checkboxKeys
         self.archivedCheckBox.stateChanged.connect(self.archivedFilterActionHandler)
         self.userFilterCheckbox.stateChanged.connect(self.userFilterActionHandler)
-                        
+
         #Connect actions in Job View
         self.jobTable.cellClicked.connect(self.jobCellClickedHandler)
 
         #Connect Context Menus
-        self.centralwidget.setContextMenuPolicy(Qt.CustomContextMenu) 
+        self.centralwidget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.centralwidget.customContextMenuRequested.connect(self.centralContextHandler)
-        
-        self.jobTable.setContextMenuPolicy(Qt.CustomContextMenu) 
+
+        self.jobTable.setContextMenuPolicy(Qt.CustomContextMenu)
         self.jobTable.customContextMenuRequested.connect(self.jobContextHandler)
-        
-        self.taskTable.setContextMenuPolicy(Qt.CustomContextMenu) 
+
+        self.taskTable.setContextMenuPolicy(Qt.CustomContextMenu)
         self.taskTable.customContextMenuRequested.connect(self.taskContextHandler)
-        
-        self.renderNodeTable.setContextMenuPolicy(Qt.CustomContextMenu) 
+
+        self.renderNodeTable.setContextMenuPolicy(Qt.CustomContextMenu)
         self.renderNodeTable.customContextMenuRequested.connect(self.nodeContextHandler)
-        
+
     def centralContextHandler(self):
         def addItem(name, handler, statusTip):
             action = QAction(name, self)
@@ -186,24 +184,24 @@ class FarmView(QMainWindow, Ui_FarmView):
             action.triggered.connect(handler)
             self.centralMenu.addAction(action)
             return action
-            
+
         self.centralMenu = QMenu(self)
-        
+
         QObject.connect(self.centralMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
-        
+
         addItem("Soft Update", self.doUpdate, "Update with the most important information from the Database")
         addItem("Full Update", self.doFetch, "Update all of the latest information from the Database")
         self.centralMenu.addSeparator()
         onAct = addItem("Online This Node", self.onlineThisNodeHandler, "Online This Node")
         offAct = addItem("Offline This Node", self.offlineThisNodeHandler, "Wait for the current job to finish then offline this node")
         getAct = addItem("Get Off This Node!", self.getOffThisNodeHandler, "Kill the current task and offline this node immediately")
-        
+
         if not self.thisNodeButtonsEnabled:
             onAct.setEnabled(False)
             offAct.setEnabled(False)
             getAct.setEnabled(False)
-        
+
         self.centralMenu.popup(QCursor.pos())
 
     #---------------------------------------------------------------------#
@@ -217,13 +215,13 @@ class FarmView(QMainWindow, Ui_FarmView):
             action.triggered.connect(handler)
             self.jobMenu.addAction(action)
             return action
-            
+
         self.jobMenu = QMenu(self)
         #self.jobMenu.setTearOffEnabled(True)
-        
+
         QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
-        
+
         addItem("Soft Update", self.doUpdate, "Update with the most important information from the Database")
         addItem("Full Update", self.doFetch, "Update all of the latest information from the Database")
         self.jobMenu.addSeparator()
@@ -241,20 +239,20 @@ class FarmView(QMainWindow, Ui_FarmView):
         editJob = addItem("Edit Job...", self.doNothing, "Edit Job, WIP")
         editJob.setEnabled(False)
         self.jobMenu.addSeparator()
-        
+
         userFilterAction = addItem("Only Show My Jobs", self.userFilterActionHandler, "Only show the jobs belonging to the current user")
         userFilterAction.setCheckable(True)
         if self.userFilter == True:
             userFilterAction.setChecked(True)
-            
+
         archivedFilterAction = addItem("Show Archived Jobs", self.archivedFilterActionHandler, "Show jobs which have been archived")
         archivedFilterAction.setCheckable(True)
         if self.showArchivedFilter == True:
             archivedFilterAction.setChecked(True)
-            
+
         addItem("Filters...", self.filterJobHandler, "Open filters dialog to select which types of jobs are shown in the Job List")
         self.jobMenu.popup(QCursor.pos())
-    
+
     def userFilterActionHandler(self):
         if self.userFilter == True:
             self.userFilter = False
@@ -274,7 +272,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.archivedCheckBox.setChecked(2)
         self.initJobTable()
         self.resetStatusBar()
-        
+
     def jobCommandBuilder(self, update = False):
         command = "WHERE"
         if self.filters != None:
@@ -305,7 +303,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                         else:
                             command += " AND job_status <> '{0}'".format(checkboxKeys[i])
                             idx += 1
-                            
+
         if command.find("owner = ") < 0:
             if self.userFilter:
                 if command != "WHERE":
@@ -315,7 +313,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 if command != "WHERE":
                     command += " AND"
                 command += " archived = 0"
-                
+
         if update:
             if command != "WHERE":
                 command += " AND"
@@ -323,10 +321,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         if self.filters != None:
             command += " LIMIT 0,{0}".format(limit)
-            
+
         if command == "WHERE":
             command = ""
-            
+
         return command
 
     def initJobTable(self):
@@ -351,7 +349,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if jobs:
             self.newestJobID = max([job.id for job in jobs])
         self.jobTable.setSortingEnabled(True)
-        
+
     def updateJobTable(self):
         #Update job statuses
         rows = self.jobTable.rowCount()
@@ -363,7 +361,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         except sqlerror as err:
             logger.error(str(err))
             self.sqlErrorBox()
-        
+
         jobDict = {job_id:[tasksComplete, tasksTotal, job_status] for job_id, tasksComplete, tasksTotal, job_status in jobData}
         for row in range(rows):
             thisJob_id = str(self.jobTable.item(row, 0).text())
@@ -379,7 +377,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.jobTable.setItem(row, 4, TableWidgetItem(taskString))
             except:
                 pass
-        
+
         #Add new jobs
         self.jobTable.setSortingEnabled(False)
         command = self.jobCommandBuilder(True)
@@ -394,7 +392,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if newJobs:
             self.newestJobID = max([job.id for job in newJobs])
         self.jobTable.setSortingEnabled(True)
-        
+
     def insertJobTableItem(self, job, row):
         if job.tasksTotal > 0:
             percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
@@ -416,7 +414,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.jobTable.item(row, 3).setBackgroundColor(QColor(220,220,220))
             self.jobTable.item(row, 4).setBackgroundColor(QColor(220,220,220))
             self.jobTable.item(row, 5).setBackgroundColor(QColor(220,220,220))
-        
+
     def updateJobRow(self, job, row, tasks):
         try:
             job_id = job.id
@@ -529,7 +527,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.initJobTable()
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
-                
+
     def resetNodeManagementHandler(self):
         rows = self.jobTableHandler()
         if not rows:
@@ -541,7 +539,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             for row in rows:
                 job_id = int(self.jobTable.item(row, 0).text())
                 JobUtils.setupNodeLimit(job_id)
-        
+
         self.initJobTable()
         self.jobCellClickedHandler(rows[-1])
         self.jobTable.setCurrentCell(rows[-1], 0)
@@ -591,7 +589,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 aboutBox(self, "SQL Error", str(err))
             finally:
                 self.initJobTable()
-                
+
     #---------------------------------------------------------------------#
     #---------------------------TASK HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
@@ -601,12 +599,12 @@ class FarmView(QMainWindow, Ui_FarmView):
             action.setStatusTip(statusTip)
             action.triggered.connect(handler)
             self.taskMenu.addAction(action)
-            
+
         self.taskMenu = QMenu(self)
-        
+
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
-        
+
         addItem("Soft Update", self.doUpdate, "Update with the most important information from the Database")
         addItem("Full Update", self.doFetch, "Update all of the latest information from the Database")
         self.taskMenu.addSeparator()
@@ -621,7 +619,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def initTaskTable(self, job_id, row):
         [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
         self.currentJobSel = job.id
-        sString = "Task List (Job ID: {0}) (Node Limit: {1})".format(str(job_id), int(job.maxNodes)) 
+        sString = "Task List (Job ID: {0}) (Node Limit: {1})".format(str(job_id), int(job.maxNodes))
         self.taskTableLabel.setText(sString)
         try:
             tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
@@ -647,15 +645,15 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 8, TableWidgetItem_int(str(task.exitCode)))
                 self.taskTable.setItem(pos, 9, TableWidgetItem_int(reqsString))
-                
+
             self.updateJobRow(job, row, tasks)
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
-            
+
     def updateTaskTable(self):
         if self.currentJobSel:
-            #Update here 
+            #Update here
             pass
 
     def jobCellClickedHandler(self, row):
@@ -832,7 +830,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     #---------------------------NODE HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
-    
+
     def nodeContextHandler(self):
         def addItem(name, handler, statusTip):
             action = QAction(name, self)
@@ -840,12 +838,12 @@ class FarmView(QMainWindow, Ui_FarmView):
             action.triggered.connect(handler)
             self.nodeMenu.addAction(action)
             return action
-            
+
         self.nodeMenu = QMenu(self)
-        
+
         QObject.connect(self.nodeMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
-        
+
         addItem("Soft Update", self.doUpdate, "Update with the most important information from the Database")
         addItem("Full Update", self.doFetch, "Update all of the latest information from the Database")
         self.nodeMenu.addSeparator()
@@ -857,11 +855,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         addItem("Deselect All Node", self.selectNoneNodesHandler, "Uncheck all ndoes in the Node Table")
         addItem("Select by Host Name...", self.selectByHostHandler, "Open a dialog to check nodes based on their host name")
         self.nodeMenu.addSeparator()
-        editNodeItem = addItem("Edit Node...", self.doNothing, "Open a dialog to edit selected node's attributes. WIP.")
-        editNodeItem.setEnabled(False)
-        
+        addItem("Edit Node...", self.nodeEditorTableHandler, "Open a dialog to edit selected node's attributes. WIP.")
+
         self.nodeMenu.popup(QCursor.pos())
-        
+
     def initRenderNodeTable(self, nodes):
         self.renderNodeTable.setSortingEnabled(False)
         self.renderNodeTable.setRowCount(len(nodes))
@@ -880,7 +877,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.renderNodeTable.item(row, 1).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
 
         self.renderNodeTable.setSortingEnabled(True)
-        
+
     def updateRenderNodeTable(self):
         rows = self.renderNodeTable.rowCount()
         try:
@@ -891,7 +888,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         except sqlerror as err:
             logger.error(str(err))
             self.sqlErrorBox()
-        
+
         nodeDict = {node:[status, task_id, pulse] for node, status, task_id, pulse in nodeData}
         for row in range(rows):
             nodeName = str(self.renderNodeTable.item(row, 1).text())
@@ -900,7 +897,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.renderNodeTable.item(row, 2).setBackgroundColor(niceColors[status])
             self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(task_id)))
             self.renderNodeTable.setItem(row, 7, TableWidgetItem_dt(pulse))
-            
+
 
     def onlineRenderNodesHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
@@ -991,6 +988,63 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.doFetch()
 
+    def nodeEditorTableHandler(self):
+        hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
+        if len(hosts) == 0:
+            self.noneCheckedBox()
+            return
+        elif len(hosts) > 1:
+            choice = yesNoBox(self, "Confirm", "Are you sure you want to edit "
+                              "multiple nodes? A box will open for each node "
+                              "checked.")
+
+            if choice == QMessageBox.No:
+                aboutBox(self, "Abort", "No action taken.")
+
+            else:
+                for host in hosts:
+                    self.nodeEditor(host)
+        else:
+            self.nodeEditor(hosts[0])
+
+    def nodeEditor(self, nodeName):
+        nodeExists = True
+        if nodeExists:
+            query = "WHERE host = '{0}'".format(nodeName)
+            [thisNode] = hydra_rendernode.fetch(query)
+            comps = thisNode.capabilities.split(" ")
+            if thisNode.onlineTime and thisNode.offlineTime:
+                sTimeData = thisNode.onlineTime.split(",")
+                sTimeData = [int(t) for t in sTimeData]
+                startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
+                eTimeData = thisNode.offlineTime.split(",")
+                eTimeData = [int(t) for t in eTimeData]
+                endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
+            else:
+                startTime = None
+                endTime = None
+            defaults = {"node" : thisNode.host,
+                        "priority" : thisNode.minPriority,
+                        "startTime" : startTime,
+                        "endTime" : endTime,
+                        "comps" : comps}
+            edits = NodeEditorDialog.create(defaults)
+            #logger.debug(edits)
+            if edits:
+                query = "UPDATE hydra_rendernode"
+                query += " SET minPriority = '{0}'".format(edits["priority"])
+                if edits["startTime"] and edits["endTime"]:
+                    query += ", onlineTime = '{0}'".format(edits["startTime"])
+                    query += ", offlineTime = '{0}'".format(edits["endTime"])
+                else:
+                    query += ", onlineTime = NULL"
+                    query += ", offlineTime = NULL"
+                query += ", capabilities = '{0}'".format(edits["comps"])
+                query += " WHERE host = '{0}'".format(nodeName)
+                #logger.debug(query)
+                with transaction() as t:
+                    t.cur.execute(query)
+
     def selectAllNodesHandler(self):
         rows = self.renderNodeTable.rowCount()
         for rowIndex in range(0, rows):
@@ -1013,11 +1067,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                 if fnmatch.fnmatch(item, searchString):
                     self.renderNodeTable.item(rowIndex, 0).setCheckState(Qt.Checked)
                     logger.info("Selecting {0} matched with {1}".format(item, searchString))
-                    
+
     #---------------------------------------------------------------------#
     #----------------------THIS NODE BUTTON HANDLERS----------------------#
     #---------------------------------------------------------------------#
-    
+
     def autoUpdateHandler(self):
         """Toggles Auto Updater"""
         if self.autoUpdate == True:
@@ -1026,7 +1080,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             self.autoUpdateThread.start()
             self.autoUpdate = True
-                    
+
     def onlineThisNodeHandler(self):
         """Changes the local render node's status to online if it was offline,
         goes back to started if it was pending offline."""
@@ -1098,6 +1152,10 @@ class FarmView(QMainWindow, Ui_FarmView):
                     aboutBox(self, "Success", "No job was found on node, node offlined")
                 self.doFetch()
 
+    def nodeEditorHandler(self):
+        if self.thisNodeExists:
+            self.nodeEditor(self.thisNodeName)
+
     #---------------------------------------------------------------------#
     #--------------------------UPDATE HANDLERS----------------------------#
     #---------------------------------------------------------------------#
@@ -1112,27 +1170,27 @@ class FarmView(QMainWindow, Ui_FarmView):
             for node in allNodes:
                 if node.host == self.thisNodeName:
                     thisNode = node
-                    
+
             if thisNode:
                 self.thisNodeExists = True
-            
+
             if self.thisNodeExists:
                 #self.updateThisNodeInfo(thisNode)
                 pass
             else:
                 self.nodeDoesNotExistBox()
                 self.setThisNodeButtonsEnabled(False)
-                
+
             self.initRenderNodeTable(allNodes)
             self.updateStatusBar(thisNode)
-            
+
             #self.updateRenderJobGrid()
-            
+
             self.initJobTable()
         except sqlerror as err:
             logger.error(str(err))
             self.sqlErrorBox()
-            
+
     def doUpdate(self):
         curTab = self.tabWidget.currentIndex()
         try:
@@ -1178,7 +1236,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateCapabilitiesLabel(self, capabilities):
         self.capabilitiesLabel.setText(capabilities)
 
-    def updateRenderJobGrid(self):    
+    def updateRenderJobGrid(self):
         columns = [
             labelFactory('id'),
             labelFactory('owner'),
@@ -1196,7 +1254,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         ]
         command = "WHERE archived = '0' ORDER BY id DESC LIMIT {0}".format(self.limitSpinBox.value())
         records = (hydra_jobboard.fetch(command))
-        
+
         clearLayout(self.taskGrid)
         setupDataGrid(records, columns, self.taskGrid)
 
@@ -1219,10 +1277,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.offlineThisNodeButton.setEnabled(choice)
         self.getOffThisNodeButton.setEnabled(choice)
         self.thisNodeButtonsEnabled = choice
-        
+
     def doNothing(self):
         pass
-        
+
     def resetStatusBar(self):
         self.statusbar.showMessage(self.statusMsg)
 
@@ -1284,7 +1342,7 @@ def setupDataGrid(records, columns, grid):
                 grid.removeItem(item)
                 item.widget().hide()
             grid.addWidget(attr.dataWidget(record),row + 1, column,)
-            
+
 def clearLayout(layout):
     while layout.count():
         child = layout.takeAt(0)
@@ -1433,17 +1491,17 @@ class TableWidgetItem_dt(TableWidgetItem):
             return True
         else:
             return False
-            
+
 class workerSignalThread(QThread):
     def __init__(self, target, interval):
         QThread.__init__(self)
         self.target = target
         self.interval = interval
         logger.info("INIT")
-    
+
     def __del__(self):
         self.wait()
-        
+
     def run(self):
         while True:
             #logger.info("Running...")

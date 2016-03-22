@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_FarmView(object):
     def setupUi(self, FarmView):
         FarmView.setObjectName(_fromUtf8("FarmView"))
-        FarmView.resize(1294, 729)
+        FarmView.resize(1294, 716)
         self.centralwidget = QtGui.QWidget(FarmView)
         self.centralwidget.setObjectName(_fromUtf8("centralwidget"))
         self.gridLayout = QtGui.QGridLayout(self.centralwidget)
@@ -229,7 +229,7 @@ class Ui_FarmView(object):
         self.scrollArea_recentTasks.setWidgetResizable(True)
         self.scrollArea_recentTasks.setObjectName(_fromUtf8("scrollArea_recentTasks"))
         self.scrollAreaWidgetContents_recentTasks = QtGui.QWidget()
-        self.scrollAreaWidgetContents_recentTasks.setGeometry(QtCore.QRect(0, 0, 63, 52))
+        self.scrollAreaWidgetContents_recentTasks.setGeometry(QtCore.QRect(0, 0, 1250, 601))
         self.scrollAreaWidgetContents_recentTasks.setObjectName(_fromUtf8("scrollAreaWidgetContents_recentTasks"))
         self.gridLayout_2 = QtGui.QGridLayout(self.scrollAreaWidgetContents_recentTasks)
         self.gridLayout_2.setObjectName(_fromUtf8("gridLayout_2"))
@@ -297,7 +297,7 @@ class Ui_FarmView(object):
         self.capabilitiesLabel.setObjectName(_fromUtf8("capabilitiesLabel"))
         self.formLayout_thisNodeLabels.setWidget(5, QtGui.QFormLayout.FieldRole, self.capabilitiesLabel)
         self.editThisNodeButton = QtGui.QPushButton(self.layoutWidget)
-        self.editThisNodeButton.setEnabled(False)
+        self.editThisNodeButton.setEnabled(True)
         self.editThisNodeButton.setObjectName(_fromUtf8("editThisNodeButton"))
         self.formLayout_thisNodeLabels.setWidget(6, QtGui.QFormLayout.LabelRole, self.editThisNodeButton)
         self.tabWidget.addTab(self.thisNodeTab, _fromUtf8(""))
