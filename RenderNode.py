@@ -181,12 +181,12 @@ class RenderTCPServer(TCPServer):
                     #Else, report error
                     else:
                         render_task.attempts += 1
-                        
+
                         if render_task.failures == None:
                             render_task.failures = thisNode.host
                         else:
                             render_task.failures += " {0}".format(thisNode.host)
-                        
+
                         if render_task.attempts >= render_task.maxAttempts:
                             render_task.status = ERROR
                             render_task.endTime = datetime.datetime.now()
@@ -197,7 +197,7 @@ class RenderTCPServer(TCPServer):
                             render_task.startTime = None
                             render_task.endTime = None
                             render_task.exitCode = None
-                    
+
 
                 #Return to 'IDLE' IF current status is 'STARTED'
                 if thisNode.status == STARTED:

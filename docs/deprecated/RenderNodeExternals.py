@@ -1,6 +1,6 @@
 """Treaded functions that were too annoying to kill when running RenderNodeMain
-as a serivce (via RenderNodeService). It is much easier to run these as a 
-subprocess and kill them upon shutdown rather than trying to get the threads 
+as a serivce (via RenderNodeService). It is much easier to run these as a
+subprocess and kill them upon shutdown rather than trying to get the threads
 to notice the shutdown signal."""
 #Standard
 import threading
@@ -9,7 +9,7 @@ import datetime
 #Hydra
 from LoggingSetup import logger
 import NodeUtils
-from RenderNodeMain import heartbeat 
+from RenderNodeMain import heartbeat
 import NodeScheduler
 
 if __name__ == "__main__":
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(e)
         raise
-    
+
     try:
         startTime, endTime, isStarted = NodeScheduler.getSchedule(NodeUtils.getThisNodeData())
         if startTime:

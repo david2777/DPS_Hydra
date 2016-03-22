@@ -19,7 +19,7 @@ def storePrivateData(key, data):
     except WIN32ERROR:
         logger.error("Error! It looks like you don't have the right permissions to store data in LSA.")
         return False
-    
+
     win32security.LsaStorePrivateData(policy_handle, key, data)
 
     #Make sure the data was stored correctly

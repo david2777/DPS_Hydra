@@ -33,13 +33,13 @@ class UberJobTicket:
         self.compatabilityPattern = self.compatabilityBuilder(compatabilityList)    #VARCHAR(255)
         self.createTime = datetime.now()
         self.maxNodes = maxNodes
-        
+
         self.frameRange = range(self.startFrame, self.endFrame)
         self.frameList = self.frameRange[0::self.byFrame]
         if self.endFrame not in self.frameList:
             self.frameList.append(self.endFrame)
         self.frameCount = len(self.frameList)
-        
+
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}
 
@@ -129,7 +129,7 @@ class UberJobTicket:
         self.job_id = job.id
         self.createCMDTicketTask()
         logger.info("Submitted UberTicket CMDTicket job with id {0}".format(self.job_id))
-        
+
     def __repr__(self):
         reprList = ["\nJob Ticket Repr:",
                     self.execName,

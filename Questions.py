@@ -22,7 +22,7 @@ class Question:
     """Interface for Question objects."""
     def computeAnswer( self, server ):
         """
-        Override this method when creating a Question subclass 
+        Override this method when creating a Question subclass
         code in this method will be run by the server
         """
         raise exceptions.NotImplementedError
@@ -63,12 +63,12 @@ class RenderQuestion(Question):
         render_task.startTime = datetime.datetime.now()
         render_task.save()
         log = file(render_task.logFile, 'w')
-        
+
         try:
             log.write('hydra log file {0} on {1}\n'.format(render_task.logFile, render_task.host))
             log.write('Command: {0}\n\n'.format(render_task.command))
             log.flush()
-            
+
             render_task.exitCode = subprocess.call(eval(render_task.command), stdout = log, stderr = subprocess.STDOUT)
             log.write('\nProcess exited with code {0}\n'.format(render_task.exitCode))
             return RenderAnswer( )
@@ -85,7 +85,7 @@ class KillCurrentTaskQuestion(Question):
     """A Question for killing a job on a RenderNodeMain.RenderTCPServer"""
     def __init__(self, statusAfterDeath):
         self.statusAfterDeath = statusAfterDeath
-        
+
     def computeAnswer(self, server):
             server.killCurrentJob(self.statusAfterDeath)
             return KillCurrentJobAnswer(server.childKilled)

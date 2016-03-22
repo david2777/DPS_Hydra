@@ -16,26 +16,26 @@ class TaskSearchDialog(QDialog, Ui_taskSearchDialog):
         QDialog.__init__(self, parent)
         self.setupUi(self)
         self.searchBtnClicked = False
-        QObject.connect(self.cancelBtn, SIGNAL("clicked()"), 
+        QObject.connect(self.cancelBtn, SIGNAL("clicked()"),
                         self.onCancelBtnClicked)
         QObject.connect(self.searchBtn, SIGNAL("clicked()"),
                         self.onSearchBtnClicked)
-        
+
     def getValues(self):
         taskStr = str(self.idBox.text())
         hostStr = str(self.hostnameBox.text())
         statusStr = str(self.statusBox.text())
         cmdStr = str(self.cmdBox.text())
         return dict(task_id=taskStr, host=hostStr, status=statusStr, cmd=cmdStr)
-    
+
     def onCancelBtnClicked(self):
         self.close()
         return None
-    
+
     def onSearchBtnClicked(self):
         self.searchBtnClicked = True
         self.close()
-    
+
     @classmethod
     def create(cls):
         dialog = TaskSearchDialog()

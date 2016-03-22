@@ -60,7 +60,7 @@ def resetTask(task_id, newStatus = "R"):
         task.logFile = None
         task.exitCode = None
         task.update(t)
-    
+
     return False
 
 

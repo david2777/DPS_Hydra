@@ -6,7 +6,7 @@ setup(options = {
             'bundle_files': 1,
             'compressed': True,
             "includes":["sip"],
-            "dll_excludes": ["MSVCP90.dll", 
+            "dll_excludes": ["MSVCP90.dll",
                              "API-MS-Win-Core-DelayLoad-L1-1-0.dll",
                              "API-MS-Win-Core-ErrorHandling-L1-1-0.dll",
                              "API-MS-Win-Core-File-L1-1-0.dll",

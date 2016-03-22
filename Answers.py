@@ -2,10 +2,10 @@
 #Original Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
-class Answer: 
+class Answer:
     """Interface for Answer objects"""
     pass
-    
+
 class TimeAnswer(Answer):
     """An Answer which stores the time."""
     def __init__( self, time ):
@@ -16,10 +16,10 @@ class EchoAnswer(Answer):
     def __init__(self, object): # @ReservedAssignment
         self.object = object
 
-class CMDAnswer(Answer):    
+class CMDAnswer(Answer):
     def __init__(self, output):
         self.output = output
-                
+
 class RenderAnswer(Answer):
     def __init__(self):
         pass

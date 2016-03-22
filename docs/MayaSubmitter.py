@@ -20,7 +20,7 @@ cmd = ""
 currentEngine = mel.eval("currentRenderer")
 if currentEngine in engineDict.keys():
     reqsList.append(engineDict[currentEngine])
-       
+
 renderLayers = cmds.listConnections("renderLayerManager")
 for layer in renderLayers:
     if cmds.getAttr(layer + ".renderable"):
@@ -36,7 +36,6 @@ if reqsReturn != "":
     command += " -c {0}".format(reqsReturn)
 if renderLayersReturn != "":
     command += " -r {0}".format(renderLayersReturn)
-    
+
 print command
 subprocess.check_call(command)
-        
