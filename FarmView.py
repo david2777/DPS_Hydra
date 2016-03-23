@@ -109,13 +109,15 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     def setupTables(self):
         # Column widths on the render node table
-        self.renderNodeTable.setColumnWidth(0, 200) # host
-        self.renderNodeTable.setColumnWidth(1, 70)  # status
-        self.renderNodeTable.setColumnWidth(2, 70)  # task id
-        self.renderNodeTable.setColumnWidth(3, 80) # minPriority
-        self.renderNodeTable.setColumnWidth(4, 500) # capabilities
-        self.renderNodeTable.setColumnWidth(5, 60)  # version
-        self.renderNodeTable.setColumnWidth(6, 110) # heartbeat
+        self.renderNodeTable.setColumnWidth(0, 200)     #Host
+        self.renderNodeTable.setColumnWidth(1, 70)      #Status
+        self.renderNodeTable.setColumnWidth(2, 70)      #Task ID
+        self.renderNodeTable.setColumnWidth(3, 70)      #Min Priority
+        self.renderNodeTable.setColumnWidth(4, 100)     #Online Time
+        self.renderNodeTable.setColumnWidth(5, 100)      #Offline Time
+        self.renderNodeTable.setColumnWidth(6, 110)     #Heartbeat
+        self.renderNodeTable.setColumnWidth(7, 110)     #Version
+        self.renderNodeTable.setColumnWidth(8, 110)     #Capabilities
 
         #Column widths on jobTable
         self.jobTable.setColumnWidth(0, 60)         #Job ID
@@ -993,10 +995,18 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.renderNodeTable.item(row, 1).setBackgroundColor(niceColors[node.status])
             self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(node.task_id)))
             self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(node.minPriority)))
-            self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(node.capabilities)))
+            if node.onlineTime and node.offlineTime:
+                onlineTimeWidget = TableWidgetItem(str(node.onlineTime).replace(",", ":"))
+                offlineTimeWidget = TableWidgetItem(str(node.offlineTime).replace(",", ":"))
+                self.renderNodeTable.setItem(row, 4, onlineTimeWidget)
+                self.renderNodeTable.setItem(row, 5, offlineTimeWidget)
+            else:
+                self.renderNodeTable.setItem(row, 4, TableWidgetItem("Manual Control"))
+                self.renderNodeTable.setItem(row, 5, TableWidgetItem("Manual Control"))
             nodeVersion  = getSoftwareVersionText(node.software_version)
-            self.renderNodeTable.setItem(row, 5, TableWidgetItem(str(nodeVersion)))
             self.renderNodeTable.setItem(row, 6, TableWidgetItem_dt(node.pulse))
+            self.renderNodeTable.setItem(row, 7, TableWidgetItem(str(nodeVersion)))
+            self.renderNodeTable.setItem(row, 8, TableWidgetItem(str(node.capabilities)))
             if node.host == self.thisNodeName:
                 self.renderNodeTable.item(row, 0).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
 
@@ -1361,22 +1371,20 @@ class FarmView(QMainWindow, Ui_FarmView):
         information available."""
         self.nodeNameLabel.setText(thisNode.host)
         self.nodeStatusLabel.setText(niceNames[thisNode.status])
-        self.updateTaskIDLabel(thisNode.task_id)
-        self.nodeVersionLabel.setText(getSoftwareVersionText(thisNode.software_version))
-        self.updateMinPriorityLabel(thisNode.minPriority)
-        self.updateCapabilitiesLabel(thisNode.capabilities)
-
-    def updateTaskIDLabel(self, task_id):
-        if task_id:
-            self.taskIDLabel.setText(str(task_id))
+        if thisNode.task_id:
+            self.taskIDLabel.setText(str(thisNode.task_id))
         else:
             self.taskIDLabel.setText("None")
-
-    def updateMinPriorityLabel(self, minPriority):
-        self.minPriorityLabel.setText(str(minPriority))
-
-    def updateCapabilitiesLabel(self, capabilities):
-        self.capabilitiesLabel.setText(capabilities)
+        self.nodeVersionLabel.setText(getSoftwareVersionText(thisNode.software_version))
+        self.minPriorityLabel.setText(str(thisNode.minPriority))
+        self.capabilitiesLabel.setText(thisNode.capabilities)
+        if thisNode.onlineTime and thisNode.offlineTime:
+            self.onlineTimeLabel.setText(str(thisNode.onlineTime).replace(",", ":"))
+            self.offlineTimeLabel.setText(str(thisNode.offlineTime).replace(",", ":"))
+        else:
+            self.onlineTimeLabel.setText("Manual Control")
+            self.offlineTimeLabel.setText("Manual Control")
+        self.pulseLabel.setText(str(thisNode.pulse))
 
     def updateRenderJobGrid(self):
         columns = [
@@ -1436,10 +1444,8 @@ def getSoftwareVersionText(sw_ver):
 
     #Get RenderNodeMain version number if exists
     if sw_ver:
-
         #Case 1: executable in a versioned directory
-        v = re.search("rendernodemain-dist-([0-9]+)", sw_ver,
-                        re.IGNORECASE)
+        v = re.search("rendernodemain-dist-([0-9]+)", sw_ver, re.IGNORECASE)
         if v:
             return v.group(1)
 
@@ -1448,7 +1454,7 @@ def getSoftwareVersionText(sw_ver):
             return "Dev"
 
         #Case 3: no freakin' clue
-        return sw_ver
+        return "Unkown_Dev"
 
     else:
         return "None"
