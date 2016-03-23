@@ -1,4 +1,4 @@
-"""A dialog called in FarmView to filter the jobs loaded into the Job Table."""
+"""Update Me!"""
 #Standard
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
