@@ -109,14 +109,13 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     def setupTables(self):
         # Column widths on the render node table
-        self.renderNodeTable.setColumnWidth(0, 30)  # check boxes
-        self.renderNodeTable.setColumnWidth(1, 200) # host
-        self.renderNodeTable.setColumnWidth(2, 70)  # status
-        self.renderNodeTable.setColumnWidth(3, 70)  # task id
-        self.renderNodeTable.setColumnWidth(4, 80) # minPriority
-        self.renderNodeTable.setColumnWidth(5, 500) # capabilities
-        self.renderNodeTable.setColumnWidth(6, 60)  # version
-        self.renderNodeTable.setColumnWidth(7, 110) # heartbeat
+        self.renderNodeTable.setColumnWidth(0, 200) # host
+        self.renderNodeTable.setColumnWidth(1, 70)  # status
+        self.renderNodeTable.setColumnWidth(2, 70)  # task id
+        self.renderNodeTable.setColumnWidth(3, 80) # minPriority
+        self.renderNodeTable.setColumnWidth(4, 500) # capabilities
+        self.renderNodeTable.setColumnWidth(5, 60)  # version
+        self.renderNodeTable.setColumnWidth(6, 110) # heartbeat
 
         #Column widths on jobTable
         self.jobTable.setColumnWidth(0, 60)         #Job ID
@@ -144,6 +143,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Get the global column count for later
         self.taskTableCols = self.taskTable.columnCount()
+
+        self.jobTable.setAlternatingRowColors(True)
+        self.taskTable.setAlternatingRowColors(True)
+        self.renderNodeTable.setAlternatingRowColors(True)
 
     def connectButtons(self):
         #Connect tab switch data update
@@ -859,22 +862,22 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.nodeMenu.popup(QCursor.pos())
 
+
     def initRenderNodeTable(self, nodes):
         self.renderNodeTable.setSortingEnabled(False)
         self.renderNodeTable.setRowCount(len(nodes))
         for row, node in enumerate(nodes):
-            self.renderNodeTable.setItem(row, 0, TableWidgetItem_check())
-            self.renderNodeTable.setItem(row, 1, TableWidgetItem_int(str(node.host)))
-            self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(niceNames[node.status])))
-            self.renderNodeTable.item(row, 2).setBackgroundColor(niceColors[node.status])
-            self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(node.task_id)))
-            self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(node.minPriority)))
-            self.renderNodeTable.setItem(row, 5, TableWidgetItem(str(node.capabilities)))
+            self.renderNodeTable.setItem(row, 0, TableWidgetItem(str(node.host)))
+            self.renderNodeTable.setItem(row, 1, TableWidgetItem(str(niceNames[node.status])))
+            self.renderNodeTable.item(row, 1).setBackgroundColor(niceColors[node.status])
+            self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(node.task_id)))
+            self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(node.minPriority)))
+            self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(node.capabilities)))
             nodeVersion  = getSoftwareVersionText(node.software_version)
-            self.renderNodeTable.setItem(row, 6, TableWidgetItem(str(nodeVersion)))
-            self.renderNodeTable.setItem(row, 7, TableWidgetItem_dt(node.pulse))
+            self.renderNodeTable.setItem(row, 5, TableWidgetItem(str(nodeVersion)))
+            self.renderNodeTable.setItem(row, 6, TableWidgetItem_dt(node.pulse))
             if node.host == self.thisNodeName:
-                self.renderNodeTable.item(row, 1).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
+                self.renderNodeTable.item(row, 0).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
 
         self.renderNodeTable.setSortingEnabled(True)
 
@@ -891,20 +894,28 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         nodeDict = {node:[status, task_id, pulse] for node, status, task_id, pulse in nodeData}
         for row in range(rows):
-            nodeName = str(self.renderNodeTable.item(row, 1).text())
+            nodeName = str(self.renderNodeTable.item(row, 0).text())
             status, task_id, pulse = nodeDict[nodeName]
-            self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(niceNames[status])))
-            self.renderNodeTable.item(row, 2).setBackgroundColor(niceColors[status])
-            self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(task_id)))
-            self.renderNodeTable.setItem(row, 7, TableWidgetItem_dt(pulse))
+            self.renderNodeTable.setItem(row, 1, TableWidgetItem(str(niceNames[status])))
+            self.renderNodeTable.item(row, 1).setBackgroundColor(niceColors[status])
+            self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(task_id)))
+            self.renderNodeTable.setItem(row, 6, TableWidgetItem_dt(pulse))
 
+    def renderNodeTableHandler(self):
+        self.resetStatusBar()
+        rows = self.renderNodeTable.selectionModel().selectedRows()
+        if len(rows) < 1:
+            aboutBox(title="Selection Error", msg = "Please select something from the Render Node Table and try again.")
+            return None
+        rows = [item.row() for item in rows]
+        nodes = [str(self.renderNodeTable.item(row, 0).text()) for row in rows]
+        return nodes
 
     def onlineRenderNodesHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
-        status to online."""
-        hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
-        if len(hosts) == 0:
-            self.noneCheckedBox()
+        status to online."""#TODO: UPDATE DOCSTRING
+        hosts = self.renderNodeTableHandler()
+        if not hosts:
             return
 
         choice = yesNoBox(self, "Confirm", "Are you sure you want to online"
@@ -915,18 +926,18 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
 
         with transaction() as t:
+            #Maybe skip the rows check
             rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
             for node_row in rendernode_rows:
                 if node_row.host in hosts:
                     NodeUtils.onlineNode(node_row)
-        self.doFetch()
+        self.updateRenderNodeTable()
 
     def offlineRenderNodesHandler(self):
         """For all nodes with boxes checked in the render nodes table, changes
         status to offline if idle, or pending if started."""
-        hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
-        if len(hosts) == 0:
-            self.noneCheckedBox()
+        hosts = self.renderNodeTableHandler()
+        if not hosts:
             return
 
         choice = yesNoBox(self, "Confirm", "Are you sure you want to offline"
@@ -947,10 +958,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         """For all nodes with boxes checked in the render nodes table, changes
         status to offline if idle, or pending if started, and attempts to kill
         any task that is running on each node."""
-
-        hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
-        if len(hosts) == 0:
-            self.noneCheckedBox()
+        hosts = self.renderNodeTableHandler()
+        if not hosts:
             return
 
         choice = yesNoBox(self, "Confirm", "<B>WARNING</B>: All progress on"
@@ -989,9 +998,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.doFetch()
 
     def nodeEditorTableHandler(self):
-        hosts = getCheckedItems(table=self.renderNodeTable, itemColumn=1, checkBoxColumn=0)
-        if len(hosts) == 0:
-            self.noneCheckedBox()
+        hosts = self.renderNodeTableHandler()
+        if not hosts:
             return
         elif len(hosts) > 1:
             choice = yesNoBox(self, "Confirm", "Are you sure you want to edit "
@@ -1047,25 +1055,27 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def selectAllNodesHandler(self):
         rows = self.renderNodeTable.rowCount()
-        for rowIndex in range(0, rows):
-            item = self.renderNodeTable.item(rowIndex, 0)
-            item.setCheckState(Qt.Checked)
+        colCount = self.renderNodeTable.columnCount() - 1
+        rows = [x for x in range(rows)]
+        #QTableWidgetSelectionRange(Top,Left,Bottom,Right)
+        for row in rows:
+            mySel = QTableWidgetSelectionRange(row, 0 , row, colCount)
+            self.renderNodeTable.setRangeSelected(mySel, True)
 
     def selectNoneNodesHandler(self):
-        rows = self.renderNodeTable.rowCount()
-        for rowIndex in range(0, rows):
-            item = self.renderNodeTable.item(rowIndex, 0)
-            item.setCheckState(Qt.Unchecked)
+        self.renderNodeTable.clearSelection()
 
     def selectByHostHandler(self):
         reply = strBox(self, "Select By Host Name", "Host (using * as wildcard):")
         if reply[1]:
+            colCount = self.renderNodeTable.columnCount() - 1
             searchString = str(reply[0])
             rows = self.renderNodeTable.rowCount()
             for rowIndex in range(0, rows):
-                item = str(self.renderNodeTable.item(rowIndex, 1).text())
+                item = str(self.renderNodeTable.item(rowIndex, 0).text())
                 if fnmatch.fnmatch(item, searchString):
-                    self.renderNodeTable.item(rowIndex, 0).setCheckState(Qt.Checked)
+                    mySel = QTableWidgetSelectionRange(rowIndex, 0 , rowIndex, colCount)
+                    self.renderNodeTable.setRangeSelected(mySel, True)
                     logger.info("Selecting {0} matched with {1}".format(item, searchString))
 
     #---------------------------------------------------------------------#
