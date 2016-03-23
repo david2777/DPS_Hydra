@@ -105,7 +105,7 @@ def killTask(task_id, newStatus = "K"):
     @return: True if there were any errors, False if there were not."""
     [task] = hydra_taskboard.fetch("WHERE id = '{0}'".format(task_id))
     if task.status == newStatus:
-        return False
+        return True
     elif task.status == "R" or task.status == "U":
         task.status = newStatus
         task.host = None
@@ -116,11 +116,11 @@ def killTask(task_id, newStatus = "K"):
         with transaction() as t:
             task.update(t)
         #If we reach this point: transaction successful, no exception raised
-        return False
+        return True
     elif task.status == "S":
         killed = sendKillQuestion(task.host, newStatus)
         #If we reach this point: TCPconnection successful, no exception raised
         return killed
     elif task.status == "K" or task.status == "F" or task.status == "U":
-        return False
-    return True
+        return True
+    return False

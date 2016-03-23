@@ -74,9 +74,9 @@ def updateJobTaskCount(job_id, tasks = None, commit = False):
 
     if commit:
         cmdList = ["UPDATE hydra_jobboard SET tasksComplete = '{0}'".format(tasksComplete),
-                    " tasksTotal = '{0}'".format(taskCount),
-                    " job_status = '{0}' WHERE id = {1}".format(jobStatus, job_id)]
-        cmd = ",".join(cmdList)
+                    ", tasksTotal = '{0}'".format(taskCount),
+                    ", job_status = '{0}' WHERE id = {1}".format(jobStatus, job_id)]
+        cmd = "".join(cmdList)
 
         with transaction() as t:
             t.cur.execute(cmd)
@@ -98,12 +98,11 @@ def killJob(job_id, newStatus = "K"):
     is sent to the host running it.
     @return: False if no errors while killing started tasks, else True"""
     tasks =  hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
-    respnse = False
-    for task in tasks:
-        response = TaskUtils.killTask(task.id, newStatus)
-        if response:
-            response = True
-    updateJobTaskCount(job_id, tasks)
+    response = False
+    if tasks:
+        for task in tasks:
+            response = TaskUtils.killTask(task.id, newStatus)
+        updateJobTaskCount(job_id, tasks)
     return response
 
 def resetJob(job_id, newStatus = "R"):
@@ -117,7 +116,7 @@ def resetJob(job_id, newStatus = "R"):
         response = TaskUtils.resetTask(task.id, newStatus)
         if response:
             returnCode = True
-
+    updateJobTaskCount(job_id, tasks)
     return returnCode
 
 def prioritizeJob(job_id, priority):

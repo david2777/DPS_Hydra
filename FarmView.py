@@ -365,21 +365,20 @@ class FarmView(QMainWindow, Ui_FarmView):
             logger.error(str(err))
             self.sqlErrorBox()
 
-        jobDict = {job_id:[tasksComplete, tasksTotal, job_status] for job_id, tasksComplete, tasksTotal, job_status in jobData}
+        jobDict = {int(job_id):[int(tasksComplete), int(tasksTotal), str(job_status)] for job_id, tasksComplete, tasksTotal, job_status in jobData}
         for row in range(rows):
-            thisJob_id = str(self.jobTable.item(row, 0).text())
-            try:
-                tasksComplete, tasksTotal, job_status = jobDict[thisJob_id]
-                if job.tasksTotal > 0:
-                    percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
-                    taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete, job.tasksTotal)
-                else:
-                    taskString = "0% (0/0)"
-                self.jobTable.setItem(row, 2, TableWidgetItem_int(str(niceNames[job_status])))
-                self.jobTable.item(row, 2).setBackgroundColor(niceColors[job_status])
-                self.jobTable.setItem(row, 4, TableWidgetItem(taskString))
-            except:
-                pass
+            thisJob_id = int(self.jobTable.item(row, 0).text())
+            tasksComplete, tasksTotal, job_status = jobDict[thisJob_id]
+            if tasksTotal > 0:
+                percent = "{0:.0%}".format(float(tasksComplete / tasksTotal))
+                taskString  = "{0} ({1}/{2})".format(percent, tasksComplete, tasksTotal)
+            else:
+                taskString = "0% (0/0)"
+            self.jobTable.setItem(row, 2, TableWidgetItem(str(niceNames[job_status])))
+            self.jobTable.item(row, 2).setBackgroundColor(niceColors[job_status])
+            self.jobTable.setItem(row, 4, TableWidgetItem(taskString))
+
+
 
         #Add new jobs
         self.jobTable.setSortingEnabled(False)
@@ -475,16 +474,15 @@ class FarmView(QMainWindow, Ui_FarmView):
             try:
                 for row in rows:
                     job_id = int(self.jobTable.item(row, 0).text())
-                    response = False
-                    if JobUtils.killJob(job_id):
-                        response = True
+                    response = JobUtils.killJob(job_id)
             except sqlerror as err:
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                if response:
+                if not response:
                     aboutBox(self, "Error", "One or more nodes couldn't kill their tasks.")
-                self.initJobTable()
+                self.updateJobTable()
+                JobUtils.manageNodeLimit(job_id)
                 self.jobCellClickedHandler(rows[-1])
                 self.jobTable.setCurrentCell(rows[-1], 0)
 
@@ -745,6 +743,9 @@ class FarmView(QMainWindow, Ui_FarmView):
                 except sqlerror as err:
                     logger.error(str(err))
                     aboutBox(self, "SQL Error", str(err))
+        [job] = hydra_taskboard.fetch("WHERE id = '{0}'".format(task_id))
+        JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
+        JobUtils.manageNodeLimit(job.job_id)
         self.reloadTaskTable()
 
     def pauseTaskHandler(self):
