@@ -1566,6 +1566,7 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              IDLE: QColor(255,255,255),         #White
              OFFLINE: QColor(220,220,220),      #Gray
              PENDING: QColor(240,230,200),      #Orange
+             TIMEOUT: QColor(220,90,90),        #Dark Red
              }
 
 #------------------------------------------------------------------------#

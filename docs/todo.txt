@@ -88,8 +88,8 @@
 
 -[Todo]Edit job dialog
 
--[Todo]Timeouts
+-[Doneish]Timeouts
 
--[Todo]Change checkbox model on RenderNode tab
+-[Done]Change checkbox model on RenderNode tab
 
 -Everything else

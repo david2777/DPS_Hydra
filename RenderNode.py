@@ -49,6 +49,7 @@ class RenderTCPServer(TCPServer):
         self.thisNodeName = Utils.myHostName()
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
+        logger.info("Checking startup status...")
         [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
         if thisNode.task_id:
             logger.info("Unsticking...")
@@ -75,11 +76,12 @@ class RenderTCPServer(TCPServer):
         """The loop that looks for jobs on the DB and runs them if the node meets
         the job's requirements (Priority & Capabilities)"""
         [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
-
-        logger.debug("Host: {0} Status: {1} Capabilities {2}".format(thisNode.host, niceNames[thisNode.status], thisNode.capabilities))
+        debugStr = "Host: {0} Status: {1} Capabilities {2}"
+        logger.debug(debugStr.format(thisNode.host,
+                                    niceNames[thisNode.status],
+                                    thisNode.capabilities))
 
         #If this node is not idle, don't try to find a new job
-
         if thisNode.status != IDLE:
             return
 
@@ -144,12 +146,20 @@ class RenderTCPServer(TCPServer):
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
                                                                 render_task.id))
 
+            #Start the timeout thread
+            tThread = False
+            if render_job.timeout > 0:
+                tThread = True
+                self.startTimeoutThread(render_job.timeout)
+
             #Wait until the job is finished or terminated
             #NOTE: This lockes up the main thread!
             #TODO:Communicate prevents deadlocking but seems to cause a window
             #     to popup for a split second after rendering. Will check out later
             self.childProcess.communicate()
             render_task.exitCode = self.childProcess.returncode
+            if tThread:
+                self.timeoutThread.cancel()
             logString = "\nProcess exited with code {0} at {1} on {2}\n"
             log.write(logString.format(render_task.exitCode,
                                         datetime.datetime.now().replace(microsecond=0),
@@ -166,6 +176,7 @@ class RenderTCPServer(TCPServer):
                 [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName),
                                                     explicitTransaction=t)
 
+                error = False
                 #Check if job was killed, update the job board accordingly
                 if self.childKilled:
                     #Reset the rendertask
@@ -173,30 +184,35 @@ class RenderTCPServer(TCPServer):
                     #render_task.startTime = None
                     #render_task.host = None
                     self.childKilled = False
+                    #Mark error if task has timedout
+                    if self.statusAfterDeath == "T":
+                        error = True
                 else:
                     #Report that the job was finished if exit code is 0
                     if render_task.exitCode == 0:
                         render_task.status = FINISHED
                         render_task.endTime = datetime.datetime.now()
-                    #Else, report error
+                    #Else, mark error
                     else:
-                        render_task.attempts += 1
+                        error = True
+                #Set as error
+                if error:
+                    render_task.attempts += 1
+                    if render_task.failures == None:
+                        render_task.failures = thisNode.host
+                    else:
+                        render_task.failures += " {0}".format(thisNode.host)
 
-                        if render_task.failures == None:
-                            render_task.failures = thisNode.host
-                        else:
-                            render_task.failures += " {0}".format(thisNode.host)
-
-                        if render_task.attempts >= render_task.maxAttempts:
-                            render_task.status = ERROR
-                            render_task.endTime = datetime.datetime.now()
-                        else:
-                            render_task.status = READY
-                            render_task.host = None
-                            render_task.logFile = None
-                            render_task.startTime = None
-                            render_task.endTime = None
-                            render_task.exitCode = None
+                    if render_task.attempts >= render_task.maxAttempts:
+                        render_task.status = ERROR
+                        render_task.endTime = datetime.datetime.now()
+                    else:
+                        render_task.status = READY
+                        render_task.host = None
+                        render_task.logFile = None
+                        render_task.startTime = None
+                        render_task.endTime = None
+                        render_task.exitCode = None
 
 
                 #Return to 'IDLE' IF current status is 'STARTED'
@@ -228,35 +244,44 @@ class RenderTCPServer(TCPServer):
         except psutil.NoSuchProcess:
             children_procs = []
 
-        #Using a while statement to get around the thread being locked by STDOUT
-        while self.childProcess:
-            #Log and kill all of the subprocesses
-            for proc in children_procs:
-                logger.info("Killing subtask with PID of {0}".format(proc.pid))
-                try:
-                    os.kill(proc.pid, signal.SIGTERM)
-                except WindowsError as err:
-                    logger.error("Could not kill PID {0} due to a WindowsError")
-                    logger.error(str(err))
-            #Log and kill the main child process
+        for proc in children_procs:
             try:
-                logger.info("Killing main task with PID of {0}".format(self.childProcess.pid))
-                os.kill(self.childProcess.pid, signal.SIGTERM)
+                logger.info("Killing subtask with PID of {0}".format(proc.pid))
+                os.kill(proc.pid, signal.SIGTERM)
             except WindowsError as err:
                 logger.error("Could not kill PID {0} due to a WindowsError")
                 logger.error(str(err))
-            #Set status as killed
-            self.childKilled = True
-            self.statusAfterDeath = statusAfterDeath
+
+        try:
+            logger.info("Killing main task with PID of {0}".format(self.childProcess.pid))
+            os.kill(self.childProcess.pid, signal.SIGTERM)
+        except WindowsError as err:
+            logger.error("Could not kill PID {0} due to a WindowsError")
+            logger.error(str(err))
+        self.childKilled = True
+        self.statusAfterDeath = statusAfterDeath
+
+    def timeoutCurrentJob(self):
+        logger.warning("Current job is timed out, killing...")
+        self.timeoutThread.cancel()
+        self.killCurrentJob("T")
+        if self.statusAfterDeath == "T":
+            logger.info("Job timed out!")
         else:
-            logger.warning("No process was running.")
+            logger.info("Job was not timed out!")
 
-    def monitorThread(self, interval):
-        """This will be a thread running to do things like check file output
-        and watch for timeouts.
-        Note: Will need to be run by RenderNodeExternals for RenderNodeService"""
-        raise NotImplementedError
-
+    def startTimeoutThread(self, timeout):
+        self.timeoutThread = threading.Timer(timeout, self.timeoutCurrentJob)
+        try:
+            self.timeoutThread.start()
+            hours = timeout / 60
+            minutes  = timeout % 60
+            infoStr = "Starting Timeout Thread for {0} hours and {1} seconds"
+            logger.info(infoStr.format(hours, minutes))
+        except Exception as err:
+            self.timeoutThread.cancel()
+            logger.error("Could not start timeout thread!")
+            logger.error(str(err))
 
 def heartbeat(interval = 5):
     host = Utils.myHostName()

@@ -45,7 +45,7 @@ def updateJobTaskCount(job_id, tasks = None, commit = False):
     for task in tasks:
         if task.status == "F":
             tasksComplete += 1
-        elif task.status == "E" or task.status == "C":
+        elif task.status == "E" or task.status == "C" or task.status == "T":
             error = 1
         elif task.status == "S":
             started = 1

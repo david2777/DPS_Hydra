@@ -31,6 +31,7 @@ READY = 'R'                 #Ready to be run by a render node
 FINISHED = 'F'              #Job complete
 KILLED = 'K'                #Job was killed
 CRASHED = 'C'               #Machine or server software crashed, task was found in host's DB record upon restart
+TIMEOUT = 'T'
 
 #Statuses for render nodes
 IDLE = 'I'                  #Ready to accept jobs
@@ -51,6 +52,7 @@ niceNames = {PAUSED: 'Paused',
             STARTED: 'Started',
             ERROR: 'Error',
             MANAGED: 'Managed',
+            TIMEOUT: "Timed Out",
             }
 
 
