@@ -84,8 +84,9 @@ CREATE TABLE `hydra_jobboard` (
   `tasksTotal` int(6) DEFAULT '0' COMMENT 'Total subtasks, to avoid querying the subtask DB all the time',
   `maxNodes` int(4) DEFAULT '0' COMMENT 'Max nodes a job should run on',
   `archived` int(4) DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
+  `timeout` smallint(6) DEFAULT '0' COMMENT 'Timeout measured in seconds',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -103,8 +104,8 @@ CREATE TABLE `hydra_rendernode` (
   `software_version` varchar(255) DEFAULT NULL COMMENT 'The version of the RenderNodeMain.exe currently running on this node',
   `capabilities` varchar(255) DEFAULT '' COMMENT 'The render nodes current capabilites in alphabetical order. (ie VRay, RenderMan, SOuP)',
   `pulse` datetime DEFAULT NULL COMMENT 'The last time RenderNodeMain.exe was known to be running, if ever',
-  `onlineTime` char(8) DEFAULT NULL COMMENT 'Time for the node to be onlined, stored as a 24 hour time with HOUR,MINUTE,SECOND like 18,30,00',
-  `offlineTime` char(8) DEFAULT NULL COMMENT 'Time for the node to be offlined, stored as a 24 hour time with HOUR,MINUTE,SECOND like 08,30,00',
+  `onlineTime` char(8) DEFAULT NULL COMMENT 'Time for the node to be onlined, stored as a 24 hour time with HOUR:MINUTE:SECOND like 18:30:00',
+  `offlineTime` char(8) DEFAULT NULL COMMENT 'Time for the node to be offlined, stored as a 24 hour time with HOUR:MINUTE:SECOND like 08:30:00',
   PRIMARY KEY (`host`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Describes all of the RenderNodes. Made in MySQL Workbench. ';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -132,9 +133,9 @@ CREATE TABLE `hydra_taskboard` (
   `archived` int(4) DEFAULT '0' COMMENT 'A column for archiving tasks so they don''t get pickedup by RenderNodeMain',
   `attempts` int(4) DEFAULT '0' COMMENT 'Number of times the task has been attempted',
   `maxAttempts` int(4) DEFAULT '3' COMMENT 'Maximum number of attempts allowed',
-  `failures` varchar(80) DEFAULT NULL COMMENT 'List of nodes where this task has already failed seperated by spaces',
+  `failures` varchar(80) DEFAULT '' COMMENT 'List of nodes where this task has already failed seperated by spaces',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -146,4 +147,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-02-28 21:56:25
+-- Dump completed on 2016-04-10 23:05:49
