@@ -49,10 +49,10 @@ class RenderTCPServer(TCPServer):
         self.thisNodeName = Utils.myHostName()
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
-        logger.info("Checking startup status...")
+        logger.info("Housekeeping...")
         [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
         if thisNode.task_id:
-            logger.info("Unsticking...")
+            logger.warning("Rouge task discovered. Unsticking...")
             [task] = hydra_taskboard.fetch("WHERE id = '{0}'".format(thisNode.task_id))
             if thisNode.status == PENDING or thisNode.status == OFFLINE:
                 newStatus = OFFLINE
@@ -61,6 +61,16 @@ class RenderTCPServer(TCPServer):
             TaskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED,
                               host=thisNode.host, newHostStatus=newStatus)
             JobUtils.manageNodeLimit(task.job_id)
+
+        query = "UPDATE hydra_rendernode SET status = '{0}' WHERE host = '{1}'"
+        elif thisNode.status == STARTED and not thisNode.task_id:
+            logger.warning("Reseting bad status.")
+            with transaction() as t:
+                t.cur.execute(query.format("R", self.thisNodeName))
+        elif thisNode.status == PENDING and not thisNode.task_id:
+            logger.warning("Reseting bad status.")
+            with transaction() as t:
+                t.cur.execute(query.format("O", self.thisNodeName))
 
         #Update current software version on the DB if necessary
         current_version = sys.argv[0]
@@ -95,7 +105,7 @@ class RenderTCPServer(TCPServer):
         queryString += " AND '{0}' LIKE requirements".format(thisNode.capabilities)
         queryString += " AND archived = '0'"
         queryString += " AND failures NOT LIKE '%{0}%'".format(thisNode.host)
-        queryString += " ORDER BY priority DESC, id ASC"
+        queryString += " ORDER BY priority DESC, id DESC"
 
         with transaction() as t:
             render_tasks = hydra_taskboard.fetch(queryString,
