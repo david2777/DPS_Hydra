@@ -11,6 +11,9 @@ from LoggingSetup import logger
 import NodeUtils
 from MySQLSetup import hydra_rendernode, hydra_holidays
 
+#TODO: Have this generate a sleep time rather than checking every so often
+#       if it is the correct time.
+
 def schedulerMain(startTime, endTime, isStarted, holidays):
     #Do the stuff
     if startTime == None:
@@ -75,14 +78,13 @@ def getSchedule(nodeOBJ):
     #Get the curent schedule for the node
     now = datetime.datetime.now()
 
-    sTimeData = nodeOBJ.onlineTime.split(",")
+    sTimeData = nodeOBJ.onlineTime.split(":")
     sTimeData = [int(t) for t in sTimeData]
     startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
 
-    eTimeData = nodeOBJ.offlineTime.split(",")
+    eTimeData = nodeOBJ.offlineTime.split(":")
     eTimeData = [int(t) for t in eTimeData]
     endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
-
 
     nowDate = now.date()
     startDT = datetime.datetime.combine(nowDate, startTime)
