@@ -50,6 +50,7 @@ class RenderTCPServer(TCPServer):
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         logger.info("Housekeeping...")
+        query = "UPDATE hydra_rendernode SET status = '{0}' WHERE host = '{1}'"
         [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
         if thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
@@ -62,7 +63,6 @@ class RenderTCPServer(TCPServer):
                               host=thisNode.host, newHostStatus=newStatus)
             JobUtils.manageNodeLimit(task.job_id)
 
-        query = "UPDATE hydra_rendernode SET status = '{0}' WHERE host = '{1}'"
         elif thisNode.status == STARTED and not thisNode.task_id:
             logger.warning("Reseting bad status.")
             with transaction() as t:

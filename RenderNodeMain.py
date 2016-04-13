@@ -5,6 +5,7 @@ import logging
 import traceback
 import functools
 import threading
+import datetime
 import time
 
 #Third Party
@@ -29,7 +30,6 @@ if sys.argv[0].split(".")[-1] == "exe":
 from MySQLSetup import *
 from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
-from NodeScheduler import schedulerMain, getSchedule
 import RenderNode
 import NodeUtils
 import TaskUtils
@@ -295,40 +295,41 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def startupServers(self):
         #Startup Pulse thread
         self.pulseThreadStatus = False
-        self.pulseThread = stoppableThread(pulse, 60, "Pulse")
-        try:
-            self.pulseThread.start()
-            self.pulseThreadStatus = True
-            self.pulseThreadPixmap.setPixmap(self.donePixmap)
-            logger.info("Pulse Thread started!")
-        except Exception, e:
-            logger.error("Exception: {0}".format(traceback.format_exc()))
-            self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
-
-        #Start Render Server
         self.renderServerStatus = False
-        try:
-            self.renderServer = RenderNode.RenderTCPServer()
-            self.renderServer.createIdleLoop(5,
-                                            self.renderServer.processRenderTasks)
-            self.renderServerStatus = True
-            self.renderServerPixmap.setPixmap(self.donePixmap)
-            logger.info("Render Server Started!")
-        except Exception, e:
-            logger.error("Exception: {0}".format(traceback.format_exc()))
-            self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
-
-        #Start Schedule Thread
         self.schedThreadStatus = False
-        try:
-            self.schedThread = schedulerThread(900)
-            self.schedThread.start()
-            self.schedThreadStatus = True
-            self.scheduleThreadPixmap.setPixmap(self.donePixmap)
-            logger.info("Schedule Thread started!")
-        except Exception, e:
-            logger.error("Exception: {0}".format(traceback.format_exc()))
-            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
+        if self.thisNode:
+            self.pulseThread = stoppableThread(pulse, 60, "Pulse")
+            try:
+                self.pulseThread.start()
+                self.pulseThreadStatus = True
+                self.pulseThreadPixmap.setPixmap(self.donePixmap)
+                logger.info("Pulse Thread started!")
+            except Exception, e:
+                logger.error("Exception: {0}".format(traceback.format_exc()))
+                self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
+
+            #Start Render Server
+            try:
+                self.renderServer = RenderNode.RenderTCPServer()
+                self.renderServer.createIdleLoop(5,
+                                                self.renderServer.processRenderTasks)
+                self.renderServerStatus = True
+                self.renderServerPixmap.setPixmap(self.donePixmap)
+                logger.info("Render Server Started!")
+            except Exception, e:
+                logger.error("Exception: {0}".format(traceback.format_exc()))
+                self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
+
+            #Start Schedule Thread
+            try:
+                self.schedThread = schedulerThread(900, self.schedulerMain)
+                self.schedThread.start()
+                self.schedThreadStatus = True
+                self.scheduleThreadPixmap.setPixmap(self.donePixmap)
+                logger.info("Schedule Thread started!")
+            except Exception, e:
+                logger.error("Exception: {0}".format(traceback.format_exc()))
+                self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
 
     def updateThisNodeInfo(self):
         """Updates widgets on the "This Node" tab with the most recent
@@ -372,6 +373,87 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.show()
             self.hide()
 
+    def schedulerMain(self):
+        #Do the stuff
+        if not self.thisNode:
+            return
+
+        self.updateThisNodeInfo()
+
+        if self.thisNode.onlineTime == None or self.thisNode.offlineTime == None:
+            return
+
+        now = datetime.datetime.now().replace(microsecond = 0, second = 0)
+        nowTime = now.time()
+        nowDate = now.date()
+
+        sTimeData = self.thisNode.onlineTime.split(":")
+        sTimeData = [int(t) for t in sTimeData]
+        startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
+
+        eTimeData = self.thisNode.offlineTime.split(":")
+        eTimeData = [int(t) for t in eTimeData]
+        endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
+
+        startDT = datetime.datetime.combine(nowDate, startTime)
+        endDT = datetime.datetime.combine(nowDate, endTime)
+
+        holidays = [] #TODO:Get the actual holidays lol
+
+        logger.info("Current time: {0}".format(str(now)))
+
+        if self.thisNode.status == "O" or self.thisNode.status == "P":
+            endDT = endDT + datetime.timedelta(days = 1)
+            if nowDate in holidays:
+                logger.info("Today is a holiday!")
+                sleepyTime = (endDT - now).total_seconds()
+                self.startupEvent()
+            elif nowDate.isoweekday() == 6:
+                logger.info("Today is Saturday!")
+                endDT = endDT + datetime.timedelta(days = 1)
+                sleepyTime = (endDT - now).total_seconds()
+                self.startupEvent()
+            elif nowDate.isoweekday() == 7:
+                logger.info("Today is Sunday!")
+                sleepyTime = (endDT - now).total_seconds()
+                self.startupEvent()
+            else:
+                logger.info("Regular Startup")
+                sleepyTime = (endDT - now).total_seconds()
+                self.startupEvent()
+
+        else:
+            if nowDate in holidays:
+                logger.info("Today is a holiday!")
+                sleepyTime = (endDT - now).total_seconds()
+            elif nowDate.isoweekday() == 6:
+                logger.info("Today is Saturday!")
+                endDT = endDT + datetime.timedelta(days = 1)
+                sleepyTime = (endDT - now).total_seconds()
+            elif nowDate.isoweekday() == 7:
+                logger.info("Today is Sunday!")
+                sleepyTime = (endDT - now).total_seconds()
+            else:
+                logger.info("Regular Shutdown")
+                sleepyTime = (now - startDT).total_seconds()
+                self.shutdownEvent()
+
+        if sleepyTime < 59:
+            logger.error("Bad sleep time!")
+            return 600
+        else:
+            return int(sleepyTime)
+
+    def startupEvent(self):
+        logger.info("Triggering Startup Event")
+        self.onlineThisNodeHandler()
+        return True
+
+    def shutdownEvent(self):
+        logger.info("Triggering Shutdown Event")
+        self.offlineThisNodeHandler()
+        return True
+
 class stoppableThread(threading.Thread):
     def __init__(self, targetFunction, interval, tName):
         self.targetFunction = targetFunction
@@ -395,32 +477,31 @@ class stoppableThread(threading.Thread):
         self.stop.set()
 
 class schedulerThread(threading.Thread):
-    def __init__(self, interval):
+    def __init__(self, interval, target):
         self.interval = interval
         self._flag = False
         self.tName = "Scheduler Thread"
         self.stop = threading.Event()
+        self.target = target
         threading.Thread.__init__(self, target = self.tgt)
 
     def tgt(self):
         try:
-            host = Utils.myHostName()
-            [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(host))
-            startTime, endTime, isStarted = getSchedule(thisNode)
-            holidays = []
+            self.interval = self.target()
             while (not self.stop.wait(1)):
                 self._flag = True
-                startTime, endTime, isStarted, holidays = schedulerMain(startTime,
-                                                                        endTime,
-                                                                        isStarted,
-                                                                        holidays)
+                self.interval = self.target()
+                hours = int(self.interval/ 60 / 60 )
+                minutes = int(self.interval/ 60 % 60)
+                logger.info("Scheduler Sleeping for {0} hours and {1} minutes".format(hours, minutes))
                 self.stop.wait(self.interval)
         finally:
             self._flag = False
 
     def terminate(self):
-        logger.info("Killing {0} Thread...".format(self.tName))
+        logger.info("Killing {0}...".format(self.tName))
         self.stop.set()
+
 
 
 def pulse():
