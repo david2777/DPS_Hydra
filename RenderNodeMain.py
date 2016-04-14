@@ -15,6 +15,7 @@ from MySQLdb import Error as sqlerror
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from UI_RenderNodeMain import Ui_RenderNodeMainWindow
+from NodeEditorDialog import NodeEditorDialog
 from MessageBoxes import aboutBox, yesNoBox, strBox
 
 #Logging
@@ -57,6 +58,26 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                     "You cannot run more than one RenderNode at the same time")
             sys.exit(1)
 
+
+        self.thisNode = None
+        try:
+            self.thisNode = NodeUtils.getThisNodeData()
+        except sqlerror as err:
+            logger.error(str(err))
+            self.onlineButton.setEnabled(False)
+            self.offlineButton.setEnabled(False)
+            self.getoffButton.setEnabled(False)
+            self.sqlErrorBox()
+
+        if not self.thisNode:
+            logger.error("Node does not exist in database!")
+            aboutBox(self, "Error",
+                "This node was not found in the database! If you wish to render  "
+                "on this node it must be registered with the databse. Run "
+                "Register.exe or Register.py to regiester this node and "
+                " try again.")
+            sys.exit(1)
+
         #Add handlers
         emStream = EmittingStream(textWritten=self.normalOutputWritten)
         handler = logging.StreamHandler(emStream)
@@ -79,16 +100,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.refreshIcon = QIcon()
         self.refreshIcon.addPixmap(self.refreshPixmap)
         self.RIcon = QIcon('images/RIcon.png')
-
-        self.thisNode = None
-        try:
-            self.thisNode = NodeUtils.getThisNodeData()
-        except sqlerror as err:
-            logger.error(str(err))
-            self.onlineButton.setEnabled(False)
-            self.offlineButton.setEnabled(False)
-            self.getoffButton.setEnabled(False)
-            self.sqlErrorBox()
 
         self.buildUI()
         self.connectButtons()
@@ -169,20 +180,14 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.trayButton.setEnabled(False)
 
     def connectButtons(self):
-        QObject.connect(self.trayButton, SIGNAL("clicked()"),
-                        self.sendToTrayHandler)
-        QObject.connect(self.onlineButton, SIGNAL("clicked()"),
-                        self.onlineThisNodeHandler)
-        QObject.connect(self.offlineButton, SIGNAL("clicked()"),
-                        self.offlineThisNodeHandler)
-        QObject.connect(self.getoffButton, SIGNAL("clicked()"),
-                        self.getOffThisNodeHandler)
-        QObject.connect(self.clearButton, SIGNAL("clicked()"),
-                        self.clearOutputHandler)
-        QObject.connect(self.runCmdButton, SIGNAL("clicked()"),
-                        self.runCommandHandler)
-        QObject.connect(self.refreshButton, SIGNAL("clicked()"),
-                        self.updateThisNodeInfo)
+        self.trayButton.clicked.connect(self.sendToTrayHandler)
+        self.onlineButton.clicked.connect(self.onlineThisNodeHandler)
+        self.offlineButton.clicked.connect(self.offlineThisNodeHandler)
+        self.getoffButton.clicked.connect(self.getOffThisNodeHandler)
+        self.clearButton.clicked.connect(self.clearOutputHandler)
+        self.runCmdButton.clicked.connect(self.runCommandHandler)
+        self.refreshButton.clicked.connect(self.updateThisNodeInfo)
+        self.editThisNodeButton.clicked.connect(self.nodeEditorHandler)
         if not self.trayIconBool:
             self.trayButton.setEnabled(False)
 
@@ -234,50 +239,47 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.hide()
 
     def onlineThisNodeHandler(self):
-        if self.thisNode:
-            try:
-                NodeUtils.onlineNode(self.thisNode)
-                self.updateThisNodeInfo()
-                logger.info("Node Onlined")
-            except sqlerror as err:
-                logger.error(str(err))
-                self.sqlErrorBox()
+        try:
+            NodeUtils.onlineNode(self.thisNode)
+            self.updateThisNodeInfo()
+            logger.info("Node Onlined")
+        except sqlerror as err:
+            logger.error(str(err))
+            self.sqlErrorBox()
 
     def offlineThisNodeHandler(self):
-       if self.thisNode:
-           try:
-               NodeUtils.offlineNode(self.thisNode)
-               self.updateThisNodeInfo()
-               logger.info("Node Offlined")
-           except sqlerror as err:
-               logger.error(str(err))
-               self.sqlErrorBox()
+       try:
+           NodeUtils.offlineNode(self.thisNode)
+           self.updateThisNodeInfo()
+           logger.info("Node Offlined")
+       except sqlerror as err:
+           logger.error(str(err))
+           self.sqlErrorBox()
 
     def getOffThisNodeHandler(self):
-        if self.thisNode:
-            self.updateThisNodeInfo()
-            task_id = self.thisNode.task_id
-            self.offlineThisNodeHandler()
-            if task_id:
-                try:
-                    killed = TaskUtils.killTask(task_id, "R")
-                    if not killed:
-                        logger.error("Node could not kill for some reason!")
-                        self.aboutBoxHidden("Error",
-                                    "Task couldn't be killed for some reason.")
-                    else:
-                        logger.info("Node Got Off current task!")
-                except socketerror as err:
-                    logger.error(str(err))
-                    self.aboutBoxHidden("Error", "Task couldn't be killed "
-                    "because there was a problem communicating with the "
-                    "host running it.")
-                except sqlerror as err:
-                    logger.error(str(err))
-                    self.aboutBoxHidden("SQL Error", str(err))
-            else:
-                self.aboutBoxHidden("Task Kill Error",
-                        "No tasks found on current node. Set status to Offline.")
+        self.updateThisNodeInfo()
+        task_id = self.thisNode.task_id
+        self.offlineThisNodeHandler()
+        if task_id:
+            try:
+                killed = TaskUtils.killTask(task_id, "R")
+                if not killed:
+                    logger.error("Node could not kill for some reason!")
+                    self.aboutBoxHidden("Error",
+                                "Task couldn't be killed for some reason.")
+                else:
+                    logger.info("Node Got Off current task!")
+            except socketerror as err:
+                logger.error(str(err))
+                self.aboutBoxHidden("Error", "Task couldn't be killed "
+                "because there was a problem communicating with the "
+                "host running it.")
+            except sqlerror as err:
+                logger.error(str(err))
+                self.aboutBoxHidden("SQL Error", str(err))
+        else:
+            self.aboutBoxHidden("Task Kill Error",
+                    "No tasks found on current node. Set status to Offline.")
 
     def runCommandHandler(self):
         reply = strBox(self, "Eval", "Eval this code:")
@@ -292,78 +294,119 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.outputTextEdit.clear()
             logger.info("Output cleared")
 
+    def nodeEditorHandler(self):
+        response = self.nodeEditor()
+        if response:
+            logger.info("Updating this node...")
+            logger.info("Node updated!")
+        else:
+            logger.info("No changes detected. Nothing was changed.")
+
     def startupServers(self):
         #Startup Pulse thread
         self.pulseThreadStatus = False
         self.renderServerStatus = False
         self.schedThreadStatus = False
-        if self.thisNode:
-            self.pulseThread = stoppableThread(pulse, 60, "Pulse")
-            try:
-                self.pulseThread.start()
-                self.pulseThreadStatus = True
-                self.pulseThreadPixmap.setPixmap(self.donePixmap)
-                logger.info("Pulse Thread started!")
-            except Exception, e:
-                logger.error("Exception: {0}".format(traceback.format_exc()))
-                self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
 
-            #Start Render Server
-            try:
-                self.renderServer = RenderNode.RenderTCPServer()
-                self.renderServer.createIdleLoop(5,
-                                                self.renderServer.processRenderTasks)
-                self.renderServerStatus = True
-                self.renderServerPixmap.setPixmap(self.donePixmap)
-                logger.info("Render Server Started!")
-            except Exception, e:
-                logger.error("Exception: {0}".format(traceback.format_exc()))
-                self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
+        self.pulseThread = stoppableThread(pulse, 60, "Pulse")
+        try:
+            self.pulseThread.start()
+            self.pulseThreadStatus = True
+            self.pulseThreadPixmap.setPixmap(self.donePixmap)
+            logger.info("Pulse Thread started!")
+        except Exception, e:
+            logger.error("Exception: {0}".format(traceback.format_exc()))
+            self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
 
-            #Start Schedule Thread
-            try:
-                self.schedThread = schedulerThread(900, self.schedulerMain)
-                self.schedThread.start()
-                self.schedThreadStatus = True
-                self.scheduleThreadPixmap.setPixmap(self.donePixmap)
-                logger.info("Schedule Thread started!")
-            except Exception, e:
-                logger.error("Exception: {0}".format(traceback.format_exc()))
-                self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
+        #Start Render Server
+        try:
+            self.renderServer = RenderNode.RenderTCPServer()
+            self.renderServer.createIdleLoop(5,
+                                            self.renderServer.processRenderTasks)
+            self.renderServerStatus = True
+            self.renderServerPixmap.setPixmap(self.donePixmap)
+            logger.info("Render Server Started!")
+        except Exception, e:
+            logger.error("Exception: {0}".format(traceback.format_exc()))
+            self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
+
+        #Start Schedule Thread
+        try:
+            self.schedThread = schedulerThread(900, self.schedulerMain)
+            self.schedThread.start()
+            self.schedThreadStatus = True
+            self.scheduleThreadPixmap.setPixmap(self.donePixmap)
+            logger.info("Schedule Thread started!")
+        except Exception, e:
+            logger.error("Exception: {0}".format(traceback.format_exc()))
+            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
+
+    def nodeEditor(self):
+        comps = self.thisNode.capabilities.split(" ")
+        if self.thisNode.onlineTime and self.thisNode.offlineTime:
+            sTimeData = self.thisNode.onlineTime.split(":")
+            sTimeData = [int(t) for t in sTimeData]
+            startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
+            eTimeData = self.thisNode.offlineTime.split(":")
+            eTimeData = [int(t) for t in eTimeData]
+            endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
+        else:
+            startTime = None
+            endTime = None
+        defaults = {"node" : self.thisNode.host,
+                    "priority" : self.thisNode.minPriority,
+                    "startTime" : startTime,
+                    "endTime" : endTime,
+                    "comps" : comps}
+        edits = NodeEditorDialog.create(defaults)
+        #logger.debug(edits)
+        if edits:
+            query = "UPDATE hydra_rendernode"
+            query += " SET minPriority = '{0}'".format(edits["priority"])
+            if edits["startTime"] and edits["endTime"]:
+                query += ", onlineTime = '{0}'".format(edits["startTime"])
+                query += ", offlineTime = '{0}'".format(edits["endTime"])
+            else:
+                query += ", onlineTime = NULL"
+                query += ", offlineTime = NULL"
+            query += ", capabilities = '{0}'".format(edits["comps"])
+            query += " WHERE host = '{0}'".format(self.thisNode.host)
+            #logger.debug(query)
+            with transaction() as t:
+                t.cur.execute(query)
+            return True
+        else:
+            return False
 
     def updateThisNodeInfo(self):
         """Updates widgets on the "This Node" tab with the most recent
         information available."""
         #Update thisNode if it is already set (so we don't error over and over)
-        if self.thisNode:
-            #Get the most current info from the database
-            self.thisNode = NodeUtils.getThisNodeData()
-            #Update the labels
-            if self.thisNode.task_id:
-                taskText = str(self.thisNode.task_id)
-            else:
-                taskText = "None"
-            self.taskIDLabel.setText(taskText)
-            self.nodeNameLabel.setText(self.thisNode.host)
-            niceStatus = niceNames[self.thisNode.status]
-            self.nodeStatusLabel.setText(niceStatus)
-            vText = getSoftwareVersionText(self.thisNode.software_version)
-            self.nodeVersionLabel.setText(vText)
-            self.minPriorityLabel.setText(str(self.thisNode.minPriority))
-            self.capabilitiesLabel.setText(str(self.thisNode.capabilities))
-
-            if self.trayIconBool:
-                iconStatus = "Hydra RenderNodeMain\nNode: {0}\nStatus: {1}\nTask: {2}"
-                self.trayIcon.setToolTip(iconStatus.format(self.thisNode.host,
-                                                        niceStatus,
-                                                        taskText))
-
+        [self.thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNode.host))
+        self.nodeNameLabel.setText(self.thisNode.host)
+        self.nodeStatusLabel.setText(niceNames[self.thisNode.status])
+        if self.thisNode.task_id:
+            taskText = str(self.thisNode.task_id)
         else:
-            aboutBox(self, "Notice",
-                "Information about this node cannot be displayed because it is "
-                "not registered on the render farm. You may continue to use"
-                " Farm View, but it must be restarted after this node is "
-                "registered if you wish to see this node's information.")
+            taskText = "None"
+        self.taskIDLabel.setText(taskText)
+        self.nodeVersionLabel.setText(getSoftwareVersionText(self.thisNode.software_version))
+        self.minPriorityLabel.setText(str(self.thisNode.minPriority))
+        self.capabilitiesLabel.setText(self.thisNode.capabilities)
+        if self.thisNode.onlineTime and self.thisNode.offlineTime:
+            self.onlineTimeLabel.setText(str(self.thisNode.onlineTime))
+            self.offlineTimeLabel.setText(str(self.thisNode.offlineTime))
+        else:
+            self.onlineTimeLabel.setText("Manual Control")
+            self.offlineTimeLabel.setText("Manual Control")
+        self.pulseLabel.setText(str(self.thisNode.pulse))
+
+        if self.trayIconBool:
+            niceStatus = niceNames[self.thisNode.status]
+            iconStatus = "Hydra RenderNodeMain\nNode: {0}\nStatus: {1}\nTask: {2}"
+            self.trayIcon.setToolTip(iconStatus.format(self.thisNode.host,
+                                                    niceStatus,
+                                                    taskText))
 
     def aboutBoxHidden(self, title="", msg=""):
         """Creates a window that has been minimzied to the tray"""
@@ -376,6 +419,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def schedulerMain(self):
         #Do the stuff
         if not self.thisNode:
+            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
             logger.error("Node OBJ not found by schedulerMain! Checking again in 24 hours.")
             #Sleep for 24 hours
             return 86400
@@ -383,29 +427,36 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.updateThisNodeInfo()
 
         if self.thisNode.onlineTime == None or self.thisNode.offlineTime == None:
+            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
             logger.info("Node is in manual control mode! Checking again in 3 hours.")
             #Sleep for 3 hours
             return 10800
 
-        now = datetime.datetime.now().replace(microsecond = 0, second = 0)
-        nowTime = now.time()
-        nowDate = now.date()
+        try:
+            now = datetime.datetime.now().replace(microsecond = 0, second = 0)
+            nowTime = now.time()
+            nowDate = now.date()
 
-        sTimeData = self.thisNode.onlineTime.split(":")
-        sTimeData = [int(t) for t in sTimeData]
-        startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
+            sTimeData = self.thisNode.onlineTime.split(":")
+            sTimeData = [int(t) for t in sTimeData]
+            startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
 
-        eTimeData = self.thisNode.offlineTime.split(":")
-        eTimeData = [int(t) for t in eTimeData]
-        endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
+            eTimeData = self.thisNode.offlineTime.split(":")
+            eTimeData = [int(t) for t in eTimeData]
+            endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
 
-        startDT = datetime.datetime.combine(nowDate, startTime)
-        endDT = datetime.datetime.combine(nowDate, endTime)
-        endDT = endDT + datetime.timedelta(days = 1)
+            startDT = datetime.datetime.combine(nowDate, startTime)
+            endDT = datetime.datetime.combine(nowDate, endTime)
+            endDT = endDT + datetime.timedelta(days = 1)
 
-        holidayData = hydra_holidays.fetch()
-        holidayData = [x.date.split(",") for x in holidayData]
-        holidays = [datetime.date(int(x[0]), int(x[1]), int(x[2])) for x in holidayData]
+            holidayData = hydra_holidays.fetch()
+            holidayData = [x.date.split(",") for x in holidayData]
+            holidays = [datetime.date(int(x[0]), int(x[1]), int(x[2])) for x in holidayData]
+        except Exception, e:
+            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
+            logger.error("Unkown Error in schedulerMain! Checking again in 24 hours.")
+            #Sleep for 24 hours
+            return 86400
 
         logger.info("Current time: {0}".format(str(now)))
 

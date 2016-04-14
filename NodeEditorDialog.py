@@ -72,8 +72,8 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
 
     def getValues(self):
         if self.schedEnabled:
-            startTime = str(self.onlineTimeEdit.time().toString()).replace(":",",")
-            endTime = str(self.offlineTimeEdit.time().toString()).replace(":",",")
+            startTime = str(self.onlineTimeEdit.time().toString())
+            endTime = str(self.offlineTimeEdit.time().toString())
         else:
             startTime = None
             endTime = None

@@ -1013,8 +1013,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(node.task_id)))
             self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(node.minPriority)))
             if node.onlineTime and node.offlineTime:
-                onlineTimeWidget = TableWidgetItem(str(node.onlineTime).replace(",", ":"))
-                offlineTimeWidget = TableWidgetItem(str(node.offlineTime).replace(",", ":"))
+                onlineTimeWidget = TableWidgetItem(str(node.onlineTime))
+                offlineTimeWidget = TableWidgetItem(str(node.offlineTime))
                 self.renderNodeTable.setItem(row, 4, onlineTimeWidget)
                 self.renderNodeTable.setItem(row, 5, offlineTimeWidget)
             else:
@@ -1179,10 +1179,10 @@ class FarmView(QMainWindow, Ui_FarmView):
             [thisNode] = hydra_rendernode.fetch(query)
             comps = thisNode.capabilities.split(" ")
             if thisNode.onlineTime and thisNode.offlineTime:
-                sTimeData = thisNode.onlineTime.split(",")
+                sTimeData = thisNode.onlineTime.split(":")
                 sTimeData = [int(t) for t in sTimeData]
                 startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
-                eTimeData = thisNode.offlineTime.split(",")
+                eTimeData = thisNode.offlineTime.split(":")
                 eTimeData = [int(t) for t in eTimeData]
                 endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
             else:
@@ -1396,8 +1396,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.minPriorityLabel.setText(str(thisNode.minPriority))
         self.capabilitiesLabel.setText(thisNode.capabilities)
         if thisNode.onlineTime and thisNode.offlineTime:
-            self.onlineTimeLabel.setText(str(thisNode.onlineTime).replace(",", ":"))
-            self.offlineTimeLabel.setText(str(thisNode.offlineTime).replace(",", ":"))
+            self.onlineTimeLabel.setText(str(thisNode.onlineTime))
+            self.offlineTimeLabel.setText(str(thisNode.offlineTime))
         else:
             self.onlineTimeLabel.setText("Manual Control")
             self.offlineTimeLabel.setText("Manual Control")
