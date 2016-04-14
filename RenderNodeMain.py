@@ -376,12 +376,16 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def schedulerMain(self):
         #Do the stuff
         if not self.thisNode:
-            return
+            logger.error("Node OBJ not found by schedulerMain! Checking again in 24 hours.")
+            #Sleep for 24 hours
+            return 86400
 
         self.updateThisNodeInfo()
 
         if self.thisNode.onlineTime == None or self.thisNode.offlineTime == None:
-            return
+            logger.info("Node is in manual control mode! Checking again in 3 hours.")
+            #Sleep for 3 hours
+            return 10800
 
         now = datetime.datetime.now().replace(microsecond = 0, second = 0)
         nowTime = now.time()
@@ -397,61 +401,57 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         startDT = datetime.datetime.combine(nowDate, startTime)
         endDT = datetime.datetime.combine(nowDate, endTime)
+        endDT = endDT + datetime.timedelta(days = 1)
 
         holidays = [] #TODO:Get the actual holidays lol
 
         logger.info("Current time: {0}".format(str(now)))
 
         if self.thisNode.status == "O" or self.thisNode.status == "P":
-            endDT = endDT + datetime.timedelta(days = 1)
             if nowDate in holidays:
-                logger.info("Today is a holiday!")
+                logger.info("Node is offline and today is a holiday. Starting then sleeping...")
                 sleepyTime = (endDT - now).total_seconds()
                 self.startupEvent()
             elif nowDate.isoweekday() == 6:
-                logger.info("Today is Saturday!")
+                logger.info("Node is offline and today is a Saturday. Starting then sleeping...")
                 endDT = endDT + datetime.timedelta(days = 1)
                 sleepyTime = (endDT - now).total_seconds()
                 self.startupEvent()
             elif nowDate.isoweekday() == 7:
-                logger.info("Today is Sunday!")
+                logger.info("Node is offline and today is a Sunday. Starting then sleeping...")
                 sleepyTime = (endDT - now).total_seconds()
                 self.startupEvent()
+            elif startDT > now:
+                logger.info("Node is offline and should be offline. Sleeping...")
+                sleepyTime = (startDT - now).total_seconds()
             else:
-                logger.info("Regular Startup")
+                logger.info("Node is offline and should be online. Starting then sleeping...")
                 sleepyTime = (endDT - now).total_seconds()
                 self.startupEvent()
 
         else:
-            if nowDate in holidays:
-                logger.info("Today is a holiday!")
-                sleepyTime = (endDT - now).total_seconds()
-            elif nowDate.isoweekday() == 6:
-                logger.info("Today is Saturday!")
-                endDT = endDT + datetime.timedelta(days = 1)
-                sleepyTime = (endDT - now).total_seconds()
-            elif nowDate.isoweekday() == 7:
-                logger.info("Today is Sunday!")
+            if startDT < now < endDT:
+                logger.info("Node is online and should be online. Sleeping...")
                 sleepyTime = (endDT - now).total_seconds()
             else:
-                logger.info("Regular Shutdown")
-                sleepyTime = (now - startDT).total_seconds()
+                logger.info("Node is online and should be offline. Shutting down the sleeping...")
+                sleepyTime = (startDT - now).total_seconds()
                 self.shutdownEvent()
 
-        if sleepyTime < 59:
+        if sleepyTime < 59.0:
             logger.error("Bad sleep time!")
-            return 600
+            return 3600
         else:
             return int(sleepyTime)
 
     def startupEvent(self):
         logger.info("Triggering Startup Event")
-        self.onlineThisNodeHandler()
+        #self.onlineThisNodeHandler()
         return True
 
     def shutdownEvent(self):
         logger.info("Triggering Shutdown Event")
-        self.offlineThisNodeHandler()
+        #self.offlineThisNodeHandler()
         return True
 
 class stoppableThread(threading.Thread):
@@ -487,7 +487,6 @@ class schedulerThread(threading.Thread):
 
     def tgt(self):
         try:
-            self.interval = self.target()
             while (not self.stop.wait(1)):
                 self._flag = True
                 self.interval = self.target()
