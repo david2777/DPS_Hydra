@@ -403,7 +403,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         endDT = datetime.datetime.combine(nowDate, endTime)
         endDT = endDT + datetime.timedelta(days = 1)
 
-        holidays = [] #TODO:Get the actual holidays lol
+        holidayData = hydra_holidays.fetch()
+        holidayData = [x.date.split(",") for x in holidayData]
+        holidays = [datetime.date(int(x[0]), int(x[1]), int(x[2])) for x in holidayData]
 
         logger.info("Current time: {0}".format(str(now)))
 
