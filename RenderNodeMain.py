@@ -31,7 +31,7 @@ if sys.argv[0].split(".")[-1] == "exe":
 from MySQLSetup import *
 from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
-from Threads import stoppableThread
+from Threads import stoppableThread, workerSignalThread
 import RenderNode
 import NodeUtils
 import TaskUtils
@@ -109,6 +109,12 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.startupServers()
         except Exception, e:
             logger.error(traceback.format_exc(e))
+
+        self.autoUpdate = True
+        self.autoUpdateThread = workerSignalThread("run", 15)
+        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.updateThisNodeInfo)
+        self.autoUpdateThread.start()
+
         logger.info("LIVE LIVE LIVE")
 
     def normalOutputWritten(self, text):
@@ -189,6 +195,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.runCmdButton.clicked.connect(self.runCommandHandler)
         self.refreshButton.clicked.connect(self.updateThisNodeInfo)
         self.editThisNodeButton.clicked.connect(self.nodeEditorHandler)
+        self.autoUpdateCheckBox.stateChanged.connect(self.autoUpdateHandler)
         if not self.trayIconBool:
             self.trayButton.setEnabled(False)
 
@@ -197,6 +204,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         if choice == QMessageBox.Yes:
             logger.info("Shutting down...")
             #Force update UI
+            self.autoUpdateThread.terminate()
             app.processEvents()
             if self.schedThreadStatus:
                 self.schedThread.terminate()
@@ -220,6 +228,15 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             sys.exit(0)
         else:
             event.ignore()
+
+    def autoUpdateHandler(self):
+        """Toggles Auto Updater"""
+        if self.autoUpdate == True:
+            self.autoUpdateThread.terminate()
+            self.autoUpdate = False
+        else:
+            self.autoUpdateThread.start()
+            self.autoUpdate = True
 
     def showWindowHandler(self):
         self.isVisable = True

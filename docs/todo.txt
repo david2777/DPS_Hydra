@@ -85,9 +85,9 @@
 
 -[In Progress]Add filters to JobTable in FarmView
 
--[In Progress]Auto update on things like FarmView and RenderNodeMain UI
+-[Done]Auto update on things like FarmView and RenderNodeMain UI
     -[Done]Farmview
-    -[In Progress]Render Node Main
+    -[Done]Render Node Main
 
 -[Todo]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
