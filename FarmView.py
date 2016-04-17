@@ -28,6 +28,7 @@ from DetailedDialog import DetailedDialog
 from MySQLSetup import *
 from LoggingSetup import logger
 from MessageBoxes import aboutBox, yesNoBox, intBox, strBox
+from Threads import workerSignalThread
 import Utils
 import TaskUtils
 import JobUtils
@@ -1538,22 +1539,6 @@ def loadLog(record):
                 "No Log on File",
                 "No log on file for task: {0}\nJob was probably never started or was recently reset.".format(record.id))
         logger.warning("No log file on record for task: {0}".format(record.id))
-
-class workerSignalThread(QThread):
-    def __init__(self, target, interval):
-        QThread.__init__(self)
-        self.target = target
-        self.interval = interval
-        logger.info("INIT")
-
-    def __del__(self):
-        self.wait()
-
-    def run(self):
-        while True:
-            #logger.info("Running...")
-            self.emit(SIGNAL(self.target))
-            time.sleep(self.interval)
 
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              READY: QColor(255,255,255),        #White

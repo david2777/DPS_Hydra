@@ -31,6 +31,7 @@ if sys.argv[0].split(".")[-1] == "exe":
 from MySQLSetup import *
 from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
+from Threads import stoppableThread
 import RenderNode
 import NodeUtils
 import TaskUtils
@@ -519,28 +520,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         #self.offlineThisNodeHandler()
         return True
 
-class stoppableThread(threading.Thread):
-    def __init__(self, targetFunction, interval, tName):
-        self.targetFunction = targetFunction
-        self.interval = interval
-        self.tName = tName
-        self._flag = False
-        self.stop = threading.Event()
-        threading.Thread.__init__(self, target = self.tgt)
-
-    def tgt(self):
-        try:
-            while (not self.stop.wait(1)):
-                self._flag = True
-                self.targetFunction()
-                self.stop.wait(self.interval)
-        finally:
-            self._flag = False
-
-    def terminate(self):
-        logger.info("Killing {0} Thread...".format(self.tName))
-        self.stop.set()
-
 class schedulerThread(threading.Thread):
     def __init__(self, interval, target):
         self.interval = interval
@@ -565,8 +544,6 @@ class schedulerThread(threading.Thread):
     def terminate(self):
         logger.info("Killing {0}...".format(self.tName))
         self.stop.set()
-
-
 
 def pulse():
     host = Utils.myHostName()
