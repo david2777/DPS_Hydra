@@ -483,7 +483,19 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 self.startupEvent()
 
         else:
-            if startDT < now < endDT:
+            if nowDate in holidays:
+                logger.info("Node is online and today is a holiday. Sleeping...")
+                sleepyTime = (endDT - now).total_seconds()
+            elif nowDate.isoweekday() == 6:
+                logger.info("Node is online and today is a Saturday. Sleeping...")
+                endDT = endDT + datetime.timedelta(days = 1)
+                sleepyTime = (endDT - now).total_seconds()
+                self.startupEvent()
+            elif nowDate.isoweekday() == 7:
+                logger.info("Node is online and today is a Sunday. Sleeping...")
+                sleepyTime = (endDT - now).total_seconds()
+                self.startupEvent()
+            elif startDT < now < endDT:
                 logger.info("Node is online and should be online. Sleeping...")
                 sleepyTime = (endDT - now).total_seconds()
             else:
