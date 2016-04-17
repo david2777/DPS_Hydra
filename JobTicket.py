@@ -33,7 +33,7 @@ class UberJobTicket:
         self.compatabilityPattern = self.compatabilityBuilder(compatabilityList)    #VARCHAR(255)
         self.createTime = datetime.now()
         self.maxNodes = maxNodes
-        self.timeout = timeout
+        self.timeout = int(timeout * 60)
 
         self.frameRange = range(self.startFrame, self.endFrame)
         self.frameList = self.frameRange[0::self.byFrame]
