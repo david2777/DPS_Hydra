@@ -16,7 +16,7 @@ Also has a main function for generating test data.
 class UberJobTicket:
     """A Ticket Class for submitting jobs and their subtasks."""
     def __init__(self, execName, baseCMD, startFrame, endFrame, byFrame, taskFile, priority,
-                phase, jobStatus, niceName, owner, compatabilityList, maxNodes):
+                phase, jobStatus, niceName, owner, compatabilityList, maxNodes, timeout):
 
         #Looks good, let's setup our class variables
         self.execName = execName        #VARCHAR(20)
@@ -33,6 +33,7 @@ class UberJobTicket:
         self.compatabilityPattern = self.compatabilityBuilder(compatabilityList)    #VARCHAR(255)
         self.createTime = datetime.now()
         self.maxNodes = maxNodes
+        self.timeout = timeout
 
         self.frameRange = range(self.startFrame, self.endFrame)
         self.frameList = self.frameRange[0::self.byFrame]
@@ -70,7 +71,8 @@ class UberJobTicket:
                             requirements = self.compatabilityPattern,
                             tasksComplete = 0,
                             tasksTotal = self.frameCount,
-                            maxNodes = self.maxNodes)
+                            maxNodes = self.maxNodes,
+                            timeout = self.timeout)
 
         with transaction() as t:
             job.insert(transaction=t)
@@ -145,6 +147,8 @@ class UberJobTicket:
                     self.owner,
                     self.createTime,
                     self.compatabilityPattern,
+                    self.maxNodes,
+                    self.timeout,
                     "\n"]
         reprList = [str(x) for x in reprList]
         return "\n".join(reprList)
@@ -164,11 +168,11 @@ if __name__ == "__main__":
         compatabilityList = ["MentalRay", "Maya2015"]
 
         uberPhase01 = UberJobTicket("maya2015Render", baseCMD, startFrame, endFrame, byFrame, mayaFile,
-        priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityList, 0)
+        priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityList, 0, 170)
         uberPhase01.doSubmit()
 
         #uberPhase02 = UberJobTicket("maya2014Render", baseCMD, proj, startFrame, endFrame, 1, mayaFile,
-        #priority, 2, "U", niceName + "_PHASE_02", owner, compatabilityList, 0)
+        #priority, 2, "U", niceName + "_PHASE_02", owner, compatabilityList, 0, 170)
         #uberPhase02.doSubmit()
 
     raw_input("DONE...")

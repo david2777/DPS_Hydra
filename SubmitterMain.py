@@ -163,6 +163,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         compatabilityList = self.getReqs()
         testNodesP1 = int(self.testNodesP1SpinBox.value())
         testNodesP2 = int(self.testNodesP2SpinBox.value())
+        timeout = int(self.timeoutSpinbox.value())
 
         #Stuff not in JobTicket
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
@@ -223,7 +224,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             niceNameOverride,
                                             owner,
                                             compatabilityList,
-                                            testNodesP1)
+                                            testNodesP1,
+                                            timeout)
 
             p1_job_id = phase01Ticket.doSubmit()
             if jobStatus == "R":
@@ -253,7 +255,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             niceNameOverride,
                                             owner,
                                             compatabilityList,
-                                            testNodesP2)
+                                            testNodesP2,
+                                            timeout)
 
             p2_job_id = phase02Ticket.doSubmit()
             if jobStatusOverride == "R":

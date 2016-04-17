@@ -14,8 +14,6 @@
     -[Done]Need to be able to see reqs in FarmView
     -[Done]Add button for viewing logs
 
--[Needs Work]Scheduler for onlineing and offlineing nodes
-
 -[Done]Overhaul capabilities
     -Reqs and Capabilities MUST be in alphabetical order and reqs MUST have "%"
     instead of space and infront/behind to wildcard reqs that the node has but
@@ -26,11 +24,6 @@
 -[Done]Overhaul Job Ticket setup
      -Job should hold a base command, start frame, end frame, and Maya File
      -Tasks should be run using these and get a dedicated frame number on creation
-
--[Doneish]Overhaul FarmView commands
-     -Maybe too many buttons
-
--[In Progress]Add filters to JobTable in FarmView
 
 -[Done]Multi-select for Task View
     -Will require a lot of reworking of functions that modify tasks
@@ -76,23 +69,30 @@
 
 -[Done]Node does not pickup job it failed on in the past
 
--[Done on FarmView]Auto update on things like FarmView and RenderNodeMain UI
+-[Done]Edit node dialog
+
+-[Todo]Edit job dialog
+
+-[Done]Timeouts
+    -[Done]Add to Submitter Main
+
+-[Done]Change checkbox model on RenderNode tab
+
+-[Testing]Scheduler for onlineing and offlineing nodes
+
+-[Doneish]Overhaul FarmView commands
+     -Maybe too many buttons
+
+-[In Progress]Add filters to JobTable in FarmView
+
+-[In Progress]Auto update on things like FarmView and RenderNodeMain UI
+    -[Done]Farmview
+    -[In Progress]Render Node Main
 
 -[Todo]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
     finished on termination.
 
 -[Todo]Detect GPUs and render one job on each GPU
-
--[Done]Edit node dialog
-
--[Todo]Edit job dialog
-
--[Doneish]Timeouts
-    -Add to Submitter Main
-
--[Done]Change checkbox model on RenderNode tab
-
--[Todo]Auto Update data on RenderNodeMain
 
 -Everything else

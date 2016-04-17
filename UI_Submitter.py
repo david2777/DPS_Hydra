@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName(_fromUtf8("MainWindow"))
-        MainWindow.resize(448, 300)
+        MainWindow.resize(448, 320)
         sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -275,6 +275,15 @@ class Ui_MainWindow(object):
         self.testNodesLabel = QtGui.QLabel(self.tab_2)
         self.testNodesLabel.setObjectName(_fromUtf8("testNodesLabel"))
         self.formLayout_2.setWidget(9, QtGui.QFormLayout.LabelRole, self.testNodesLabel)
+        self.timeoutLabel = QtGui.QLabel(self.tab_2)
+        self.timeoutLabel.setObjectName(_fromUtf8("timeoutLabel"))
+        self.formLayout_2.setWidget(6, QtGui.QFormLayout.LabelRole, self.timeoutLabel)
+        self.timeoutSpinbox = QtGui.QSpinBox(self.tab_2)
+        self.timeoutSpinbox.setSuffix(_fromUtf8(""))
+        self.timeoutSpinbox.setMaximum(999)
+        self.timeoutSpinbox.setProperty("value", 170)
+        self.timeoutSpinbox.setObjectName(_fromUtf8("timeoutSpinbox"))
+        self.formLayout_2.setWidget(6, QtGui.QFormLayout.FieldRole, self.timeoutSpinbox)
         self.tabWidget.addTab(self.tab_2, _fromUtf8(""))
         self.verticalLayout.addWidget(self.tabWidget)
         self.submitButton = QtGui.QPushButton(self.centralwidget)
@@ -349,6 +358,7 @@ class Ui_MainWindow(object):
         self.testNodesP1Label.setText(_translate("MainWindow", "Phase 01:", None))
         self.testNodesP2Label.setText(_translate("MainWindow", "Phase 02:", None))
         self.testNodesLabel.setText(_translate("MainWindow", "Test Nodes:", None))
+        self.timeoutLabel.setText(_translate("MainWindow", "Timeout:", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2), _translate("MainWindow", "Advanced", None))
         self.submitButton.setText(_translate("MainWindow", "Submit", None))
 
