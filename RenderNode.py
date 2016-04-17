@@ -50,11 +50,10 @@ class RenderTCPServer(TCPServer):
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         logger.info("Housekeeping...")
-        query = "UPDATE hydra_rendernode SET status = '{0}' WHERE host = '{1}'"
-        [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
+        [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (self.thisNodeName,))
         if thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
-            [task] = hydra_taskboard.fetch("WHERE id = '{0}'".format(thisNode.task_id))
+            [task] = hydra_taskboard.secureFetch("WHERE id = %s", (thisNode.task_id,))
             if thisNode.status == PENDING or thisNode.status == OFFLINE:
                 newStatus = OFFLINE
             else:
@@ -63,14 +62,15 @@ class RenderTCPServer(TCPServer):
                               host=thisNode.host, newHostStatus=newStatus)
             JobUtils.manageNodeLimit(task.job_id)
 
+        query = "UPDATE hydra_rendernode SET status = %s WHERE host = %s"
         elif thisNode.status == STARTED and not thisNode.task_id:
             logger.warning("Reseting bad status.")
             with transaction() as t:
-                t.cur.execute(query.format("R", self.thisNodeName))
+                t.cur.execute(query, ("R", self.thisNodeName,))
         elif thisNode.status == PENDING and not thisNode.task_id:
             logger.warning("Reseting bad status.")
             with transaction() as t:
-                t.cur.execute(query.format("O", self.thisNodeName))
+                t.cur.execute(query, ("O", self.thisNodeName,))
 
         #Update current software version on the DB if necessary
         current_version = sys.argv[0]
@@ -85,7 +85,7 @@ class RenderTCPServer(TCPServer):
     def processRenderTasks(self):
         """The loop that looks for jobs on the DB and runs them if the node meets
         the job's requirements (Priority & Capabilities)"""
-        [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName))
+        [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s",(self.thisNodeName,))
         debugStr = "Host: {0} Status: {1} Capabilities {2}"
         logger.debug(debugStr.format(thisNode.host,
                                     niceNames[thisNode.status],
@@ -100,6 +100,7 @@ class RenderTCPServer(TCPServer):
         #-Ready to be run and
         #-Has a high enough priority level for this particular node and
         #-Is able to meet to jobs required capabilities
+        #TODO:Secure This?
         queryString = "WHERE status = '{0}'".format(READY)
         queryString += "AND priority >= '{0}'".format(thisNode.minPriority)
         queryString += " AND '{0}' LIKE requirements".format(thisNode.capabilities)
@@ -114,7 +115,8 @@ class RenderTCPServer(TCPServer):
             if not render_tasks:
                 return
             render_task = render_tasks[0]
-            [render_job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(render_task.job_id),
+            [render_job] = hydra_jobboard.secureFetch("WHERE id = %s",
+                                                (render_task.job_id,),
                                                 explicitTransaction = t)
 
             self.taskFile = '"{0}"'.format(render_job.taskFile)
@@ -183,8 +185,9 @@ class RenderTCPServer(TCPServer):
         finally:
             #Get the latest info about this render node
             with transaction() as t:
-                [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNodeName),
-                                                    explicitTransaction=t)
+                [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s",
+                                                            (self.thisNodeName,),
+                                                            explicitTransaction=t)
 
                 error = False
                 #Check if job was killed, update the job board accordingly
@@ -298,7 +301,8 @@ def heartbeat(interval = 5):
     while True:
         try:
             with transaction() as t:
-                t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = '{0}'".format(host))
+                t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = %s",
+                            (host,))
         except Exception, e:
             logger.error(traceback.format_exc(e))
         time.sleep(interval)

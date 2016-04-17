@@ -400,7 +400,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         """Updates widgets on the "This Node" tab with the most recent
         information available."""
         #Update thisNode if it is already set (so we don't error over and over)
-        [self.thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(self.thisNode.host))
+        [self.thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (self.thisNode.host,))
         self.nodeNameLabel.setText(self.thisNode.host)
         self.nodeStatusLabel.setText(niceNames[self.thisNode.status])
         if self.thisNode.task_id:

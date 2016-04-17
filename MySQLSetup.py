@@ -78,8 +78,7 @@ class tupleObject:
             logger.debug (('dirty', k, v))
 
     @classmethod
-    def fetch(cls, whereClause = "", order = None, limit = None,
-               explicitTransaction=None):
+    def fetch(cls, whereClause = "", order = None, limit = None, explicitTransaction=None):
         orderClause = "" if order is None else " " + order + " "
         limitClause = "" if limit is None else " LIMIT {0} ".format(limit)
         select = "SELECT * FROM {0} {1} {2} {3}".format(cls.tableName(), whereClause, orderClause, limitClause)
@@ -87,6 +86,58 @@ class tupleObject:
 
         def doFetch(t):
             t.cur.execute(select)
+            names = [desc[0] for desc in t.cur.description]
+            return [cls (**dict(zip(names, tuple)))
+                    for tuple in t.cur.fetchall()]
+        if explicitTransaction:
+            return doFetch(explicitTransaction)
+        else:
+            with transaction() as t:
+                return doFetch(t)
+
+    @classmethod
+    def secureFetch(cls, whereClause, whereTuple, cols = None, orderTuples = None,
+                    limit = None, explicitTransaction=None):
+        """A fetch function with paramater binding.
+        ie. [thisNode] = hydra_rendernode.fetch("WHERE host = %s", ("test"))
+            idAttr = thisNode.id"""
+        #orderClause = "" if order is None else " " + order + " "
+        #limitClause = "" if limit is None else " LIMIT %s "
+        if orderTuples:
+            if type(orderTuples) is not tuple:
+                logger.error("Bad orderTuple!")
+                return None
+            orderCount = len(orderTuples)
+            for oTuple in orderTuples:
+                if type(oTuple) is not tuple or len(oTuple) != 2:
+                    logger.error("Bad orderTuple!")
+                    return None
+            orderClause = " ORDER BY"
+            for oTuple in orderTuples:
+                orderClause += " %s %s"
+                whereTuple = whereTuple + oTuple
+            orderClause += " "
+        else:
+            orderClause = ""
+        
+        if limit:
+            limitClause = " LIMIT %s "
+            whereTuple = whereTuple + (limit,)
+        else:
+            limitClause = ""
+
+        if cols:
+            cols = [str(x) for x in cols]
+            colStatement = ",".join(cols)
+            select = "SELECT " + colStatement + " FROM {0} {1} {2} {3}"
+        else:
+            select = "SELECT * FROM {0} {1} {2} {3}"
+
+        select =  select.format(cls.tableName(), whereClause, orderClause, limitClause)
+        logger.debug(select % whereTuple)
+
+        def doFetch(t):
+            t.cur.execute(select, whereTuple)
             names = [desc[0] for desc in t.cur.description]
             return [cls (**dict(zip(names, tuple)))
                     for tuple in t.cur.fetchall()]
