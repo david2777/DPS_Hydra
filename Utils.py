@@ -3,6 +3,7 @@
 import ConfigParser
 import os
 import itertools
+import socket
 
 #Hydra
 import Constants
@@ -16,7 +17,7 @@ def myHostName():
     config = ConfigParser.RawConfigParser ()
     config.read(Constants.SETTINGS)
     domain = config.get(section="network", option="dnsDomainExtension")
-    return os.getenv('COMPUTERNAME') + domain
+    return socket.gethostname() + domain
 
 def flanged(name):
     return name.startswith ('__') and name.endswith ('__')

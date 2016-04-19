@@ -6,6 +6,7 @@ import shutil
 
 #Hydra
 import Constants
+from LoggingSetup import logger
 
 #3rd party
 import MySQLdb

@@ -89,6 +89,8 @@
     -[Done]Farmview
     -[Done]Render Node Main
 
+-[Todo]When auto update is on and there is no SQL sever it errors out every x seconds
+
 -[Todo]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
     finished on termination.
