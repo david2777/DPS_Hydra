@@ -14,12 +14,12 @@ from MySQLdb import Error as sqlerror
 #Qt
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from UI_RenderNodeMain import Ui_RenderNodeMainWindow
-from NodeEditorDialog import NodeEditorDialog
-from MessageBoxes import aboutBox, yesNoBox, strBox
+from CompiledUI.UI_RenderNodeMain import Ui_RenderNodeMainWindow
+from Dialogs.NodeEditorDialog import NodeEditorDialog
+from Dialogs.MessageBoxes import aboutBox, yesNoBox, strBox
 
 #Logging
-from LoggingSetup import logger, simpleFormatter
+from Setups.LoggingSetup import logger, simpleFormatter
 
 if sys.argv[0].split(".")[-1] == "exe":
     logger.removeHandler(logger.handlers[0])
@@ -28,13 +28,13 @@ if sys.argv[0].split(".")[-1] == "exe":
 
 #Import after logging setup
 #Hydra
-from MySQLSetup import *
+from Setups.MySQLSetup import *
 from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
-from Threads import stoppableThread, workerSignalThread
+from Setups.Threads import stoppableThread, workerSignalThread
 import RenderNode
-import NodeUtils
-import TaskUtils
+import Utilities.NodeUtils as NodeUtils
+import Utilities.TaskUtils as TaskUtils
 
 class EmittingStream(QObject):
     """For writing text to the console output"""
@@ -92,15 +92,15 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         logger.info('Starting in {0}'.format(os.getcwd()))
         logger.info('arglist is {0}'.format(sys.argv))
         #Get Pixmaps and Icon
-        self.donePixmap = QPixmap("images/status/done.png")
-        self.inProgPixmap = QPixmap("images/status/inProgress.png")
-        self.needsAttentionPixmap = QPixmap("images/status/needsAttention.png")
-        self.nonePixmap = QPixmap("images/status/none.png")
-        self.notStartedPixmap = QPixmap("images/status/notStarted.png")
-        self.refreshPixmap = QPixmap("images/refresh.png")
+        self.donePixmap = QPixmap("Images/status/done.png")
+        self.inProgPixmap = QPixmap("Images/status/inProgress.png")
+        self.needsAttentionPixmap = QPixmap("Images/status/needsAttention.png")
+        self.nonePixmap = QPixmap("Images/status/none.png")
+        self.notStartedPixmap = QPixmap("Images/status/notStarted.png")
+        self.refreshPixmap = QPixmap("Images/refresh.png")
         self.refreshIcon = QIcon()
         self.refreshIcon.addPixmap(self.refreshPixmap)
-        self.RIcon = QIcon('images/RIcon.png')
+        self.RIcon = QIcon('Images/RIcon.png')
 
         self.buildUI()
         self.connectButtons()

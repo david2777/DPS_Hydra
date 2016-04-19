@@ -18,14 +18,14 @@ import signal
 import psutil
 
 #Hydra
-from Servers import TCPServer
-from LoggingSetup import logger
-from Answers import RenderAnswer
-from MySQLSetup import *
+from Networking.Servers import TCPServer
+from Setups.LoggingSetup import logger
+from Networking.Answers import RenderAnswer
+from Setups.MySQLSetup import *
 import Constants
-import Utils
-import JobUtils
-import TaskUtils
+import Utilities.Utils as Utils
+import Utilities.JobUtils as JobUtils
+import Utilities.TaskUtils as TaskUtils
 
 class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):
@@ -51,6 +51,7 @@ class RenderTCPServer(TCPServer):
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         logger.info("Housekeeping...")
         [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (self.thisNodeName,))
+        query = "UPDATE hydra_rendernode SET status = %s WHERE host = %s"
         if thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
             [task] = hydra_taskboard.secureFetch("WHERE id = %s", (thisNode.task_id,))
@@ -61,8 +62,6 @@ class RenderTCPServer(TCPServer):
             TaskUtils.unstick(taskID=thisNode.task_id, newTaskStatus=CRASHED,
                               host=thisNode.host, newHostStatus=newStatus)
             JobUtils.manageNodeLimit(task.job_id)
-
-        query = "UPDATE hydra_rendernode SET status = %s WHERE host = %s"
         elif thisNode.status == STARTED and not thisNode.task_id:
             logger.warning("Reseting bad status.")
             with transaction() as t:
@@ -308,6 +307,7 @@ def heartbeat(interval = 5):
         time.sleep(interval)
 
 def checkRenderNodeInstances():
+    """
     nInstances = len(filter(lambda line: 'RenderNode' in line,
                               subprocess.check_output('tasklist').split('\n')))
     logger.info("{0} RenderNode instances running.".format(nInstances))
@@ -319,7 +319,7 @@ def checkRenderNodeInstances():
 
     elif nInstances == 0 and not sys.argv[0].endswith('.py'):
         logger.warning("Can't find running RenderNodeMain.")
-
+    """
     return True
 
 def main():
