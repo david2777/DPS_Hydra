@@ -17,22 +17,22 @@ from MySQLdb import Error as sqlerror
 #Qt
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from WidgetFactories import *
-from UI_FarmView import Ui_FarmView
-from TaskSearchDialog import TaskSearchDialog
-from JobFilterDialog import JobFilterDialog
-from NodeEditorDialog import NodeEditorDialog
-from DetailedDialog import DetailedDialog
+from Setups.WidgetFactories import *
+from CompiledUI.UI_FarmView import Ui_FarmView
+from Dialogs.TaskSearchDialog import TaskSearchDialog
+from Dialogs.JobFilterDialog import JobFilterDialog
+from Dialogs.NodeEditorDialog import NodeEditorDialog
+from Dialogs.DetailedDialog import DetailedDialog
+from Dialogs.MessageBoxes import aboutBox, yesNoBox, intBox, strBox
 
 #Hydra
-from MySQLSetup import *
-from LoggingSetup import logger
-from MessageBoxes import aboutBox, yesNoBox, intBox, strBox
-from Threads import workerSignalThread
-import Utils
-import TaskUtils
-import JobUtils
-import NodeUtils
+from Setups.MySQLSetup import *
+from Setups.LoggingSetup import logger
+from Setups.Threads import workerSignalThread
+import Utilities.Utils as Utils
+import Utilities.TaskUtils as TaskUtils
+import Utilities.JobUtils as JobUtils
+import Utilities.NodeUtils as NodeUtils
 
 #Parts taken from Cogswell's Project Hydra by David Gladstein and Aaron Cohn
 
