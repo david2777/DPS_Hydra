@@ -1,0 +1,100 @@
+-[Done]Job kill doesn't actually kill the subprocess
+    -[Tried changing, broke logs]Probably because we are using STDOUT
+      -Should switch over to cominicate()
+        -https://docs.python.org/2/library/subprocess.html
+    -Also should add a check to see if it was killed or not
+      -[Solution]If not, us os.kill()
+    -Was caused by subprocess.kill() not working for some reason, using OS now
+
+-[Done]Keep implementing new boards into farm View
+    -[Mostly Done]Update button handlers
+    -[Done]Figure out why table helpers don't like anything other than strings
+    -[Done]Organize FarmView button handlers
+    -[Done]Add NodeUtils for messing with nodes
+    -[Done]Need to be able to see reqs in FarmView
+    -[Done]Add button for viewing logs
+
+-[Done]Overhaul capabilities
+    -Reqs and Capabilities MUST be in alphabetical order and reqs MUST have "%"
+    instead of space and infront/behind to wildcard reqs that the node has but
+    the task doesn't need
+
+-[Done]Overhaul some functions (like getting a row) with the way I've done it on TASC before
+
+-[Done]Overhaul Job Ticket setup
+     -Job should hold a base command, start frame, end frame, and Maya File
+     -Tasks should be run using these and get a dedicated frame number on creation
+
+-[Done]Multi-select for Task View
+    -Will require a lot of reworking of functions that modify tasks
+
+-[Done]Make a Job Status
+    -Done on demand via Farmview when loading shot data for specific shots
+    -Mostly should be done by RenderNodemain when it changes status in DB
+
+-[Done]Make some sort of job submitter
+    -Make a simple one for Maya?
+
+-[Done]Need a way to limit nodes on test jobs
+    -Limited jobs will pause all tasks above the node limit
+    -Seems to be working for now, maybe missed some fringe error cases
+
+-[Done]Make it prefer jobs with higher priority rather than ones submitted first
+    -Changed sorting
+
+-[Done]Make RenderNodeMain not pick up archived jobs
+
+-[Done]Change UI to right click
+    -[Done]Need to separate creation and activation of QMenus for toggles
+        -Solved via class-wide variables instead
+
+-[Done]Change Job/Task Ticketing System
+    -Try not to store the same information over and over
+    -RenderNodeMain will build command
+    -This will make it so we can do stuff like multiple frames on a multi GPU
+    node and multiple frames in a row in the future
+
+    Taskboard:
+    	Remove command
+    	Remove createTime - Move to Job
+    	Remove frame
+    	Add startFrame
+    	Add endFrame
+
+    Jobboard:
+    	Change taskDone to tasksComplete
+    	Change totalTask to tasksTotal
+
+-[Done]Attempts
+
+-[Done]Node does not pickup job it failed on in the past
+
+-[Done]Edit node dialog
+
+-[Todo]Edit job dialog
+
+-[Done]Timeouts
+    -[Done]Add to Submitter Main
+
+-[Done]Change checkbox model on RenderNode tab
+
+-[Testing]Scheduler for onlineing and offlineing nodes
+
+-[Doneish]Overhaul FarmView commands
+     -Maybe too many buttons
+
+-[In Progress]Add filters to JobTable in FarmView
+
+-[Done]Auto update on things like FarmView and RenderNodeMain UI
+    -[Done]Farmview
+    -[Done]Render Node Main
+
+-[Todo]When auto update is on and there is no SQL sever it errors out every x seconds
+
+-[Todo]Render consecutive frames
+    -Needs to update the task board with the number of frames it actually
+    finished on termination.
+
+-[Todo]Detect GPUs and render one job on each GPU
+
+-Everything else
