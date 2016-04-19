@@ -35,9 +35,9 @@ class RenderTCPServer(TCPServer):
             sys.exit(1)
         #Initiate TCP Server
         self.renderServ = TCPServer.__init__(self, *arglist, **kwargs)
-
-        self.si = subprocess.STARTUPINFO()
-        self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        if sys.platform == "win32":
+            self.si = subprocess.STARTUPINFO()
+            self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
         #Setup class variables
         execs = hydra_executable.fetch()
@@ -150,10 +150,15 @@ class RenderTCPServer(TCPServer):
             Utils.flushOut(log)
 
             #Run the job and keep track of the process
-            self.childProcess = subprocess.Popen(self.renderCMD,
-                                                stdout = log,
-                                                stderr = subprocess.STDOUT,
-                                                startupinfo = self.si)
+            if sys.platform == "win32":
+                self.childProcess = subprocess.Popen(self.renderCMD,
+                                                    stdout = log,
+                                                    stderr = subprocess.STDOUT,
+                                                    startupinfo = self.si)
+            else:
+                self.childProcess = subprocess.Popen(self.renderCMD,
+                                                    stdout = log,
+                                                    stderr = subprocess.STDOUT)
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
                                                                 render_task.id))
 
@@ -307,9 +312,13 @@ def heartbeat(interval = 5):
         time.sleep(interval)
 
 def checkRenderNodeInstances():
-    """
-    nInstances = len(filter(lambda line: 'RenderNode' in line,
-                              subprocess.check_output('tasklist').split('\n')))
+    #TODO: Fix This
+    if sys.platform == "win32":
+        nInstances = len(filter(lambda line: 'RenderNode' in line,
+                        subprocess.check_output('tasklist').split('\n')))
+    else:
+        nInstances = len(filter(lambda line: 'RenderNode' in line,
+                        subprocess.check_output(["ps", "-e"]).split('\n')))
     logger.info("{0} RenderNode instances running.".format(nInstances))
 
     if nInstances > 1:
@@ -319,7 +328,7 @@ def checkRenderNodeInstances():
 
     elif nInstances == 0 and not sys.argv[0].endswith('.py'):
         logger.warning("Can't find running RenderNodeMain.")
-    """
+
     return True
 
 def main():
