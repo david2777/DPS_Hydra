@@ -1,7 +1,6 @@
 """Registers a node with the database."""
 #Standard
 import os
-import LoggingSetup
 import ConfigParser
 from MySQLdb import IntegrityError
 

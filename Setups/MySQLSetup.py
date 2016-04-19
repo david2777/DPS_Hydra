@@ -8,7 +8,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #HydraQT
-from LoginWidget import DatabaseLogin, getDbInfo
+from Dialogs.LoginWidget import DatabaseLogin, getDbInfo
 
 #Hydra
 from Setups.LoggingSetup import logger
@@ -119,7 +119,7 @@ class tupleObject:
             orderClause += " "
         else:
             orderClause = ""
-        
+
         if limit:
             limitClause = " LIMIT %s "
             whereTuple = whereTuple + (limit,)

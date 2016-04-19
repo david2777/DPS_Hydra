@@ -46,6 +46,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.setupUi(self)
 
         self.thisNodeName = Utils.myHostName()
+        logger.info("This host is {0}".format(self.thisNodeName))
 
         #My UI Setup Functions
         self.setupTables()
@@ -1336,6 +1337,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             #Node setup and updaters
             self.thisNodeExists = False
             allNodes = hydra_rendernode.fetch(order = "ORDER BY host")
+            logger.info(allNodes)
             thisNode = None
             for node in allNodes:
                 if node.host == self.thisNodeName:

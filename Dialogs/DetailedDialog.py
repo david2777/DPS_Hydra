@@ -4,11 +4,10 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import sys
 import datetime
-from WidgetFactories import *
 
 #Hydra
 from CompiledUI.UI_DetailedDialog import Ui_detailedDialog
-#from FarmView import setupDataGrid, clearLayout
+from Setups.WidgetFactories import *
 from Setups.MySQLSetup import db_username, hydra_jobboard
 
 class DetailedDialog(QDialog, Ui_detailedDialog):
