@@ -14,15 +14,15 @@ import traceback
 import subprocess
 import signal
 
-#3rd Party
+#Third Party
 import psutil
 
 #Hydra
+import Constants
 from Networking.Servers import TCPServer
 from Setups.LoggingSetup import logger
 from Networking.Answers import RenderAnswer
 from Setups.MySQLSetup import *
-import Constants
 import Utilities.Utils as Utils
 import Utilities.JobUtils as JobUtils
 import Utilities.TaskUtils as TaskUtils

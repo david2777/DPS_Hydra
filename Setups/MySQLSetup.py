@@ -1,13 +1,13 @@
 """Setup for MySQL Transactions."""
 #Standard
-import MySQLdb
 import sys
 
-#QT
+#Third Party
+import MySQLdb
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-#HydraQT
+#Hydra Qt
 from Dialogs.LoginWidget import DatabaseLogin, getDbInfo
 
 #Hydra

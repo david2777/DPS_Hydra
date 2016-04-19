@@ -2,13 +2,15 @@
 #Standard
 import os
 import ConfigParser
+
+#Third Party
 from MySQLdb import IntegrityError
 
 #Hydra
-import Utilities.Utils as Utils
 import Constants
-from Setups.MySQLSetup import hydra_rendernode, OFFLINE, transaction
 from Setups.LoggingSetup import logger
+import Utilities.Utils as Utils
+from Setups.MySQLSetup import hydra_rendernode, OFFLINE, transaction
 
 config = ConfigParser.RawConfigParser ()
 config.read(Constants.SETTINGS)

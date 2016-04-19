@@ -1,11 +1,12 @@
 """Things that will remain constant. Also makes them easy to change in here..."""
+#Standard
 import os
 import sys
 import getpass
 
 PORT = 3606
-HOSTNAME = "localhost" # for testing on a single machine
-#HOSTNAME = "154-01"    # for testing on another machine
+HOSTNAME = "localhost" #For testing on a single machine
+#HOSTNAME = "154-01"    #For testing on another machine
 MANYBYTES = 1 << 20
 
 if sys.platform == "win32":

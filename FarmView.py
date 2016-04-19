@@ -1,22 +1,22 @@
 """The software for managing jobs, tasks, and nodes."""
 #Standard
-import sys
 import os
+import re
+import sys
+import time
 import fnmatch
-import webbrowser
-from exceptions import NotImplementedError
 import datetime
 import functools
-import re
-import time
+import webbrowser
 from socket import error as socketerror
+from exceptions import NotImplementedError
 
-#3rd party
+#Third Party
 from MySQLdb import Error as sqlerror
-
-#Qt
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+
+#Hydra Qt
 from Setups.WidgetFactories import *
 from CompiledUI.UI_FarmView import Ui_FarmView
 from Dialogs.TaskSearchDialog import TaskSearchDialog

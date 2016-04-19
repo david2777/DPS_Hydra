@@ -5,8 +5,10 @@ from PyQt4.QtCore import *
 import sys
 import datetime
 
-#Hydra
+#Hydra Qt
 from CompiledUI.UI_DetailedDialog import Ui_detailedDialog
+
+#Hydra
 from Setups.WidgetFactories import *
 from Setups.MySQLSetup import db_username, hydra_jobboard
 

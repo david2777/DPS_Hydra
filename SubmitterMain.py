@@ -5,20 +5,20 @@ import sys
 import os
 import getopt
 
-#QT
+#Third Party
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-#HydraQT
+#Hydra Qt
 from CompiledUI.UI_Submitter import Ui_MainWindow
 
 #Hydra
+import Constants
 from Setups.MySQLSetup import db_username, hydra_capabilities, hydra_executable
 from Setups.LoggingSetup import logger
 from Dialogs.MessageBoxes import aboutBox, yesNoBox
 from Setups.JobTicket import UberJobTicket
 import Utilities.JobUtils as JobUtils
-import Constants
 
 class SubmitterMain(QMainWindow, Ui_MainWindow):
     def __init__(self):

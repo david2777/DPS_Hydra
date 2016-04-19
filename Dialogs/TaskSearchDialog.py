@@ -1,9 +1,9 @@
 """A dialog for searching for a task."""
-#Standard
+#Third Party
 from PyQt4.QtGui import QDialog
 from PyQt4.QtCore import QObject, SIGNAL
 
-#Hydra
+#Hydra Qt
 from CompiledUI.UI_TaskSearchDialog import Ui_taskSearchDialog
 
 #Original Author: Aaron Cohn

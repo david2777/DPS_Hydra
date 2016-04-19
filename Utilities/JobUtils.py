@@ -3,7 +3,7 @@
 import sys
 from socket import error as socketerror
 
-#3rd party
+#Third Party
 from MySQLdb import Error as sqlerror
 
 #Hydra

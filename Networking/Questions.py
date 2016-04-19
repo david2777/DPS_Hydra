@@ -1,4 +1,4 @@
-"""Questions you can ask nodes, can probably be cleaned up a bit to get rid 
+"""Questions you can ask nodes, can probably be cleaned up a bit to get rid
 of legacy stuff that isn't used anymore."""
 #Standard
 import time
@@ -11,8 +11,6 @@ import datetime
 #Hydra
 from Networking.Answers import TimeAnswer, EchoAnswer, CMDAnswer, RenderAnswer, KillCurrentJobAnswer
 from Setups.MySQLSetup import hydra_taskboard
-#Not needed?
-#import RenderNodeMain
 from Constants import RENDERLOGDIR
 
 #Authors: David Gladstein and Aaron Cohn

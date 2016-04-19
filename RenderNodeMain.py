@@ -10,15 +10,10 @@ import time
 
 #Third Party
 from MySQLdb import Error as sqlerror
-
-#Qt
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-from CompiledUI.UI_RenderNodeMain import Ui_RenderNodeMainWindow
-from Dialogs.NodeEditorDialog import NodeEditorDialog
-from Dialogs.MessageBoxes import aboutBox, yesNoBox, strBox
 
-#Logging
+#Logging and Logging Setup
 from Setups.LoggingSetup import logger, simpleFormatter
 
 if sys.argv[0].split(".")[-1] == "exe":
@@ -26,13 +21,17 @@ if sys.argv[0].split(".")[-1] == "exe":
     logger.propagate = False
     logger.debug("Running as exe!")
 
-#Import after logging setup
+#Hydra Qt
+from CompiledUI.UI_RenderNodeMain import Ui_RenderNodeMainWindow
+from Dialogs.NodeEditorDialog import NodeEditorDialog
+from Dialogs.MessageBoxes import aboutBox, yesNoBox, strBox
+
 #Hydra
+import RenderNode
 from Setups.MySQLSetup import *
 from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
 from Setups.Threads import stoppableThread, workerSignalThread
-import RenderNode
 import Utilities.NodeUtils as NodeUtils
 import Utilities.TaskUtils as TaskUtils
 

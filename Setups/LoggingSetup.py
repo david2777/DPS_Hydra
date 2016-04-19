@@ -1,11 +1,11 @@
 """Sets up a global logger instance for use in other modules."""
 #Standard
-import logging                      # @UnusedImport
-import logging.handlers
 import os
+import logging
+import logging.handlers
 from sys import argv
 
-#Project Hydra
+#Hydra
 from Constants import BASELOGDIR
 
 #Originally By : David Gladstein

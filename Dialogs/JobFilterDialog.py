@@ -1,8 +1,10 @@
 """A dialog called in FarmView to filter the jobs loaded into the Job Table."""
 #Standard
+import sys
+
+#Third Party
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-import sys
 
 #Hydra
 from CompiledUI.UI_JobFilter import Ui_jobFilterDialog

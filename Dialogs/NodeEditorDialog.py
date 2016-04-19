@@ -1,12 +1,16 @@
 """Update Me!"""
 #Standard
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
 import sys
 import datetime
 
-#Hydra
+#Third Party
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+
+#Hydra Qt
 from CompiledUI.UI_NodeEditor import Ui_nodeEditorDialog
+
+#Hydra
 from Setups.MySQLSetup import db_username, hydra_capabilities, hydra_executable
 
 class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):

@@ -2,7 +2,7 @@
 #Standard
 import sys
 
-#3rd party
+#Third Party
 from MySQLdb import Error as sqlerror
 
 #Hydra

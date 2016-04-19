@@ -6,7 +6,7 @@ from datetime import datetime
 
 #Hydra
 from Setups.LoggingSetup import logger
-from Setups.MySQLSetup import hydra_jobboard, hydra_taskboard, hydra_executable, transaction
+from Setups.MySQLSetup import *
 
 """
 Contains a class with functions for submitting a job to the DB.

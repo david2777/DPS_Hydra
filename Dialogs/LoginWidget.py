@@ -4,18 +4,18 @@ import os
 import ConfigParser
 import shutil
 
+#Third Party
+import MySQLdb
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
+
+#Hydra Qt
+from CompiledUI.UI_Login import Ui_Login
+
 #Hydra
 import Constants
 from Setups.LoggingSetup import logger
-
-#3rd party
-import MySQLdb
-
-#QT
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-from CompiledUI.UI_Login import Ui_Login
-from MessageBoxes import aboutBox
+from Dialogs.MessageBoxes import aboutBox
 
 def getDbInfo():
     SETTINGS = Constants.SETTINGS
