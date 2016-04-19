@@ -56,7 +56,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.thisNodeButtonsEnabled = True
 
         #Get user
-        self.username = getDbInfo()[2]
+        self.username = Utils.getDbInfo()[2]
 
         #Globals
         self.filters = None

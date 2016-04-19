@@ -8,14 +8,14 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra Qt
-from Dialogs.LoginWidget import DatabaseLogin, getDbInfo
+from Dialogs.LoginWidget import DatabaseLogin
 
 #Hydra
 from Setups.LoggingSetup import logger
 import Utilities.Utils as Utils
 
 ##########AUTO LOGIN##########
-autoLogin = True
+autoLogin = eval(Utils.getInfoFromCFG("database", "autologin"))
 #Constants
 db_username = "UNKOWN"
 
@@ -205,7 +205,7 @@ class transaction:
     global autoLogin
     if autoLogin:
         logger.debug("Auto login enabled.")
-        _db_host, _db_name, _db_username, _db_password = getDbInfo()
+        _db_host, _db_name, _db_username, _db_password = Utils.getDbInfo()
     else:
         app = QApplication(sys.argv)
         loginWin = DatabaseLogin()
