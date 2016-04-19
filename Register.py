@@ -6,10 +6,10 @@ import ConfigParser
 from MySQLdb import IntegrityError
 
 #Hydra
-import Utilities.Utils as Utils
+import Utils
 import Constants
-from Setups.MySQLSetup import hydra_rendernode, OFFLINE, transaction
-from Setups.LoggingSetup import logger
+from MySQLSetup import hydra_rendernode, OFFLINE, transaction
+from LoggingSetup import logger
 
 config = ConfigParser.RawConfigParser ()
 config.read(Constants.SETTINGS)
