@@ -318,7 +318,7 @@ def checkRenderNodeInstances():
                         subprocess.check_output('tasklist').split('\n')))
     else:
         nInstances = len(filter(lambda line: 'RenderNode' in line,
-                        subprocess.check_output(["ps", "-e"]).split('\n')))
+                        subprocess.check_output(["ps", "-af"]).split('\n')))
     logger.info("{0} RenderNode instances running.".format(nInstances))
 
     if nInstances > 1:

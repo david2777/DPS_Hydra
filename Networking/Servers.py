@@ -9,6 +9,7 @@ import time
 #Hydra
 import Constants
 from Setups.LoggingSetup import logger
+from Utilities.Utils import getInfoFromCFG
 
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
@@ -38,7 +39,9 @@ class MySocketServer(SocketServer.TCPServer):
     allow_reuse_address = True
 
 class TCPServer(Server):
-    def __init__(self, port = Constants.PORT):
+    def __init__(self, port = None):
+        if not port:
+            port = int(getInfoFromCFG("database", "port"))
         MyTCPHandler.TCPserver = self
         logger.info('Open TCPServer Socket @ Port {0}'.format(port))
         self.threadVar = True

@@ -8,6 +8,7 @@ import pickle
 import Networking.Servers as Servers
 import Constants
 from Setups.LoggingSetup import logger
+from Utilities.Utils import getInfoFromCFG
 
 #Original Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
@@ -30,10 +31,12 @@ class LocalConnection(Connection):
 
 class TCPConnection(Connection):
     """A connection to a remote Hydra server, using TCP"""
-    def __init__(self,
-                  hostname = Constants.HOSTNAME,
-                  port = Constants.PORT):
+    def __init__(self, hostname = None, port = None):
         """Constructor. Supply a hostname to connect to another computer."""
+        if not hostname:
+            hostname = getInfoFromCFG("database", "host")
+        if not port:
+            port = int(getInfoFromCFG("database", "port"))
         self.hostname = hostname
         self.port = port
 
