@@ -109,7 +109,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         except Exception, e:
             logger.error(traceback.format_exc(e))
 
-        self.autoUpdate = True
         self.autoUpdateThread = workerSignalThread("run", 15)
         QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.updateThisNodeInfo)
         self.autoUpdateThread.start()
@@ -229,13 +228,13 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             event.ignore()
 
     def autoUpdateHandler(self):
-        """Toggles Auto Updater"""
-        if self.autoUpdate == True:
+        """Toggles Auto Updater
+        Note that this is run AFTER the CheckState is changed so when we do
+        .isChecked() it's looking for the state after it has been checked."""
+        if not self.autoUpdateCheckBox.isChecked():
             self.autoUpdateThread.terminate()
-            self.autoUpdate = False
         else:
             self.autoUpdateThread.start()
-            self.autoUpdate = True
 
     def showWindowHandler(self):
         self.isVisable = True

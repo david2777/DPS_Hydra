@@ -69,7 +69,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.currentJobSel = None
         self.newestJobID = 0
 
-        self.autoUpdate = True
         self.autoUpdateThread = workerSignalThread("run", 10)
         QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
 
@@ -101,7 +100,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "registered if you wish to see this node's information."))
 
         self.doFetch()
-        self.autoUpdateThread.start()
+        if self.thisNodeExists:
+            self.autoUpdateThread.start()
+        else:
+            self.autoUpdateCheckbox.setCheckState(0)
+            self.autoUpdateCheckbox.setEnabled(False)
 
     def closeEvent(self, event):
         event.accept()
@@ -1242,13 +1245,13 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
 
     def autoUpdateHandler(self):
-        """Toggles Auto Updater"""
-        if self.autoUpdate == True:
+        """Toggles Auto Updater
+        Note that this is run AFTER the CheckState is changed so when we do
+        .isChecked() it's looking for the state after it has been checked."""
+        if not self.autoUpdateCheckbox.isChecked():
             self.autoUpdateThread.terminate()
-            self.autoUpdate = False
         else:
             self.autoUpdateThread.start()
-            self.autoUpdate = True
 
     def onlineThisNodeHandler(self):
         """Changes the local render node's status to online if it was offline,
@@ -1360,6 +1363,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
             self.initJobTable()
         except sqlerror as err:
+            self.autoUpdateCheckbox.setCheckState(0)
             logger.error(str(err))
             self.sqlErrorBox()
 
@@ -1383,6 +1387,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 if self.thisNodeExists:
                     self.updateThisNodeInfo(thisNode)
         except sqlerror as err:
+            self.autoUpdateCheckbox.setCheckState(0)
             logger.error(str(err))
             self.sqlErrorBox()
 
