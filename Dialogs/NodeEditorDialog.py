@@ -1,7 +1,6 @@
 """Update Me!"""
 #Standard
 import sys
-import datetime
 
 #Third Party
 from PyQt4.QtGui import *

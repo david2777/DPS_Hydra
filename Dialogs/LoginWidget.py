@@ -1,8 +1,5 @@
 #Standard
 import sys
-import os
-import ConfigParser
-import shutil
 
 #Third Party
 import MySQLdb

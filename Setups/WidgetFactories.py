@@ -1,6 +1,11 @@
+#Standard
+import functools
+
 #Third Party
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
+
+from Setups.LoggingSetup import logger
 
 class widgetFactory():
     """A widget building class intended to be subclassed for building particular
@@ -57,14 +62,6 @@ class buttonFactory(widgetFactory):
 
     def doNothing(self):
         pass
-
-class versionLabelFactory(widgetFactory):
-    """Builds a label specially for the software_version column in the render
-    node table, trimming out non-essential information in the process."""
-
-    def dataWidget(self, record):
-        sw_version_text = getSoftwareVersionText(self.data(record))
-        return QLabel(sw_version_text)
 
 class getOffButton(widgetFactory):
     """As above, but makes a specialized button to implement the GetOff

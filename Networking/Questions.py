@@ -18,7 +18,7 @@ from Constants import RENDERLOGDIR
 
 class Question:
     """Interface for Question objects."""
-    def computeAnswer( self, server ):
+    def computeAnswer(self, server):
         """
         Override this method when creating a Question subclass
         code in this method will be run by the server

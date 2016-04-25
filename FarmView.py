@@ -9,7 +9,6 @@ import datetime
 import functools
 import webbrowser
 from socket import error as socketerror
-from exceptions import NotImplementedError
 
 #Third Party
 from MySQLdb import Error as sqlerror
@@ -294,14 +293,14 @@ class FarmView(QMainWindow, Ui_FarmView):
                                     "Only show the jobs belonging to the "
                                     "current user")
         userFilterAction.setCheckable(True)
-        if self.userFilter == True:
+        if self.userFilter:
             userFilterAction.setChecked(True)
 
         archivedFilterAction = addItem("Show Archived Jobs",
                                         self.archivedFilterContextHandler,
                                         "Show jobs which have been archived")
         archivedFilterAction.setCheckable(True)
-        if self.showArchivedFilter == True:
+        if self.showArchivedFilter:
             archivedFilterAction.setChecked(True)
 
         addItem("Filters...",
@@ -311,7 +310,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobMenu.popup(QCursor.pos())
 
     def userFilterContextHandler(self):
-        if self.userFilter == True:
+        if self.userFilter:
             self.userFilterCheckbox.setChecked(0)
         else:
             self.userFilterCheckbox.setChecked(2)
@@ -319,7 +318,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.resetStatusBar()
 
     def archivedFilterContextHandler(self):
-        if self.showArchivedFilter == True:
+        if self.showArchivedFilter:
             self.archivedCheckBox.setChecked(0)
         else:
             self.archivedCheckBox.setChecked(2)
@@ -327,7 +326,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.resetStatusBar()
 
     def userFilterActionHandler(self):
-        if self.userFilter == True:
+        if self.userFilter:
             self.userFilter = False
             self.userFilterCheckbox.setChecked(0)
         else:
@@ -336,7 +335,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.initJobTable()
 
     def archivedFilterActionHandler(self):
-        if self.showArchivedFilter == True:
+        if self.showArchivedFilter:
             self.showArchivedFilter = False
             self.archivedCheckBox.setChecked(0)
         else:
@@ -365,7 +364,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             if False in statuses:
                 idx = 0
                 for i in range(len(statuses)):
-                    if statuses[i] == False:
+                    if not statuses[i]:
                         if command != "WHERE" and idx == 0:
                             command += " AND"
                         if idx == 0:
@@ -930,32 +929,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         """Given a task id, finds the job, selects it in the job table, and
         displays the tasks for that job, including the one searched for. Does
         nothing if task id doesn't exist."""
-
-        #Retrieve job id by task id in the database
-        task_id = str(self.taskIDLineEdit.text())
-        if task_id:
-            with transaction() as t:
-                query = "SELECT job_id FROM hydra_taskboard WHERE id = '{0}'".format(task_id)
-                t.cur.execute(query)
-                job_id = t.cur.fetchall()
-
-                if not job_id:
-                    aboutBox(self, "Error", "The given task ID does not "
-                             "correspond to an existing job.")
-                    return
-
-                #Find item with matching job id in the table
-                ((job_id,),) = job_id # unpack -- TODO: fix this hack?
-                [item] = self.jobTable.findItems(str(job_id), Qt.MatchExactly)
-
-                #Select the row and trigger the update for the task list
-                self.jobTable.setCurrentItem(item)
-                self.jobCellClickedHandler(item.row())
-                [item] = self.taskTable.findItems(str(task_id), Qt.MatchExactly)
-                self.taskTable.setCurrentItem(item)
-        else:
-            aboutBox(self, "Error", "No task ID was entered.")
-            return
+        pass
+        #TODO: Fix this
 
     #---------------------------------------------------------------------#
     #---------------------------NODE HANDLERS-----------------------------#
@@ -1131,8 +1106,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             aboutBox(self, "Aborted", "No action taken.")
             return
 
-        error = False
-        notKilledList = list()
         with transaction() as t:
             rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
             for thisNode in rendernode_rows:
@@ -1536,14 +1509,12 @@ def loadLog(record):
             logger.info("Opening Log File @ {0}".format(str(logFile)))
             webbrowser.open(logFile)
         else:
-            aboutBox(self,
-                    "Invalid Log File Path",
+            aboutBox("Invalid Log File Path",
                     "Invalid log file path for task: {0}".format(record.id))
             logger.error("Invalid log file path for task: {0}".format(record.id))
             logger.error(logFile)
     else:
-        aboutBox(self,
-                "No Log on File",
+        aboutBox("No Log on File",
                 "No log on file for task: {0}\nJob was probably never started or was recently reset.".format(record.id))
         logger.warning("No log file on record for task: {0}".format(record.id))
 

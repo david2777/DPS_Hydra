@@ -87,8 +87,8 @@ class tupleObject:
         def doFetch(t):
             t.cur.execute(select)
             names = [desc[0] for desc in t.cur.description]
-            return [cls (**dict(zip(names, tuple)))
-                    for tuple in t.cur.fetchall()]
+            return [cls (**dict(zip(names, tup)))
+                    for tup in t.cur.fetchall()]
         if explicitTransaction:
             return doFetch(explicitTransaction)
         else:
@@ -107,7 +107,6 @@ class tupleObject:
             if type(orderTuples) is not tuple:
                 logger.error("Bad orderTuple!")
                 return None
-            orderCount = len(orderTuples)
             for oTuple in orderTuples:
                 if type(oTuple) is not tuple or len(oTuple) != 2:
                     logger.error("Bad orderTuple!")
@@ -139,8 +138,8 @@ class tupleObject:
         def doFetch(t):
             t.cur.execute(select, whereTuple)
             names = [desc[0] for desc in t.cur.description]
-            return [cls (**dict(zip(names, tuple)))
-                    for tuple in t.cur.fetchall()]
+            return [cls (**dict(zip(names, tup)))
+                    for tup in t.cur.fetchall()]
         if explicitTransaction:
             return doFetch(explicitTransaction)
         else:
@@ -166,8 +165,8 @@ class tupleObject:
         transaction.cur.executemany(query, [values])
         if self.autoColumn:
             transaction.cur.execute("SELECT last_insert_id()")
-            [id] = transaction.cur.fetchone()
-            self.__dict__[self.autoColumn] = id
+            [insert_id] = transaction.cur.fetchone()
+            self.__dict__[self.autoColumn] = insert_id
 
     def update(self, transaction):
         names = list(self.__dirty__)
@@ -235,7 +234,7 @@ class transaction:
         self.cur.execute("start transaction")
         return self
 
-    def __exit__(self, errorType, value, traceback):
+    def __exit__(self, errorType, traceback, value):
         if errorType is None:
             logger.debug("commit %s", self)
             self.cur.execute ("commit")

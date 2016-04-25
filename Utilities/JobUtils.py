@@ -28,13 +28,13 @@ def changeStatusViaJobID(job_id, new_status, old_status_list=[]):
     with transaction() as t:
         t.cur.execute(command)
 
-    updateJobTaskCount()
+    updateJobTaskCount(job_id)
 
 def updateJobTaskCount(job_id, tasks = None, commit = False):
     """Function for updating the job task count.
     Takes job_id and optional tasks so we don't have to hit the DB server 2x
     @return Total tasks and total complete tasks as intigers"""
-    if tasks == None:
+    if not tasks:
         tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
     taskCount = len(tasks)
     tasksComplete = 0

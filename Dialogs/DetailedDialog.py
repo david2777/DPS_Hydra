@@ -2,8 +2,6 @@
 #Standard
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
-import sys
-import datetime
 
 #Hydra Qt
 from CompiledUI.UI_DetailedDialog import Ui_detailedDialog
