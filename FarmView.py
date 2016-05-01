@@ -225,6 +225,18 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.centralMenu.popup(QCursor.pos())
 
+    def revealDetailedHandler(self, qtTable, qtIdx, qtRows, sqlTable, sqlWhere):
+        dataList = []
+        for row in qtRows:
+            if type(row) == int:
+                data_id = int(qtTable.item(row, 0).text())
+            else:
+                data_id = row
+            [data] = sqlTable.secureFetch(sqlWhere, (data_id))
+            dataList.append(data)
+
+        DetailedDialog.create(dataList)
+
     #---------------------------------------------------------------------#
     #----------------------------JOB HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
@@ -275,8 +287,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "Reset the number of tasks which are ready to match the limit "
                 "of the number of concurant tasks.")
         addItem("Reveal Detailed Data...",
-                self.revealDetailedHandler,
-                "Opens a dialog window the detailed data on each job.")
+                self.revealJobDetailedHandler,
+                "Opens a dialog window the detailed data for the selected jobs.")
         self.jobMenu.addSeparator()
         #setJobPriorityHandler
         addItem("Set Job Priority...",
@@ -682,17 +694,11 @@ class FarmView(QMainWindow, Ui_FarmView):
             finally:
                 self.initJobTable()
 
-    def revealDetailedHandler(self):
+    def revealJobDetailedHandler(self):
         rows = self.jobTableHandler()
         if not rows:
             return
-        jobs = []
-        for row in rows:
-            job_id = int(self.jobTable.item(row, 0).text())
-            [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id))
-            jobs.append(job)
-
-        DetailedDialog.create(jobs)
+        self.revealDetailedHandler(self.jobTable, 0, rows, hydra_jobboard, "WHERE id = %s")
 
     #---------------------------------------------------------------------#
     #---------------------------TASK HANDLERS-----------------------------#
@@ -709,28 +715,23 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        addItem("Soft Update",
-                self.doUpdate,
+        addItem("Soft Update", self.doUpdate,
                 "Update with the most important information from the Database")
-        addItem("Full Update",
-                self.doFetch,
+        addItem("Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.taskMenu.addSeparator()
-        addItem("Start Tasks",
-                self.startTaskHandler,
+        addItem("Start Tasks", self.startTaskHandler,
                 "Start all tasks selected in the Task List")
-        addItem("Pause Tasks",
-                self.pauseTaskHandler,
+        addItem("Pause Tasks", self.pauseTaskHandler,
                 "Pause all tasks selected in the Task List")
-        addItem("Kill Tasks",
-                self.killTaskHandler,
+        addItem("Kill Tasks", self.killTaskHandler,
                 "Kill all tasks selected in the Task List")
-        addItem("Reset Tasks",
-                self.resetTaskHandler,
+        addItem("Reset Tasks", self.resetTaskHandler,
                 "Reset all tasks selected in the Task List")
         self.taskMenu.addSeparator()
-        addItem("Load LogFile",
-                self.loadLogHandler,
+        addItem("Reveal Detailed Data...", self.revealTaskDetailedHandler,
+                "Opens a dialog window the detailed data for the selected tasks.")
+        addItem("Load LogFile", self.loadLogHandler,
                 "Load the log file for all tasks selected in the Task List")
         self.taskMenu.popup(QCursor.pos())
 
@@ -923,6 +924,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         logger.info(self.jobCommandBuilder())
         self.initJobTable()
 
+    def revealTaskDetailedHandler(self):
+        rows = self.taskTableHandler()
+        if not rows:
+            return
+        self.revealDetailedHandler(self.taskTable, 0, rows, hydra_taskboard, "WHERE id = %s")
+
     def searchByTaskID(self):
         """Given a task id, finds the job, selects it in the job table, and
         displays the tasks for that job, including the one searched for. Does
@@ -974,6 +981,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.selectByHostHandler,
                 "Open a dialog to check nodes based on their host name")
         self.nodeMenu.addSeparator()
+        addItem("Reveal Detailed Data...", self.revealNodeDetailedHandler,
+                "Opens a dialog window the detailed data for the selected nodes.")
         addItem("Edit Node...",
                 self.nodeEditorTableHandler,
                 "Open a dialog to edit selected node's attributes. WIP.")
@@ -1185,6 +1194,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                 #logger.debug(query)
                 with transaction() as t:
                     t.cur.execute(query)
+
+    def revealNodeDetailedHandler(self):
+        rows = self.renderNodeTableHandler()
+        if not rows:
+            return
+        self.revealDetailedHandler(self.renderNodeTable, 0, rows, hydra_rendernode, "WHERE host = %s")
 
     def selectAllNodesHandler(self):
         rows = self.renderNodeTable.rowCount()

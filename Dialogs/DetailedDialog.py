@@ -7,15 +7,15 @@ from PyQt4.QtCore import *
 from CompiledUI.UI_DetailedDialog import Ui_detailedDialog
 
 #Hydra
-from Setups.WidgetFactories import *
+from Setups.WidgetFactories import labelFactory
 from Setups.MySQLSetup import db_username, hydra_jobboard
 
 class DetailedDialog(QDialog, Ui_detailedDialog):
-    def __init__(self, jobs, parent=None):
+    def __init__(self, data, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
 
-        self.jobs = jobs
+        self.data = data
         #Connect Buttons
         self.okButton.clicked.connect(self.okButtonHandler)
 
@@ -25,28 +25,15 @@ class DetailedDialog(QDialog, Ui_detailedDialog):
         self.close()
 
     def updateRenderJobGrid(self):
-        columns = [
-            labelFactory('id'),
-            labelFactory('owner'),
-            labelFactory('niceName'),
-            labelFactory('taskFile'),
-            labelFactory('baseCMD'),
-            labelFactory('startFrame'),
-            labelFactory('endFrame'),
-            labelFactory('execName'),
-            labelFactory('phase'),
-            labelFactory('requirements'),
-            labelFactory('job_status'),
-            labelFactory('maxNodes'),
-            labelFactory('creationTime')
-        ]
+        columns = self.data[0].__dict__.keys()
+        columns = [labelFactory(col) for col in columns if col.find("__") is not 0]
 
         clearLayout(self.detailedGridLayout)
-        setupDataGrid(self.jobs, columns, self.detailedGridLayout)
+        setupDataGrid(self.data, columns, self.detailedGridLayout)
 
     @classmethod
-    def create(cls, jobs):
-        dialog = DetailedDialog(jobs)
+    def create(cls, data):
+        dialog = DetailedDialog(data)
         dialog.exec_()
 
 
@@ -76,34 +63,3 @@ def clearLayout(layout):
             child.widget().deleteLater()
         elif child.layout() is not None:
             clearLayout(child.layout())
-
-class widgetFactory():
-    """A widget building class intended to be subclassed for building particular
-    types of widgets. 'name' must be the name of a database column."""
-
-    def __init__(self, name, intention = None):
-        self.name = name
-        self.intention = intention
-
-    def headerWidget(self):
-        """Makes a label for the header row of the display."""
-
-        return QLabel('<b>' + self.name + '</b>')
-
-    def data(self, record):
-
-        return str(getattr(record, self.name))
-
-    def dataWidget(self, record):
-        """Create a QWidget instance and return a reference to it. To make a
-        widget, given a record, extract the named attribute from the record
-        with the data method, and use that as the widget's text/data."""
-
-        raise NotImplementedError
-
-class labelFactory(widgetFactory):
-    """A label widget factory. The object's name is the name of a database
-    column."""
-
-    def dataWidget(self, record):
-        return QLabel(self.data(record))
