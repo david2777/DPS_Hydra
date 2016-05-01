@@ -104,6 +104,9 @@
     </item>
     <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
       <widget class="QWidget" name="jobListTab">
        <attribute name="title">
         <string>Job List</string>
@@ -143,33 +146,6 @@
             <property name="horizontalSpacing">
              <number>6</number>
             </property>
-            <item row="1" column="1">
-             <spacer name="horizontalSpacer_jobList">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item row="1" column="2">
-             <widget class="QCheckBox" name="archivedCheckBox">
-              <property name="text">
-               <string>Show Archived Jobs</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="3">
-             <widget class="QCheckBox" name="userFilterCheckbox">
-              <property name="text">
-               <string>Only Show My Jobs</string>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="0">
              <widget class="QLabel" name="jobTableLabel">
               <property name="text">
@@ -177,7 +153,7 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="0" colspan="5">
+            <item row="2" column="0" colspan="5">
              <widget class="QTableWidget" name="jobTable">
               <property name="font">
                <font>
@@ -255,31 +231,31 @@
               </column>
              </widget>
             </item>
-            <item row="2" column="0" colspan="4">
-             <widget class="QTreeWidget" name="jobTree">
-              <property name="alternatingRowColors">
-               <bool>true</bool>
+            <item row="1" column="2">
+             <widget class="QCheckBox" name="archivedCheckBox">
+              <property name="text">
+               <string>Show Archived Jobs</string>
               </property>
-              <property name="selectionMode">
-               <enum>QAbstractItemView::ExtendedSelection</enum>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <spacer name="horizontalSpacer_jobList">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
               </property>
-              <property name="indentation">
-               <number>15</number>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
               </property>
-              <attribute name="headerDefaultSectionSize">
-               <number>50</number>
-              </attribute>
-              <attribute name="headerMinimumSectionSize">
-               <number>50</number>
-              </attribute>
-              <attribute name="headerShowSortIndicator" stdset="0">
-               <bool>false</bool>
-              </attribute>
-              <column>
-               <property name="text">
-                <string>1</string>
-               </property>
-              </column>
+             </spacer>
+            </item>
+            <item row="1" column="3">
+             <widget class="QCheckBox" name="userFilterCheckbox">
+              <property name="text">
+               <string>Only Show My Jobs</string>
+              </property>
              </widget>
             </item>
            </layout>

@@ -19,7 +19,6 @@ from PyQt4.QtCore import *
 from Setups.WidgetFactories import *
 from CompiledUI.UI_FarmView import Ui_FarmView
 from Dialogs.TaskSearchDialog import TaskSearchDialog
-from Dialogs.JobFilterDialog import JobFilterDialog
 from Dialogs.NodeEditorDialog import NodeEditorDialog
 from Dialogs.DetailedDialog import DetailedDialog
 from Dialogs.MessageBoxes import aboutBox, yesNoBox, intBox, strBox
@@ -58,7 +57,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.username = Utils.getDbInfo()[2]
 
         #Globals
-        self.filters = None
         self.userFilter = False
         self.showArchivedFilter = False
 
@@ -99,6 +97,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "registered if you wish to see this node's information."))
 
         self.doFetch()
+        self.initJobTree()
         if self.thisNodeExists:
             self.autoUpdateThread.start()
         else:
@@ -237,6 +236,73 @@ class FarmView(QMainWindow, Ui_FarmView):
         DetailedDialog.create(dataList)
 
     #---------------------------------------------------------------------#
+    #------------------------------JOB TREE-------------------------------#
+    #---------------------------------------------------------------------#
+
+    def jobTreeHandler(self):
+        items = self.jobTree.selectedItems()
+        itemList = []
+        for item in items:
+            if item.parent():
+                itemList.append(int(item.text(1)))
+        logger.info(itemList)
+        return itemList
+
+    def jobTreeClickedHandler(self):
+        item = self.jobTree.currentItem()
+        if item.parent():
+            self.initTaskTable(int(item.text(1)), 0)
+        else:
+            pass
+
+    def addJobTreeShot(self, project, shot, job):
+        proj = self.jobTree.findItems(project, Qt.MatchContains)
+        if proj != []:
+            item = QTreeWidgetItem(proj[0], shot)
+        else:
+            root = QTreeWidgetItem(self.jobTree, [project])
+            root.setFont(0, QFont('Segoe UI', 10, QFont.DemiBold))
+            item = QTreeWidgetItem(root, shot)
+
+        item.setBackgroundColor(3, niceColors[job.job_status])
+        if job.archived == 1:
+            item.setBackgroundColor(0, QColor(220,220,220))
+            item.setBackgroundColor(1, QColor(220,220,220))
+            item.setBackgroundColor(2, QColor(220,220,220))
+            item.setBackgroundColor(4, QColor(220,220,220))
+            item.setBackgroundColor(5, QColor(220,220,220))
+        if job.owner == self.username:
+            item.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
+
+    def populateJobTree(self):
+        jobs = hydra_jobboard.fetch()
+        for job in jobs:
+            if job.tasksTotal > 0:
+                percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
+                taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete,
+                                                    job.tasksTotal)
+            else:
+                taskString = "0% (0/0)"
+
+            jobData = [job.niceName, str(job.id), job.owner,
+                        niceNames[job.job_status], taskString, str(job.priority)]
+            self.addJobTreeShot(job.projectName, jobData, job)
+
+    def initJobTree(self):
+        self.jobTree.itemClicked.connect(self.jobTreeClickedHandler)
+        header = QTreeWidgetItem(["Name", "ID", "Owner", "Status", "Tasks",
+                                    "Priority"])
+        self.jobTree.setHeaderItem(header)
+        #Must set widths AFTER setting header
+        self.jobTree.setColumnWidth(0, 250)        #Project/Name
+        self.jobTree.setColumnWidth(1, 50)         #ID
+        self.jobTree.setColumnWidth(2, 100)        #Owner
+        self.jobTree.setColumnWidth(3, 60)         #Status
+        self.jobTree.setColumnWidth(4, 60)         #Tasks
+        self.jobTree.setColumnWidth(5, 50)         #Priority
+        self.populateJobTree()
+
+    #---------------------------------------------------------------------#
     #----------------------------JOB HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
 
@@ -313,11 +379,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         archivedFilterAction.setCheckable(True)
         if self.showArchivedFilter:
             archivedFilterAction.setChecked(True)
-
-        addItem("Filters...",
-                self.filterJobHandler,
-                "Open filters dialog to select which types of jobs are shown "
-                "in the Job List")
         self.jobMenu.popup(QCursor.pos())
 
     def userFilterContextHandler(self):
@@ -356,35 +417,6 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def jobCommandBuilder(self, update = False):
         command = "WHERE"
-        if self.filters != None:
-            checkboxKeys = ["C", "E", "F", "K", "R", "S", "U"]
-            users = self.filters["owner"].split(",")
-            names = self.filters["name"].split(",")
-            statuses = self.filters["status"]
-            limit = self.filters["limit"]
-            if users[0] != "":
-                command += " owner = '{0}'".format(users[0])
-                for user in users[1:]:
-                    command += " OR owner = '{0}'".format(user)
-            if names[0] != "":
-                if command != "WHERE":
-                    command += " AND"
-                command += " niceName LIKE '{0}'".format(names[0])
-                for name in names[1:]:
-                    command += " OR niceName LIKE '{0}'".format(name)
-            if False in statuses:
-                idx = 0
-                for i in range(len(statuses)):
-                    if not statuses[i]:
-                        if command != "WHERE" and idx == 0:
-                            command += " AND"
-                        if idx == 0:
-                            command += " job_status <> '{0}'".format(checkboxKeys[i])
-                            idx += 1
-                        else:
-                            command += " AND job_status <> '{0}'".format(checkboxKeys[i])
-                            idx += 1
-
         if command.find("owner = ") < 0:
             if self.userFilter:
                 if command != "WHERE":
@@ -400,9 +432,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                 command += " AND"
             command += " id > '{0}'".format(self.newestJobID)
 
-        if self.filters != None:
-            command += " LIMIT 0,{0}".format(limit)
-
         if command == "WHERE":
             command = ""
 
@@ -417,8 +446,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             for row, job in enumerate(jobs):
                 self.insertJobTableItem(job, row)
             labelText = "Job List"
-            if self.filters:
-                labelText += " (Filtered)"
             if self.userFilter:
                 labelText += " (This User Only)"
             if not self.showArchivedFilter:
@@ -765,7 +792,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 8, TableWidgetItem_int(str(task.exitCode)))
                 self.taskTable.setItem(pos, 9, TableWidgetItem_int(reqsString))
 
-            self.updateJobRow(job, row, tasks)
+            #self.updateJobRow(job, row, tasks)
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
@@ -779,6 +806,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         item = self.jobTable.item(row, 0)
         job_id = int(item.text())
         self.initTaskTable(job_id, row)
+
 
     def reloadTaskTable(self):
         row = self.jobTable.selectionModel().selectedRows()[0].row()
@@ -916,12 +944,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         results = TaskSearchDialog.create()
         logger.error("Not Implemeted!")
         print results
-
-    def filterJobHandler(self):
-        self.filters = JobFilterDialog.create(self.filters)
-        #logger.debug(self.filters)
-        logger.info(self.jobCommandBuilder())
-        self.initJobTable()
 
     def revealTaskDetailedHandler(self):
         rows = self.taskTableHandler()
