@@ -79,6 +79,8 @@ class tupleObject:
 
     @classmethod
     def fetch(cls, whereClause = "", order = None, limit = None, explicitTransaction=None):
+        """A deprecated method for easily fethcing information from the SQL server.
+        This is insecure and vulnerable to SQL injection so don't use it where possible."""
         orderClause = "" if order is None else " " + order + " "
         limitClause = "" if limit is None else " LIMIT {0} ".format(limit)
         select = "SELECT * FROM {0} {1} {2} {3}".format(cls.tableName(), whereClause, orderClause, limitClause)
