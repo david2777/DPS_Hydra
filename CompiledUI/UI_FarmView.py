@@ -84,6 +84,7 @@ class Ui_FarmView(object):
         self.jobTree.setAlternatingRowColors(True)
         self.jobTree.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
         self.jobTree.setIndentation(15)
+        self.jobTree.setAnimated(True)
         self.jobTree.setObjectName(_fromUtf8("jobTree"))
         self.jobTree.header().setDefaultSectionSize(50)
         self.jobTree.header().setMinimumSectionSize(50)
