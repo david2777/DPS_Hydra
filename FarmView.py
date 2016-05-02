@@ -60,11 +60,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.userFilter = False
         self.showArchivedFilter = False
 
-        self.statusMsg = ""
+        self.statusMsg = "ERROR"
 
-        self.lastJTUpdate = False
         self.currentJobSel = None
-        self.newestJobID = 0
 
         self.autoUpdateThread = workerSignalThread("run", 10)
         QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
@@ -97,7 +95,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "registered if you wish to see this node's information."))
 
         self.doFetch()
-        self.initJobTree()
         if self.thisNodeExists:
             self.autoUpdateThread.start()
         else:
@@ -388,8 +385,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         jobs = self.fetchJobs()
         if not jobs:
             return None
-
-        self.newestJobID = max([job.id for job in jobs])
 
         for job in jobs:
             jobData = self.getJobData(job)
@@ -838,11 +833,21 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.revealDetailedHandler(task_id_list, hydra_taskboard, "WHERE id = %s")
 
     def searchByTaskID(self):
-        """Given a task id, finds the job, selects it in the job table, and
+        """~~UNTESTED~~
+        Given a task id, finds the job, selects it in the job table, and
         displays the tasks for that job, including the one searched for. Does
         nothing if task id doesn't exist."""
-        pass
-        #TODO: Fix this
+        reply = intBox(self, "Search for job via TaskID", 0)
+        if reply[1]:
+            taskID = int(reply[0])
+            cmd = "SELECT job_id FROM hydra_taskboard WHERE id = %s"
+            with transaction() as t:
+                [task] = t.cur.execute(cmd, (taskID))
+            shotItem = self.jobTree.findItems(str(task.job_id), Qt.MatchRecursive, 1)
+            if shotItem != []:
+                self.jobTree.itemClicked(shotItem[0], 0)
+            else:
+                self.aboutBox("Error!", "Could not find job for given task!")
 
     #---------------------------------------------------------------------#
     #---------------------------NODE HANDLERS-----------------------------#
@@ -1086,7 +1091,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                         "comps" : comps}
             edits = NodeEditorDialog.create(defaults)
             #logger.debug(edits)
-            #TODO: Secure this
             if edits:
                 query = "UPDATE hydra_rendernode"
                 query += " SET minPriority = '{0}'".format(edits["priority"])
@@ -1232,7 +1236,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             #Node setup and updaters
             self.thisNodeExists = False
-            #TODO: Secure?
             allNodes = hydra_rendernode.fetch(order = "ORDER BY host")
             logger.info(allNodes)
             thisNode = None
@@ -1243,19 +1246,14 @@ class FarmView(QMainWindow, Ui_FarmView):
             if thisNode:
                 self.thisNodeExists = True
 
-            if self.thisNodeExists:
-                #self.updateThisNodeInfo(thisNode)
-                pass
-            else:
+            if not self.thisNodeExists:
                 self.nodeDoesNotExistBox()
                 self.setThisNodeButtonsEnabled(False)
 
             self.initRenderNodeTable(allNodes)
             self.updateStatusBar(thisNode)
 
-            #self.updateRenderJobGrid()
-
-            self.populateJobTree()
+            self.initJobTree()
         except sqlerror as err:
             self.autoUpdateCheckbox.setCheckState(0)
             logger.error(str(err))
@@ -1306,23 +1304,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.pulseLabel.setText(str(thisNode.pulse))
 
     def updateRenderJobGrid(self):
-        columns = [
-            labelFactory('id'),
-            labelFactory('owner'),
-            labelFactory('niceName'),
-            labelFactory('taskFile'),
-            labelFactory('baseCMD'),
-            labelFactory('startFrame'),
-            labelFactory('endFrame'),
-            labelFactory('execName'),
-            labelFactory('phase'),
-            labelFactory('requirements'),
-            labelFactory('job_status'),
-            labelFactory('maxNodes'),
-            labelFactory('creationTime')
-        ]
         command = "WHERE archived = '0' ORDER BY id DESC LIMIT %s"
         records = hydra_jobboard.secureFetch(command, (self.limitSpinBox.value()))
+        columns = records[0].__dict__.keys()
+        columns = [labelFactory(col) for col in columns if col.find("__") is not 0]
 
         clearLayout(self.taskGrid)
         setupDataGrid(records, columns, self.taskGrid)
