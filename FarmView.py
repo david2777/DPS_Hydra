@@ -298,6 +298,26 @@ class FarmView(QMainWindow, Ui_FarmView):
             archivedFilterAction.setChecked(True)
         self.jobMenu.popup(QCursor.pos())
 
+    def fetchJobs(self):
+        cmd = self.jobCommandBuilder()
+        try:
+            return hydra_jobboard.fetch(cmd)
+        except sqlerror as err:
+            logger.debug(str(err))
+            aboutBox(self, "SQL error", str(err))
+            return None
+
+    def getJobData(self, job):
+        if job.tasksTotal > 0:
+            percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
+            taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete,
+                                                job.tasksTotal)
+        else:
+            taskString = "0% (0/0)"
+
+        return [job.niceName, str(job.id), job.owner, niceNames[job.job_status],
+                taskString, str(job.priority)]
+
     def jobTreeHandler(self):
         mySel = self.jobTree.selectedItems()
         if len(mySel) < 1:
@@ -310,62 +330,70 @@ class FarmView(QMainWindow, Ui_FarmView):
         for sel in mySel:
             #Check if this is a child
             if sel.parent():
-                job_id_list.append(int(item.text(1)))
+                job_id_list.append(int(sel.text(1)))
 
         if job_id_list == []:
             return None
         return job_id_list
 
+    def jobTreeItemHandler(self):
+        mySel = self.jobTree.selectedItems()
+        if len(mySel) < 1:
+            aboutBox(self,
+                    "Selection Error",
+                    "Please select something from the Job Table and try again.")
+            return None
+        return mySel
+
     def jobTreeClickedHandler(self):
-        item = self.jobTree.currentItem()
-        if item.parent():
-            self.initTaskTable(int(item.text(1)), 0)
-        else:
-            pass
+        shotItem = self.jobTree.currentItem()
+        if shotItem.parent():
+            self.initTaskTable(int(shotItem.text(1)), shotItem)
 
-    def addJobTreeShot(self, project, shot, job):
-        proj = self.jobTree.findItems(project, Qt.MatchContains)
+    def addJobTreeShot(self, jobData, job):
+        proj = self.jobTree.findItems(str(job.projectName), Qt.MatchContains)
         if proj != []:
-            item = QTreeWidgetItem(proj[0], shot)
+            #If project was found search for job
+            shotItem = self.jobTree.findItems(str(job.id), Qt.MatchRecursive, 1)
+            if shotItem != []:
+                #If job was found update it
+                shotItem = shotItem[0]
+                shotItem.setData(0,0,jobData[0])
+                shotItem.setData(1,0,jobData[1])
+                shotItem.setData(2,0,jobData[2])
+                shotItem.setData(3,0,jobData[3])
+                shotItem.setData(4,0,jobData[4])
+                shotItem.setData(5,0,jobData[5])
+            else:
+                #If job was not found add it as a new item
+                shotItem = QTreeWidgetItem(proj[0], jobData)
         else:
-            root = QTreeWidgetItem(self.jobTree, [project])
+            #If project was not found add it and the item
+            root = QTreeWidgetItem(self.jobTree, [str(job.projectName)])
             root.setFont(0, QFont('Segoe UI', 10, QFont.DemiBold))
-            item = QTreeWidgetItem(root, shot)
+            shotItem = QTreeWidgetItem(root, jobData)
 
-        item.setBackgroundColor(3, niceColors[job.job_status])
+        #Update colors and stuff
+        shotItem.setBackgroundColor(3, niceColors[job.job_status])
         if job.archived == 1:
-            item.setBackgroundColor(0, QColor(220,220,220))
-            item.setBackgroundColor(1, QColor(220,220,220))
-            item.setBackgroundColor(2, QColor(220,220,220))
-            item.setBackgroundColor(4, QColor(220,220,220))
-            item.setBackgroundColor(5, QColor(220,220,220))
+            shotItem.setBackgroundColor(0, QColor(220,220,220))
+            shotItem.setBackgroundColor(1, QColor(220,220,220))
+            shotItem.setBackgroundColor(2, QColor(220,220,220))
+            shotItem.setBackgroundColor(4, QColor(220,220,220))
+            shotItem.setBackgroundColor(5, QColor(220,220,220))
         if job.owner == self.username:
-            item.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
+            shotItem.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
 
     def populateJobTree(self):
-        try:
-            jobs = hydra_jobboard.fetch()
-        except sqlerror as err:
-            logger.debug(str(err))
-            aboutBox(self, "SQL error", str(err))
+        jobs = self.fetchJobs()
+        if not jobs:
             return None
 
-        self.jobTree.clear()
+        self.newestJobID = max([job.id for job in jobs])
 
         for job in jobs:
-            if job.tasksTotal > 0:
-                percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
-                taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete,
-                                                    job.tasksTotal)
-            else:
-                taskString = "0% (0/0)"
-
-            jobData = [job.niceName, str(job.id), job.owner,
-                        niceNames[job.job_status], taskString, str(job.priority)]
-            self.addJobTreeShot(job.projectName, jobData, job)
-
-        if jobs:
-            self.newestJobID = max([job.id for job in jobs])
+            jobData = self.getJobData(job)
+            self.addJobTreeShot(jobData, job)
 
         labelText = "Job List"
         if self.userFilter:
@@ -387,6 +415,25 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTree.setColumnWidth(4, 60)         #Tasks
         self.jobTree.setColumnWidth(5, 50)         #Priority
         self.populateJobTree()
+
+    def updateJobTreeRow(self, job_id, shotItem):
+        [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id))
+        data = self.getJobData(job)
+        shotItem.setData(0,0,data[0])
+        shotItem.setData(1,0,data[1])
+        shotItem.setData(2,0,data[2])
+        shotItem.setData(3,0,data[3])
+        shotItem.setData(4,0,data[4])
+        shotItem.setData(5,0,data[5])
+        shotItem.setBackgroundColor(3, niceColors[job.job_status])
+        if job.archived == 1:
+            shotItem.setBackgroundColor(0, QColor(220,220,220))
+            shotItem.setBackgroundColor(1, QColor(220,220,220))
+            shotItem.setBackgroundColor(2, QColor(220,220,220))
+            shotItem.setBackgroundColor(4, QColor(220,220,220))
+            shotItem.setBackgroundColor(5, QColor(220,220,220))
+        if job.owner == self.username:
+            shotItem.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
 
     def userFilterContextHandler(self):
         if self.userFilter:
@@ -411,6 +458,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             self.userFilter = True
             self.userFilterCheckbox.setChecked(2)
+        self.jobTree.clear()
         self.populateJobTree()
 
     def archivedFilterActionHandler(self):
@@ -420,25 +468,17 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             self.showArchivedFilter = True
             self.archivedCheckBox.setChecked(2)
+        self.jobTree.clear()
         self.populateJobTree()
 
-    def jobCommandBuilder(self, update = False):
-        #TODO:Fix this
+    def jobCommandBuilder(self):
         command = "WHERE"
-        if command.find("owner = ") < 0:
-            if self.userFilter:
-                if command != "WHERE":
-                    command += " AND"
-                command += " owner = '{0}'".format(self.username)
-            if not self.showArchivedFilter:
-                if command != "WHERE":
-                    command += " AND"
-                command += " archived = 0"
-
-        if update:
+        if self.userFilter:
+            command += " owner = '{0}'".format(self.username)
+        if not self.showArchivedFilter:
             if command != "WHERE":
                 command += " AND"
-            command += " id > '{0}'".format(self.newestJobID)
+            command += " archived = 0"
 
         if command == "WHERE":
             command = ""
@@ -450,7 +490,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
         for row in rows:
             JobUtils.startJob(job_id)
-        #self.initJobTable()
+        self.populateJobTree()
 
     def killJobHandler(self):
         job_ids = self.jobTreeHandler()
@@ -491,7 +531,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     aboutBox(self,
                             "Error",
                             "One or more nodes couldn't kill their tasks.")
-                #self.initJobTable()
+                self.populateJobTree()
 
     def resetJobHandler(self):
         job_ids = self.jobTreeHandler()
@@ -513,7 +553,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 aboutBox(self, "SQL Error", str(err))
             finally:
                 pass
-                #self.initJobTable()
+                self.populateJobTree()
 
     def resetNodeManagementHandler(self):
         job_ids = self.jobTreeHandler()
@@ -526,23 +566,22 @@ class FarmView(QMainWindow, Ui_FarmView):
             for job_id in job_ids:
                 JobUtils.setupNodeLimit(job_id)
 
-        #self.initJobTable()
+        self.populateJobTree()
 
     def setJobPriorityHandler(self):
-        #TODO: Make a rows handler to get default job_priority
-        job_ids = self.jobTreeHandler()
-        if not job_ids:
+        selection = self.jobTreeItemHandler()
+        if not selection:
             return
-        for job_id in job_ids:
-            #job_priority = int(self.jobTable.item(row, 1).text())
-            job_priority = 50
+        for sel in selection:
+            job_id = int(sel.text(1))
+            job_priority = int(sel.text(5))
             msgString = "Priority for job {0}:".format(job_id)
             reply = intBox(self, "Set Job Priority", msgString , job_priority)
             if reply[1]:
                 JobUtils.prioritizeJob(job_id, reply[0])
             else:
                 logger.info("prioritizeJob skipped on {0}".format(job_id))
-        #self.initJobTable()
+        self.populateJobTree()
 
     def toggleArchiveHandler(self):
         job_ids = self.jobTreeHandler()
@@ -574,7 +613,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 aboutBox(self, "SQL Error", str(err))
             finally:
                 pass
-                #self.initJobTable()
+                self.populateJobTree()
 
     def revealJobDetailedHandler(self):
         job_ids = self.jobTreeHandler()
@@ -617,7 +656,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "Load the log file for all tasks selected in the Task List")
         self.taskMenu.popup(QCursor.pos())
 
-    def initTaskTable(self, job_id, row):
+    def initTaskTable(self, job_id, shotItem):
         [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id))
         self.currentJobSel = job.id
         sString = "Task List (Job ID: {0}) (Node Limit: {1})".format(str(job_id),
@@ -648,7 +687,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 8, TableWidgetItem_int(str(task.exitCode)))
                 self.taskTable.setItem(pos, 9, TableWidgetItem_int(reqsString))
 
-            #self.updateJobRow(job, row, tasks)
+            JobUtils.updateJobTaskCount(job_id, tasks = tasks, commit = True)
+            self.updateJobTreeRow(job_id, shotItem)
 
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
@@ -692,13 +732,12 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def callTestFrameBox(self):
         try:
-            rows = self.jobTreeHandler()
-            if not rows:
+            job_ids = self.jobTreeHandler()
+            if not job_ids:
                 return
-            row = rows[0]
+            job_id = job_ids[0]
             reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
             if reply[1]:
-                job_id = int(self.jobTree.item(row, 0).text())
                 logger.info("Starting {0} test frames on job_id {1}".format(reply[0], job_id))
                 tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id))
                 for task in tasks[0:reply[0]]:
@@ -708,7 +747,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id))
                     job.job_status = "S"
                     job.update(t)
-                #self.initJobTable()
+                self.populateJobTree()
             else:
                 logger.info("No test tasks started.")
         except IndexError:

@@ -1,5 +1,3 @@
-CREATE DATABASE  IF NOT EXISTS `hydra` /*!40100 DEFAULT CHARACTER SET utf8 */;
-USE `hydra`;
 -- MySQL dump 10.13  Distrib 5.7.9, for Win64 (x86_64)
 --
 -- Host: 127.0.0.1    Database: hydra
@@ -52,10 +50,8 @@ DROP TABLE IF EXISTS `hydra_holidays`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hydra_holidays` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `date` char(10) DEFAULT NULL COMMENT 'Date of a holiday, format is YEAR,MONTH,DAY ie. 2015,11,26',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+  `date` char(10) DEFAULT NULL COMMENT 'Date of a holiday, format is YEAR,MONTH,DAY ie. 2015,11,26'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -85,8 +81,9 @@ CREATE TABLE `hydra_jobboard` (
   `maxNodes` int(4) DEFAULT '0' COMMENT 'Max nodes a job should run on',
   `archived` int(4) DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
   `timeout` smallint(6) DEFAULT '0' COMMENT 'Timeout measured in seconds',
+  `projectName` varchar(60) DEFAULT 'UnknownProject',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -135,7 +132,7 @@ CREATE TABLE `hydra_taskboard` (
   `maxAttempts` int(4) DEFAULT '3' COMMENT 'Maximum number of attempts allowed',
   `failures` varchar(80) DEFAULT '' COMMENT 'List of nodes where this task has already failed seperated by spaces',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=73 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -147,4 +144,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-04-10 23:05:49
+-- Dump completed on 2016-05-01 20:58:57
