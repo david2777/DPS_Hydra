@@ -104,9 +104,6 @@
     </item>
     <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
-      <property name="currentIndex">
-       <number>0</number>
-      </property>
       <widget class="QWidget" name="jobListTab">
        <attribute name="title">
         <string>Job List</string>
@@ -146,96 +143,31 @@
             <property name="horizontalSpacing">
              <number>6</number>
             </property>
-            <item row="1" column="0">
-             <widget class="QLabel" name="jobTableLabel">
-              <property name="text">
-               <string>Job List:</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0" colspan="5">
-             <widget class="QTableWidget" name="jobTable">
-              <property name="font">
-               <font>
-                <pointsize>8</pointsize>
-               </font>
-              </property>
-              <property name="contextMenuPolicy">
-               <enum>Qt::CustomContextMenu</enum>
-              </property>
-              <property name="layoutDirection">
-               <enum>Qt::LeftToRight</enum>
-              </property>
-              <property name="autoFillBackground">
-               <bool>false</bool>
-              </property>
-              <property name="frameShape">
-               <enum>QFrame::StyledPanel</enum>
-              </property>
-              <property name="editTriggers">
-               <set>QAbstractItemView::NoEditTriggers</set>
-              </property>
-              <property name="selectionBehavior">
-               <enum>QAbstractItemView::SelectRows</enum>
-              </property>
-              <property name="showGrid">
+            <item row="2" column="0" colspan="4">
+             <widget class="QTreeWidget" name="jobTree">
+              <property name="alternatingRowColors">
                <bool>true</bool>
               </property>
-              <property name="sortingEnabled">
-               <bool>true</bool>
+              <property name="selectionMode">
+               <enum>QAbstractItemView::ExtendedSelection</enum>
               </property>
-              <property name="cornerButtonEnabled">
+              <property name="indentation">
+               <number>15</number>
+              </property>
+              <attribute name="headerDefaultSectionSize">
+               <number>50</number>
+              </attribute>
+              <attribute name="headerMinimumSectionSize">
+               <number>50</number>
+              </attribute>
+              <attribute name="headerShowSortIndicator" stdset="0">
                <bool>false</bool>
-              </property>
-              <property name="columnCount">
-               <number>6</number>
-              </property>
-              <attribute name="horizontalHeaderStretchLastSection">
-               <bool>true</bool>
-              </attribute>
-              <attribute name="verticalHeaderVisible">
-               <bool>false</bool>
-              </attribute>
-              <attribute name="verticalHeaderDefaultSectionSize">
-               <number>20</number>
               </attribute>
               <column>
                <property name="text">
-                <string>Job ID</string>
+                <string>1</string>
                </property>
               </column>
-              <column>
-               <property name="text">
-                <string>Priority</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Status</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Owner</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Tasks</string>
-               </property>
-              </column>
-              <column>
-               <property name="text">
-                <string>Job Name</string>
-               </property>
-              </column>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QCheckBox" name="archivedCheckBox">
-              <property name="text">
-               <string>Show Archived Jobs</string>
-              </property>
              </widget>
             </item>
             <item row="1" column="1">
@@ -255,6 +187,20 @@
              <widget class="QCheckBox" name="userFilterCheckbox">
               <property name="text">
                <string>Only Show My Jobs</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="jobTableLabel">
+              <property name="text">
+               <string>Job List:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QCheckBox" name="archivedCheckBox">
+              <property name="text">
+               <string>Show Archived Jobs</string>
               </property>
              </widget>
             </item>

@@ -1268,13 +1268,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                 #Job List
                 self.populateJobTree()
                 self.updateTaskTable()
-            elif curTab == 1:
-                #Render Node
                 self.updateRenderNodeTable()
-            elif curTab == 2:
+            elif curTab == 1:
                 #Recent Jobs
                 self.updateRenderJobGrid()
-            elif curTab == 3:
+            elif curTab == 2:
                 #This Node
                 if self.thisNodeExists:
                     self.updateThisNodeInfo(thisNode)
