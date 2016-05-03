@@ -39,7 +39,6 @@ def getDbInfo():
     db = getInfoFromCFG("database", "db")
     username = getInfoFromCFG("database", "username")
     password = getInfoFromCFG("database", "password")
-
     return host, db, username, password
 
 def myHostName():

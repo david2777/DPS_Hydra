@@ -19,16 +19,18 @@ def changeStatusViaJobID(job_id, new_status, old_status_list=[]):
     if type(old_status_list) is not list:
         logger.error("Bad Old Status List in TaskUtils!")
         raise Exception("Please use a list for old statuses")
-    command = "UPDATE hydra_taskboard SET status = '{0}' WHERE job_id = '{1}'".format(new_status, job_id)
+    command = "UPDATE hydra_taskboard SET status = %s WHERE job_id = %s"
+    commandTuple = (new_status, job_id)
     if len(old_status_list) > 0:
-        command += " AND status = '{0}'".format(old_status_list[0])
+        command += " AND status = %s"
+        commandTuple += (old_status_list[0],)
         for status in old_status_list[1:]:
-            command += " OR status = '{0}'".format(status)
-
+            command += " OR status = %s"
+            commandTuple += (status,)
     with transaction() as t:
-        t.cur.execute(command)
+        t.cur.execute(command, commandTuple)
 
-    updateJobTaskCount(job_id)
+    updateJobTaskCount(job_id, tasks = None, commit = True)
 
 def updateJobTaskCount(job_id, tasks = None, commit = False):
     """Function for updating the job task count.
@@ -38,48 +40,45 @@ def updateJobTaskCount(job_id, tasks = None, commit = False):
         tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
     taskCount = len(tasks)
     tasksComplete = 0
-    error = 0
-    killed = 0
-    started = 0
-    ready = 0
+    error = False
+    killed = False
+    started = False
+    ready = False
     for task in tasks:
         if task.status == "F":
             tasksComplete += 1
         elif task.status == "E" or task.status == "C" or task.status == "T":
-            error = 1
+            error = True
         elif task.status == "S":
-            started = 1
+            started = True
         elif task.status == "R":
-            ready = 1
+            ready = True
         elif task.status == "K":
-            killed = 1
+            killed = True
     #If there is an error on any, mark job as error
     #Else, If total done == total tasks, mark job as done
     #Else, If there are any killed tasks, mark job as killed
     #Else, If there are any tasks started, mark job as started
     #Else, If there are any tasks marked as ready, mark job as ready
     #Else, mark as paused (I think that covers all of our bases)
-    if error == 1:
+    if error:
         jobStatus = "E"
     elif tasksComplete == taskCount:
         jobStatus = "F"
-    elif killed == 1:
+    elif killed:
         jobStatus = "K"
-    elif started == 1:
+    elif started:
         jobStatus = "S"
-    elif ready == 1:
+    elif ready:
         jobStatus = "R"
     else:
         jobStatus = "U"
 
     if commit:
-        cmdList = ["UPDATE hydra_jobboard SET tasksComplete = '{0}'".format(tasksComplete),
-                    ", tasksTotal = '{0}'".format(taskCount),
-                    ", job_status = '{0}' WHERE id = {1}".format(jobStatus, job_id)]
-        cmd = "".join(cmdList)
-
+        command = "UPDATE hydra_jobboard SET tasksComplete = %s, tasksTotal = %s, job_status = %s WHERE id = %s"
+        commandTuple = (tasksComplete, taskCount, jobStatus, job_id)
         with transaction() as t:
-            t.cur.execute(cmd)
+            t.cur.execute(command, commandTuple)
 
     return taskCount, tasksComplete
 
@@ -96,20 +95,20 @@ def killJob(job_id, newStatus = "K"):
     set by newStatus. If a task was already started, an a kill request
     is sent to the host running it.
     @return: False if no errors while killing started tasks, else True"""
-    tasks =  hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
-    response = False
+    tasks =  hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
     if tasks:
         responses = [TaskUtils.killTask(task.id, newStatus) for task in tasks]
         updateJobTaskCount(job_id, tasks)
-    return True if True in responses else False
+        return True if True in responses else False
+    else:
+        return False
 
 def resetJob(job_id, newStatus = "R"):
     """Resets every task associated with job_id. Reset jobs have the status code
     set by newStatus.
     @return: True means there was an error, false means there were not
     any errors."""
-    tasks = hydra_taskboard.fetch("WHERE job_id = {0}".format(job_id))
-    returnCode = False
+    tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
     responses = [TaskUtils.resetTask(task.id, newStatus) for task in tasks]
     updateJobTaskCount(job_id, tasks)
     return True if True in responses else False
@@ -117,8 +116,8 @@ def resetJob(job_id, newStatus = "R"):
 def prioritizeJob(job_id, priority):
     """Update a the priority for a job AND all of it's tasks"""
     with transaction() as t:
-        t.cur.execute("UPDATE hydra_jobboard SET priority = '{0}' WHERE id = '{1}'".format(priority, job_id))
-        t.cur.execute("UPDATE hydra_taskboard SET priority = '{0}' WHERE job_id = '{1}'".format(priority, job_id))
+        t.cur.execute("UPDATE hydra_jobboard SET priority = %s WHERE id = %s", (priority, job_id))
+        t.cur.execute("UPDATE hydra_taskboard SET priority = %s WHERE job_id = %s", (priority, job_id))
 
 def setupNodeLimit(job_id, hold_status = "M"):
     """A function for setting up the node limit on a job. The node limiting system
@@ -126,31 +125,30 @@ def setupNodeLimit(job_id, hold_status = "M"):
     nodes then the job will only have a maxiumum of 3 tasks ready or started
     at a time. manageNodeLimit is run after every task and will ready a new task
     if applicable."""
-    [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
+    [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id,))
     taskLimit = job.maxNodes
     if taskLimit < 1:
         return
 
-    tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
+    tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
     startTasks = tasks[0:taskLimit]
     holdTasks = tasks[taskLimit:]
 
-    for task in startTasks:
-        TaskUtils.startTask(task.id)
+    map(TaskUtils.startTask, startTasks)
 
     with transaction() as t:
         for task in holdTasks:
-            t.cur.execute("UPDATE hydra_taskboard SET status = '{0}' WHERE id = '{1}' AND status = '{2}'".format(hold_status, task.id, READY))
+            t.cur.execute("UPDATE hydra_taskboard SET status = %s WHERE id = %s AND status = %s", (hold_status, task.id, READY))
 
 def manageNodeLimit(job_id, hold_status = "M"):
     """The counterpart to setupNodeLimit. This is run by RenderNodeMain after
     every task. For more info see setupNodeLimit doc string."""
-    [job] = hydra_jobboard.fetch("WHERE id = '{0}'".format(job_id))
+    [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id,))
     taskLimit = job.maxNodes
     if taskLimit < 1:
         return
 
-    tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
+    tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
     startList = []
 
     for task in tasks:

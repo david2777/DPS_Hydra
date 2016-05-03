@@ -16,24 +16,25 @@ Also has a main function for generating test data.
 class UberJobTicket:
     """A Ticket Class for submitting jobs and their subtasks."""
     def __init__(self, execName, baseCMD, startFrame, endFrame, byFrame, taskFile, priority,
-                phase, jobStatus, niceName, owner, compatabilityList, maxNodes, timeout):
+                phase, jobStatus, niceName, owner, compatabilityList, maxNodes, timeout, project):
 
         #Looks good, let's setup our class variables
         self.execName = execName        #VARCHAR(20)
         self.baseCMD = baseCMD          #VARCHAR(255)
-        self.startFrame = startFrame    #SMALLINT   ie.(0-65535)
-        self.endFrame = endFrame        #SMALLINT   ie.(0-65535)
-        self.byFrame = byFrame          #TINYINT   ie.(0-255)
+        self.startFrame = startFrame    #SMALLINT(6)    ie.(0-65535)
+        self.endFrame = endFrame        #SMALLINT(6)    ie.(0-65535)
+        self.byFrame = byFrame          #TINYINT(4)     ie.(0-255)
         self.taskFile = taskFile        #VARCHAR(255)
-        self.priority = priority        #TINYINT    ie.(0-255)
-        self.phase = phase              #TINYINT    ie.(0-255)
+        self.priority = priority        #TINYINT(4)     ie.(0-255)
+        self.phase = phase              #TINYINT(4)     ie.(0-255)
         self.jobStatus = jobStatus      #CHAR(1)
         self.niceName = niceName        #VARCHAR(60)
         self.owner = owner              #VARCHAR(45)
         self.compatabilityPattern = self.compatabilityBuilder(compatabilityList)    #VARCHAR(255)
-        self.createTime = datetime.now()
-        self.maxNodes = maxNodes
-        self.timeout = int(timeout * 60)
+        self.createTime = datetime.now()#DATETIME
+        self.maxNodes = maxNodes        #TINYINT(4)     ie.(0-255)
+        self.timeout = int(timeout * 60)#SMALLINT(6)    ie.(0-65535)
+        self.project = project          #VARCHAR(60)
 
         self.frameRange = range(self.startFrame, self.endFrame)
         self.frameList = self.frameRange[0::self.byFrame]
@@ -72,7 +73,8 @@ class UberJobTicket:
                             tasksComplete = 0,
                             tasksTotal = self.frameCount,
                             maxNodes = self.maxNodes,
-                            timeout = self.timeout)
+                            timeout = self.timeout,
+                            projectName = self.project)
 
         with transaction() as t:
             job.insert(transaction=t)
@@ -154,25 +156,28 @@ class UberJobTicket:
         return "\n".join(reprList)
 
 
-if __name__ == "__main__":
+def testJobs():
     prompt = raw_input("Create test Job? ").lower()
     if prompt == "yes" or prompt == "y":
-        baseCMD = "-x 640 -y 360 -rl Beauty -proj \\\\zed\\Lego -rd C:\\Users\DPSPurple\\Desktop\\testFrames"
-        mayaFile = "\\\\zed\\Lego\\Legodk\\LEGO Minecraft\\1HY16_Loopable_Spins\\21125\\Animation\\seq_010\\shot_010_0010\\maya\\lighting\\Minecraft_21125_shot_010_0010_lit_v08.ma"
+        baseCMD = "-cam RenderCam -rl Beauty -proj \\\\Sample\\Proj -rd \\\\This\\Is\\A\\Sample\\File\\Directory"
+        mayaFile = "\\\\This\\Is\\A\\Sample\\File\\Directory\\Sample_Job_Test_010_0010_v01.ma"
         startFrame = 101
         endFrame = 275
-        byFrame = 30
         priority = 50
-        niceName = "Minecraft_Test"
+        niceName = "Sample_Job_Test_010_0010_v01"
         owner = "dduvoisin"
         compatabilityList = ["MentalRay", "Maya2015"]
 
-        uberPhase01 = UberJobTicket("maya2015Render", baseCMD, startFrame, endFrame, byFrame, mayaFile,
-        priority, 1, "R", niceName + "_PHASE_01", owner, compatabilityList, 0, 170)
+        uberPhase01 = UberJobTicket("maya2015Render", baseCMD + "-x 640 -y 360",
+                                    startFrame, endFrame, 10, mayaFile, priority,
+                                    1, "R", niceName + "_PHASE_01", owner,
+                                    compatabilityList, 1, 170, "TEST_PROJECT_01")
         uberPhase01.doSubmit()
 
-        #uberPhase02 = UberJobTicket("maya2014Render", baseCMD, proj, startFrame, endFrame, 1, mayaFile,
-        #priority, 2, "U", niceName + "_PHASE_02", owner, compatabilityList, 0, 170)
-        #uberPhase02.doSubmit()
+        uberPhase02 = UberJobTicket("maya2015Render", baseCMD, startFrame,
+                                    endFrame, 1, mayaFile, priority, 2, "U",
+                                    niceName + "_PHASE_02", owner,
+                                    compatabilityList, 0, 170, "TEST_PROJECT_01")
+        uberPhase02.doSubmit()
 
     raw_input("DONE...")
