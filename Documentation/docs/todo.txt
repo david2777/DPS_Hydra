@@ -93,6 +93,10 @@
 
 -[Done]Cleanup imports
 
+-[Todo]Standardize if True or False means error on return
+
+-[Todo]Make sure Job_Statuses updated when changes are made
+
 -[Todo]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
     finished on termination.

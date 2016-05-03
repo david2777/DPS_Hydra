@@ -88,8 +88,7 @@ def startJob(job_id):
     """Start every task associated with a specified job if it is paused,
     ressurect task if it is killed/errored."""
     tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
-    for task in tasks:
-        TaskUtils.startTask(task.id)
+    map(TaskUtils.startTask, [task.id for task in tasks])
     updateJobTaskCount(job_id, tasks)
 
 def killJob(job_id, newStatus = "K"):
@@ -100,10 +99,9 @@ def killJob(job_id, newStatus = "K"):
     tasks =  hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
     response = False
     if tasks:
-        for task in tasks:
-            response = TaskUtils.killTask(task.id, newStatus)
+        responses = [TaskUtils.killTask(task.id, newStatus) for task in tasks]
         updateJobTaskCount(job_id, tasks)
-    return response
+    return True if True in responses else False
 
 def resetJob(job_id, newStatus = "R"):
     """Resets every task associated with job_id. Reset jobs have the status code
@@ -112,12 +110,9 @@ def resetJob(job_id, newStatus = "R"):
     any errors."""
     tasks = hydra_taskboard.fetch("WHERE job_id = {0}".format(job_id))
     returnCode = False
-    for task in tasks:
-        response = TaskUtils.resetTask(task.id, newStatus)
-        if response:
-            returnCode = True
+    responses = [TaskUtils.resetTask(task.id, newStatus) for task in tasks]
     updateJobTaskCount(job_id, tasks)
-    return returnCode
+    return True if True in responses else False
 
 def prioritizeJob(job_id, priority):
     """Update a the priority for a job AND all of it's tasks"""

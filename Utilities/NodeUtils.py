@@ -18,7 +18,6 @@ def onlineNode(node):
     """Onlines the node.
     Precondition: node refers to a row from the hydra_rendernode table.
     Raises MySQLdb.Error"""
-
     if node.status == IDLE:
         return
     elif node.status == OFFLINE:

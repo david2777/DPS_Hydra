@@ -60,7 +60,6 @@ def resetTask(task_id, newStatus = "R"):
         task.logFile = None
         task.exitCode = None
         task.update(t)
-
     return False
 
 
@@ -116,11 +115,11 @@ def killTask(task_id, newStatus = "K"):
         with transaction() as t:
             task.update(t)
         #If we reach this point: transaction successful, no exception raised
-        return True
+        return False
     elif task.status == "S":
         killed = sendKillQuestion(task.host, newStatus)
         #If we reach this point: TCPconnection successful, no exception raised
         return killed
     elif task.status == "K" or task.status == "F" or task.status == "U":
-        return True
-    return False
+        return False
+    return True
