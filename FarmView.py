@@ -191,14 +191,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.doFetch,
                 "Update all of the latest information from the Database")
         self.centralMenu.addSeparator()
-        onAct = addItem("Online This Node",
-                        self.onlineThisNodeHandler,
+        onAct = addItem("Online This Node", self.onlineThisNodeHandler,
                         "Online This Node")
-        offAct = addItem("Offline This Node",
-                        self.offlineThisNodeHandler,
+        offAct = addItem("Offline This Node", self.offlineThisNodeHandler,
                         "Wait for the current job to finish then offline this node")
-        getAct = addItem("Get Off This Node!",
-                        self.getOffThisNodeHandler,
+        getAct = addItem("Get Off This Node!", self.getOffThisNodeHandler,
                         "Kill the current task and offline this node immediately")
 
         if not self.thisNodeButtonsEnabled:
@@ -234,65 +231,50 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        addItem("Soft Update",
-                self.doUpdate,
+        addItem("Soft Update", self.doUpdate,
                 "Update with the most important information from the Database")
-        addItem("Full Update",
-                self.doFetch,
+        addItem("Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.jobMenu.addSeparator()
-        addItem("Start Jobs",
-                self.startJobHandler,
+        addItem("Start Jobs", self.startJobHandler,
                 "Start all jobs selected in Job List")
-        addItem("Pause Jobs",
-                self.pauseJobHandler,
+        addItem("Pause Jobs", self.pauseJobHandler,
                 "Pause all jobs selected in Job List")
-        addItem("Kill Jobs",
-                self.killJobHandler,
+        addItem("Kill Jobs", self.killJobHandler,
                 "Kill all jobs selected in Job List")
-        addItem("Reset Jobs",
-                self.resetJobHandler,
+        addItem("Reset Jobs", self.resetJobHandler,
                 "Reset all jobs selected in Job List")
-        addItem("Start Test Frames...",
-                self.callTestFrameBox,
+        addItem("Start Test Frames...", self.callTestFrameBox,
                 "Open a dialog to start the first X frames in each job "
                 "selected in the Job List")
         self.jobMenu.addSeparator()
-        addItem("Archive/Unarchive Jobs",
-                self.toggleArchiveHandler,
+        addItem("Archive/Unarchive Jobs", self.toggleArchiveHandler,
                 "Toggle the Archived status on each job selected in he Job List")
-        addItem("Reset Node Limit on Jobs",
-                self.resetNodeManagementHandler,
+        addItem("Reset Node Limit on Jobs", self.resetNodeManagementHandler,
                 "Reset the number of tasks which are ready to match the limit "
                 "of the number of concurant tasks.")
-        addItem("Reveal Detailed Data...",
-                self.revealJobDetailedHandler,
+        addItem("Reveal Detailed Data...", self.revealJobDetailedHandler,
                 "Opens a dialog window the detailed data for the selected jobs.")
         self.jobMenu.addSeparator()
         #setJobPriorityHandler
-        addItem("Set Job Priority...",
-                self.setJobPriorityHandler, "Set priority on each job selected "
-                "in the Job List")
-        editJob = addItem("Edit Job...",
-                            self.doNothing,
+        addItem("Set Job Priority...", self.setJobPriorityHandler,
+        "Set priority on each job selected in the Job List")
+        editJob = addItem("Edit Job...", self.doNothing,
                             "Edit Job, WIP")
         editJob.setEnabled(False)
         self.jobMenu.addSeparator()
 
-        userFilterAction = addItem("Only Show My Jobs",
-                                    self.userFilterContextHandler,
-                                    "Only show the jobs belonging to the "
-                                    "current user")
-        userFilterAction.setCheckable(True)
+        uFA = addItem("Only Show My Jobs", self.userFilterContextHandler,
+                        "Only show the jobs belonging to the current user")
+        uFA.setCheckable(True)
         if self.userFilter:
-            userFilterAction.setChecked(True)
+            uFA.setChecked(True)
 
-        archivedFilterAction = addItem("Show Archived Jobs",
-                                        self.archivedFilterContextHandler,
-                                        "Show jobs which have been archived")
-        archivedFilterAction.setCheckable(True)
+        aFA = addItem("Show Archived Jobs", self.archivedFilterContextHandler,
+                        "Show jobs which have been archived")
+        aFa.setCheckable(True)
         if self.showArchivedFilter:
-            archivedFilterAction.setChecked(True)
+            aFa.setChecked(True)
         self.jobMenu.popup(QCursor.pos())
 
     def fetchJobs(self):
