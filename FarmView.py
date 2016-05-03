@@ -320,12 +320,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             if shotItem != []:
                 #If job was found update it
                 shotItem = shotItem[0]
-                shotItem.setData(0,0,jobData[0])
-                shotItem.setData(1,0,jobData[1])
-                shotItem.setData(2,0,jobData[2])
-                shotItem.setData(3,0,jobData[3])
-                shotItem.setData(4,0,jobData[4])
-                shotItem.setData(5,0,jobData[5])
+                for i in range(0,6):
+                    shotItem.setData(i,0,jobData[i])
             else:
                 #If job was not found add it as a new item
                 shotItem = QTreeWidgetItem(proj[0], jobData)
@@ -336,13 +332,24 @@ class FarmView(QMainWindow, Ui_FarmView):
             shotItem = QTreeWidgetItem(root, jobData)
 
         #Update colors and stuff
-        shotItem.setBackgroundColor(3, niceColors[job.job_status])
         if job.archived == 1:
-            shotItem.setBackgroundColor(0, QColor(220,220,220))
-            shotItem.setBackgroundColor(1, QColor(220,220,220))
-            shotItem.setBackgroundColor(2, QColor(220,220,220))
-            shotItem.setBackgroundColor(4, QColor(220,220,220))
-            shotItem.setBackgroundColor(5, QColor(220,220,220))
+            for i in range(0,6):
+                shotItem.setBackgroundColor(i, QColor(200,200,200))
+        shotItem.setBackgroundColor(3, niceColors[job.job_status])
+        if job.owner == self.username:
+            shotItem.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
+
+    def updateJobTreeRow(self, job_id, shotItem):
+        [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id))
+        data = self.getJobData(job)
+
+        for i in range(0, 6):
+            shotItem.setData(i,0,data[i])
+            if job.archived == 1:
+                shotItem.setBackgroundColor(i, QColor(200,200,200))
+
+        shotItem.setBackgroundColor(3, niceColors[job.job_status])
+
         if job.owner == self.username:
             shotItem.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
 
@@ -373,20 +380,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTree.setColumnWidth(4, 60)         #Tasks
         self.jobTree.setColumnWidth(5, 50)         #Priority
         self.populateJobTree()
-
-    def updateJobTreeRow(self, job_id, shotItem):
-        [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id))
-        data = self.getJobData(job)
-
-        for i in range(0, 6):
-            shotItem.setData(i,0,data[i])
-            if job.archived == 1:
-                shotItem.setBackgroundColor(i, QColor(200,200,200))
-
-        shotItem.setBackgroundColor(3, niceColors[job.job_status])
-
-        if job.owner == self.username:
-            shotItem.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
 
     def userFilterContextHandler(self):
         self.userFilterCheckbox.setChecked(0) if self.userFilter else 2
