@@ -9,7 +9,7 @@ from Setups.MySQLSetup import *
 def getThisNodeData():
     """Gets the row corresponding to localhost in the hydra_rendernode table."""
     try:
-        [thisNode] = hydra_rendernode.fetch("WHERE host = '{0}'".format(Utils.myHostName()))
+        [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (Utils.myHostName(),))
     except ValueError:
         thisNode = None
     return thisNode

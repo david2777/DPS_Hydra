@@ -45,15 +45,15 @@ def updateJobTaskCount(job_id, tasks = None, commit = False):
     started = False
     ready = False
     for task in tasks:
-        if task.status == "F":
+        if task.status == FINISHED:
             tasksComplete += 1
-        elif task.status == "E" or task.status == "C" or task.status == "T":
+        elif task.status == ERROR or task.status == CRASHED or task.status == TIMEOUT:
             error = True
-        elif task.status == "S":
+        elif task.status == STARTED:
             started = True
-        elif task.status == "R":
+        elif task.status == READY:
             ready = True
-        elif task.status == "K":
+        elif task.status == KILLED:
             killed = True
     #If there is an error on any, mark job as error
     #Else, If total done == total tasks, mark job as done
@@ -62,17 +62,17 @@ def updateJobTaskCount(job_id, tasks = None, commit = False):
     #Else, If there are any tasks marked as ready, mark job as ready
     #Else, mark as paused (I think that covers all of our bases)
     if error:
-        jobStatus = "E"
+        jobStatus = ERROR
     elif tasksComplete == taskCount:
-        jobStatus = "F"
+        jobStatus = FINISHED
     elif killed:
-        jobStatus = "K"
+        jobStatus = KILLED
     elif started:
-        jobStatus = "S"
+        jobStatus = STARTED
     elif ready:
-        jobStatus = "R"
+        jobStatus = READY
     else:
-        jobStatus = "U"
+        jobStatus = PAUSED
 
     if commit:
         command = "UPDATE hydra_jobboard SET tasksComplete = %s, tasksTotal = %s, job_status = %s WHERE id = %s"
@@ -90,7 +90,7 @@ def startJob(job_id):
     map(TaskUtils.startTask, [task.id for task in tasks])
     updateJobTaskCount(job_id, tasks)
 
-def killJob(job_id, newStatus = "K"):
+def killJob(job_id, newStatus = KILLED):
     """Kills every task associated with job_id. Killed tasks have status code
     set by newStatus. If a task was already started, an a kill request
     is sent to the host running it.
@@ -103,7 +103,7 @@ def killJob(job_id, newStatus = "K"):
     else:
         return False
 
-def resetJob(job_id, newStatus = "R"):
+def resetJob(job_id, newStatus = READY):
     """Resets every task associated with job_id. Reset jobs have the status code
     set by newStatus.
     @return: True means there was an error, false means there were not
@@ -119,7 +119,7 @@ def prioritizeJob(job_id, priority):
         t.cur.execute("UPDATE hydra_jobboard SET priority = %s WHERE id = %s", (priority, job_id))
         t.cur.execute("UPDATE hydra_taskboard SET priority = %s WHERE job_id = %s", (priority, job_id))
 
-def setupNodeLimit(job_id, hold_status = "M"):
+def setupNodeLimit(job_id, hold_status = MANAGED):
     """A function for setting up the node limit on a job. The node limiting system
     works by pausing tasks beyond the count of the limit. Ie if the limit is 3
     nodes then the job will only have a maxiumum of 3 tasks ready or started
@@ -140,7 +140,7 @@ def setupNodeLimit(job_id, hold_status = "M"):
         for task in holdTasks:
             t.cur.execute("UPDATE hydra_taskboard SET status = %s WHERE id = %s AND status = %s", (hold_status, task.id, READY))
 
-def manageNodeLimit(job_id, hold_status = "M"):
+def manageNodeLimit(job_id, hold_status = MANAGED):
     """The counterpart to setupNodeLimit. This is run by RenderNodeMain after
     every task. For more info see setupNodeLimit doc string."""
     [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id,))
@@ -152,7 +152,7 @@ def manageNodeLimit(job_id, hold_status = "M"):
     startList = []
 
     for task in tasks:
-        if task.status == "S" or task.status == "R":
+        if task.status == STARTED or task.status == READY:
             taskLimit -= 1
         elif task.status == hold_status:
             startList.append(task.id)

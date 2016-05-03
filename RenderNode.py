@@ -65,11 +65,11 @@ class RenderTCPServer(TCPServer):
         elif thisNode.status == STARTED and not thisNode.task_id:
             logger.warning("Reseting bad status.")
             with transaction() as t:
-                t.cur.execute(query, ("R", self.thisNodeName,))
+                t.cur.execute(query, (READY, self.thisNodeName,))
         elif thisNode.status == PENDING and not thisNode.task_id:
             logger.warning("Reseting bad status.")
             with transaction() as t:
-                t.cur.execute(query, ("O", self.thisNodeName,))
+                t.cur.execute(query, (OFFLINE, self.thisNodeName,))
 
         #Update current software version on the DB if necessary
         current_version = sys.argv[0]
@@ -202,7 +202,7 @@ class RenderTCPServer(TCPServer):
                     #render_task.host = None
                     self.childKilled = False
                     #Mark error if task has timedout
-                    if self.statusAfterDeath == "T":
+                    if self.statusAfterDeath == TIMEOUT:
                         error = True
                 else:
                     #Report that the job was finished if exit code is 0
@@ -281,8 +281,8 @@ class RenderTCPServer(TCPServer):
     def timeoutCurrentJob(self):
         logger.warning("Current job is timed out, killing...")
         self.timeoutThread.cancel()
-        self.killCurrentJob("T")
-        if self.statusAfterDeath == "T":
+        self.killCurrentJob(TIMEOUT)
+        if self.statusAfterDeath == TIMEOUT:
             logger.info("Job timed out!")
         else:
             logger.info("Job was not timed out!")

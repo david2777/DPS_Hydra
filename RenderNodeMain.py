@@ -278,7 +278,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.offlineThisNodeHandler()
         if task_id:
             try:
-                killed = TaskUtils.killTask(task_id, "R")
+                killed = TaskUtils.killTask(task_id, READY)
                 if not killed:
                     logger.error("Node could not kill for some reason!")
                     self.aboutBoxHidden("Error",
@@ -476,7 +476,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         logger.info("Current time: {0}".format(str(now)))
 
-        if self.thisNode.status == "O" or self.thisNode.status == "P":
+        if self.thisNode.status == OFFLINE or self.thisNode.status == PENDING:
             if nowDate in holidays:
                 logger.info("Node is offline and today is a holiday. Starting then sleeping...")
                 sleepyTime = (endDT - now).total_seconds()

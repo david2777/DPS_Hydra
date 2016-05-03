@@ -34,22 +34,22 @@ def startTask(task_id):
     """Start task if it is paused, ressurect task if it is killed/errored.
     Pass over task if it is already Ready or Started"""
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
-    if task.status == "R" or task.status == "S" or task.status == "F":
+    if task.status == READY or task.status == STARTED or task.status == FINISHED:
         logger.info("Passing Task {0} because it is either already started or ready".format(task_id))
-    elif task.status == "U":
+    elif task.status == PAUSED:
         logger.info("Setting paused Task {0} to Ready".format(task_id))
-        task.status = "R"
+        task.status = READY
         with transaction() as t:
             task.update(t)
     else:
         logger.info("Skipping...")
 
-def resetTask(task_id, newStatus = "R"):
+def resetTask(task_id, newStatus = READY):
     """Resets a task and puts it back on the job board with a new status.
     @return: True means there was an error, false means there was not"""
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     logger.info("Reseting Task {0}".format(task_id))
-    if task.status == "S":
+    if task.status == STARTED:
         if killTask(task.id):
             logger.error("Could not kill task {0}, unable to reset!".format(task_id))
             return True
@@ -86,7 +86,7 @@ def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
             if host:
                 host.update(t)
 
-def sendKillQuestion(renderhost, newStatus="K"):
+def sendKillQuestion(renderhost, newStatus=KILLED):
     """Tries to kill the current task running on the renderhost.
     @return True if successful, otherwise False"""
     logger.info('Kill task on {0}'.format(renderhost))
@@ -99,14 +99,14 @@ def sendKillQuestion(renderhost, newStatus="K"):
         logger.warning("{0} tried to kill its job but failed for some reason.".format(renderhost))
     return answer.childKilled
 
-def killTask(task_id, newStatus = "K"):
+def killTask(task_id, newStatus = KILLED):
     """Kills the task with the specified id. If the task has been started, a
     kill request is sent to the node running it.
     @return: True if there were any errors, False if there were not."""
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     if task.status == newStatus:
         return True
-    elif task.status == "R" or task.status == "U":
+    elif task.status == READY or task.status == PAUSED:
         task.status = newStatus
         task.host = None
         task.startTime = None
@@ -117,10 +117,10 @@ def killTask(task_id, newStatus = "K"):
             task.update(t)
         #If we reach this point: transaction successful, no exception raised
         return False
-    elif task.status == "S":
+    elif task.status == STARTED:
         killed = sendKillQuestion(task.host, newStatus)
         #If we reach this point: TCPconnection successful, no exception raised
         return killed
-    elif task.status == "K" or task.status == "F" or task.status == "U":
+    elif task.status == KILLED or task.status == FINISHED or task.status == PAUSED:
         return False
     return True

@@ -170,12 +170,12 @@ def testJobs():
 
         uberPhase01 = UberJobTicket("maya2015Render", baseCMD + "-x 640 -y 360",
                                     startFrame, endFrame, 10, mayaFile, priority,
-                                    1, "R", niceName + "_PHASE_01", owner,
+                                    1, READY, niceName + "_PHASE_01", owner,
                                     compatabilityList, 1, 170, "TEST_PROJECT_01")
         uberPhase01.doSubmit()
 
         uberPhase02 = UberJobTicket("maya2015Render", baseCMD, startFrame,
-                                    endFrame, 1, mayaFile, priority, 2, "U",
+                                    endFrame, 1, mayaFile, priority, 2, PAUSED,
                                     niceName + "_PHASE_02", owner,
                                     compatabilityList, 0, 170, "TEST_PROJECT_01")
         uberPhase02.doSubmit()

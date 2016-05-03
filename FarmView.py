@@ -450,7 +450,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         choice = yesNoBox(self, "Confirm", "Really pause the selected jobs?")
         if choice == QMessageBox.Yes:
             try:
-                responses = [JobUtils.killJob(job_id, "U") for job_id in job_ids]
+                responses = [JobUtils.killJob(job_id, PAUSED) for job_id in job_ids]
             except sqlerror as err:
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
@@ -467,7 +467,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
         if choice == QMessageBox.Yes:
             try:
-                responses = [JobUtils.resetJob(job_id, "R") for job_id in job_ids]
+                responses = [JobUtils.resetJob(job_id, READY) for job_id in job_ids]
             except sqlerror as err:
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
@@ -652,7 +652,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
         choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
         if choice == QMessageBox.Yes:
-            responses = [TaskUtils.resetTask(t_id, "R") for t_id in task_ids]
+            responses = [TaskUtils.resetTask(t_id, READY) for t_id in task_ids]
             self.updateTaskTable()
             if True in responses:
                 msg = "Unable to reset task {0} because there was an error communicating with it's host.".format(task_id)
@@ -710,7 +710,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if choice == QMessageBox.Yes:
             for task_id in task_ids:
                 try:
-                    response = TaskUtils.killTask(task_id, "U")
+                    response = TaskUtils.killTask(task_id, PAUSED)
                     if response:
                         aboutBox(self, "Error",
                                 "Task couldn't be killed for some reason.")
@@ -933,7 +933,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 NodeUtils.offlineNode(thisNode)
                 if thisNode.task_id:
                     try:
-                        response = TaskUtils.killTask(thisNode.task_id, "R")
+                        response = TaskUtils.killTask(thisNode.task_id, READY)
                         if not response:
                             logger.warning("Problem killing task durring GetOff")
                             aboutBox(self, "Error",
@@ -1100,7 +1100,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             if thisNode.task_id:
                 task_id = thisNode.task_id
                 try:
-                    response = TaskUtils.killTask(task_id, "R")
+                    response = TaskUtils.killTask(task_id, READY)
                     if not response:
                         logger.warning("Problem killing task durring GetOff")
                         aboutBox(self, "Error",
