@@ -689,11 +689,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                 except sqlerror as err:
                     logger.error(str(err))
                     aboutBox(self, "SQL Error", str(err))
-        [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id))
-        JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
-        JobUtils.manageNodeLimit(job.job_id)
-        self.updateTaskTable()
-        self.populateJobTree()
+                [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id))
+                JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
+                JobUtils.manageNodeLimit(job.job_id)
+            self.updateTaskTable()
+            self.populateJobTree()
 
     def pauseTaskHandler(self):
         task_ids = self.taskTableHandler()
@@ -715,10 +715,10 @@ class FarmView(QMainWindow, Ui_FarmView):
                 except sqlerror as err:
                     logger.error(str(err))
                     aboutBox(self, "SQL Error", str(err))
-        [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id))
-        JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
-        self.updateTaskTable()
-        self.populateJobTree()
+                [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id))
+                JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
+            self.updateTaskTable()
+            self.populateJobTree()
 
     def loadLogHandler(self):
         task_ids = self.taskTableHandler()
