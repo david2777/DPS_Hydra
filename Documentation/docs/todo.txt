@@ -102,5 +102,7 @@
     finished on termination.
 
 -[Todo]Detect GPUs and render one job on each GPU
+    -Need to start a Render Server thread for each GPU
+    -Need to rethink the way data is stored on the hydra_rendernode table
 
 -Everything else

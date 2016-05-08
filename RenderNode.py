@@ -39,6 +39,15 @@ class RenderTCPServer(TCPServer):
             self.si = subprocess.STARTUPINFO()
             self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
+        self.rsGPUs = Utils.getRedshiftPreference("SelectedCudaDevices")
+        self.rsGPUs = self.rsGPUs.split(",")[:-1]
+        self.rsGPUids = [x.split(":")[0] for x in self.rsGPUs]
+        if len(self.rsGPUs) != len(self.rsGPUids):
+            logger.error("Problems parsing RS Preferences")
+            raise Exception("Problems parsing RS Preferences")
+        logger.info("{0} Redshift Enabled GPU(s) found on this node".format(len(self.rsGPUs)))
+        logger.debug("GPUs available for rendering are {0}".format(self.rsGPUs))
+
         #Setup class variables
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}

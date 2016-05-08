@@ -37,7 +37,6 @@ class workerSignalThread(QThread):
         QThread.__init__(self)
         self.target = target
         self.interval = interval
-        logger.info("INIT")
 
     def __del__(self):
         self.wait()

@@ -6,6 +6,7 @@ import sys
 import itertools
 import shutil
 import socket
+import xml.etree.ElementTree as ET
 
 #Hydra
 from Setups.LoggingSetup import logger
@@ -45,6 +46,26 @@ def myHostName():
     """This computer's host name in the RenderHost table"""
     domain = getInfoFromCFG("network", "dnsDomainExtension")
     return socket.gethostname() + domain
+
+def getRedshiftPreference(attribute):
+    """Returns an attribute from the Redshift preferences.xml file"""
+    if sys.platform == "win32":
+        try:
+            tree = ET.parse(r"C:\ProgramData\Redshift\preferences.xml")
+        except IOError:
+            logger.error("Could not find Redshift Preferences!")
+            return
+    else:
+        #TODO:Other platforms
+        return
+    root = tree.getroot()
+    perfDict = {c.attrib["name"]:c.attrib["value"] for c in root}
+    try:
+        returnVal = perfDict[attribute]
+    except KeyError:
+        returnVal = None
+        logger.error("Could not find {0} in Redshift Preferences!".format(attribute))
+    return returnVal
 
 def flanged(name):
     return name.startswith ('__') and name.endswith ('__')
