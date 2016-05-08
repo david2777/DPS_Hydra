@@ -101,7 +101,7 @@ class tupleObject:
     def secureFetch(cls, whereClause, whereTuple, cols = None, orderTuples = None,
                     limit = None, explicitTransaction=None):
         """A fetch function with paramater binding.
-        ie. [thisNode] = hydra_rendernode.fetch("WHERE host = %s", ("test"))
+        ie. [thisNode] = hydra_rendernode.fetch("WHERE host = %s", ("test",))
             idAttr = thisNode.id"""
         #orderClause = "" if order is None else " " + order + " "
         #limitClause = "" if limit is None else " LIMIT %s "
