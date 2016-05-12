@@ -43,30 +43,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
-        self.thisNodeName = Utils.myHostName()
-        logger.info("This host is {0}".format(self.thisNodeName))
-
-        #My UI Setup Functions
-        self.setupTables()
-        self.connectButtons()
-
-        #Enable this node buttons
-        self.thisNodeButtonsEnabled = True
-
-        #Get user
-        self.username = Utils.getDbInfo()[2]
-
-        #Globals
-        self.userFilter = False
-        self.showArchivedFilter = False
-
-        self.statusMsg = "ERROR"
-
-        self.currentJobSel = None
-
-        self.autoUpdateThread = workerSignalThread("run", 10)
-        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
-
         #Partial applications for convenience
         self.sqlErrorBox = (
             functools.partial(
@@ -94,6 +70,30 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "use Farm View, but it must be restarted after this node is "
                 "registered if you wish to see this node's information."))
 
+        self.thisNodeName = Utils.myHostName()
+        logger.info("This host is {0}".format(self.thisNodeName))
+
+        #My UI Setup Functions
+        self.setupTables()
+        self.connectButtons()
+
+        #Enable this node buttons
+        self.thisNodeButtonsEnabled = True
+
+        #Get user
+        self.username = Utils.getDbInfo()[2]
+
+        #Globals
+        self.userFilter = False
+        self.showArchivedFilter = False
+
+        self.statusMsg = "ERROR"
+
+        self.currentJobSel = None
+
+        self.autoUpdateThread = workerSignalThread("run", 10)
+        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
+
         self.doFetch()
         if self.thisNodeExists:
             self.autoUpdateThread.start()
@@ -104,6 +104,13 @@ class FarmView(QMainWindow, Ui_FarmView):
     def closeEvent(self, event):
         event.accept()
         sys.exit(0)
+
+    def addItem(self, menu, name, handler, statusTip):
+        action = QAction(name, self)
+        action.setStatusTip(statusTip)
+        action.triggered.connect(handler)
+        menu.addAction(action)
+        return action
 
     #---------------------------------------------------------------------#
     #--------------------------UI SETUP FUNCTIONS-------------------------#
@@ -172,28 +179,23 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.customContextMenuRequested.connect(self.nodeContextHandler)
 
     def centralContextHandler(self):
-        def addItem(name, handler, statusTip):
-            action = QAction(name, self)
-            action.setStatusTip(statusTip)
-            action.triggered.connect(handler)
-            self.centralMenu.addAction(action)
-            return action
-
         self.centralMenu = QMenu(self)
 
         QObject.connect(self.centralMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        addItem("Soft Update", self.doUpdate,
+        self.addItem(self.centralMenu, "Soft Update", self.doUpdate,
                 "Update with the most important information from the Database")
-        addItem("Full Update", self.doFetch,
+        self.addItem(self.centralMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.centralMenu.addSeparator()
-        onAct = addItem("Online This Node", self.onlineThisNodeHandler,
-                        "Online This Node")
-        offAct = addItem("Offline This Node", self.offlineThisNodeHandler,
+        onAct = self.addItem(self.centralMenu, "Online This Node",
+                            self.onlineThisNodeHandler, "Online This Node")
+        offAct = self.addItem(self.centralMenu, "Offline This Node",
+                        self.offlineThisNodeHandler,
                         "Wait for the current job to finish then offline this node")
-        getAct = addItem("Get Off This Node!", self.getOffThisNodeHandler,
+        getAct = self.addItem(self.centralMenu,
+                        "Get Off This Node!", self.getOffThisNodeHandler,
                         "Kill the current task and offline this node immediately")
 
         if not self.thisNodeButtonsEnabled:
@@ -212,59 +214,52 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
 
     def jobContextHandler(self):
-        def addItem(name, handler, statusTip):
-            action = QAction(name, self)
-            action.setStatusTip(statusTip)
-            action.triggered.connect(handler)
-            self.jobMenu.addAction(action)
-            return action
-
         self.jobMenu = QMenu(self)
         #self.jobMenu.setTearOffEnabled(True)
 
         QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        addItem("Soft Update", self.doUpdate,
+        self.addItem(self.jobMenu, "Soft Update", self.doUpdate,
                 "Update with the most important information from the Database")
-        addItem("Full Update", self.doFetch,
+        self.self.addItem(self.jobMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.jobMenu.addSeparator()
-        addItem("Start Jobs", self.startJobHandler,
+        self.self.addItem(self.jobMenu, "Start Jobs", self.startJobHandler,
                 "Start all jobs selected in Job List")
-        addItem("Pause Jobs", self.pauseJobHandler,
+        self.self.addItem(self.jobMenu, "Pause Jobs", self.pauseJobHandler,
                 "Pause all jobs selected in Job List")
-        addItem("Kill Jobs", self.killJobHandler,
+        self.self.addItem(self.jobMenu, "Kill Jobs", self.killJobHandler,
                 "Kill all jobs selected in Job List")
-        addItem("Reset Jobs", self.resetJobHandler,
+        self.self.addItem(self.jobMenu, "Reset Jobs", self.resetJobHandler,
                 "Reset all jobs selected in Job List")
-        addItem("Start Test Frames...", self.callTestFrameBox,
+        self.self.addItem(self.jobMenu, "Start Test Frames...", self.callTestFrameBox,
                 "Open a dialog to start the first X frames in each job "
                 "selected in the Job List")
         self.jobMenu.addSeparator()
-        addItem("Archive/Unarchive Jobs", self.toggleArchiveHandler,
+        self.self.addItem(self.jobMenu, "Archive/Unarchive Jobs", self.toggleArchiveHandler,
                 "Toggle the Archived status on each job selected in he Job List")
-        addItem("Reset Node Limit on Jobs", self.resetNodeManagementHandler,
+        self.self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.resetNodeManagementHandler,
                 "Reset the number of tasks which are ready to match the limit "
                 "of the number of concurant tasks.")
-        addItem("Reveal Detailed Data...", self.revealJobDetailedHandler,
+        self.self.addItem(self.jobMenu, "Reveal Detailed Data...", self.revealJobDetailedHandler,
                 "Opens a dialog window the detailed data for the selected jobs.")
         self.jobMenu.addSeparator()
         #setJobPriorityHandler
-        addItem("Set Job Priority...", self.setJobPriorityHandler,
+        self.self.addItem(self.jobMenu, "Set Job Priority...", self.setJobPriorityHandler,
         "Set priority on each job selected in the Job List")
-        editJob = addItem("Edit Job...", self.doNothing,
+        editJob = self.self.addItem(self.jobMenu, "Edit Job...", self.doNothing,
                             "Edit Job, WIP")
         editJob.setEnabled(False)
         self.jobMenu.addSeparator()
 
-        uFA = addItem("Only Show My Jobs", self.userFilterContextHandler,
+        uFA = self.self.addItem(self.jobMenu, "Only Show My Jobs", self.userFilterContextHandler,
                         "Only show the jobs belonging to the current user")
         uFA.setCheckable(True)
         if self.userFilter:
             uFA.setChecked(True)
 
-        aFA = addItem("Show Archived Jobs", self.archivedFilterContextHandler,
+        aFA = self.self.addItem(self.jobMenu, "Show Archived Jobs", self.archivedFilterContextHandler,
                         "Show jobs which have been archived")
         aFA.setCheckable(True)
         if self.showArchivedFilter:
@@ -535,34 +530,28 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------TASK HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
     def taskContextHandler(self):
-        def addItem(name, handler, statusTip):
-            action = QAction(name, self)
-            action.setStatusTip(statusTip)
-            action.triggered.connect(handler)
-            self.taskMenu.addAction(action)
-
         self.taskMenu = QMenu(self)
 
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        addItem("Soft Update", self.doUpdate,
+        self.addItem(self.taskMenu, "Soft Update", self.doUpdate,
                 "Update with the most important information from the Database")
-        addItem("Full Update", self.doFetch,
+        self.addItem(self.taskMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.taskMenu.addSeparator()
-        addItem("Start Tasks", self.startTaskHandler,
+        self.addItem(self.taskMenu, "Start Tasks", self.startTaskHandler,
                 "Start all tasks selected in the Task List")
-        addItem("Pause Tasks", self.pauseTaskHandler,
+        self.addItem(self.taskMenu, "Pause Tasks", self.pauseTaskHandler,
                 "Pause all tasks selected in the Task List")
-        addItem("Kill Tasks", self.killTaskHandler,
+        self.addItem(self.taskMenu, "Kill Tasks", self.killTaskHandler,
                 "Kill all tasks selected in the Task List")
-        addItem("Reset Tasks", self.resetTaskHandler,
+        self.addItem(self.taskMenu, "Reset Tasks", self.resetTaskHandler,
                 "Reset all tasks selected in the Task List")
         self.taskMenu.addSeparator()
-        addItem("Reveal Detailed Data...", self.revealTaskDetailedHandler,
+        self.addItem(self.taskMenu, "Reveal Detailed Data...", self.revealTaskDetailedHandler,
                 "Opens a dialog window the detailed data for the selected tasks.")
-        addItem("Load LogFile", self.loadLogHandler,
+        self.addItem(self.taskMenu, "Load LogFile", self.loadLogHandler,
                 "Load the log file for all tasks selected in the Task List")
         self.taskMenu.popup(QCursor.pos())
 
@@ -740,13 +729,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         logger.error("Not Implemeted!")
 
     def revealTaskDetailedHandler(self):
-        rows = self.taskTableHandler()
-        if not rows:
+        task_ids = self.taskTableHandler()
+        if not task_ids:
             return
-        task_id_list = []
-        for row in rows:
-            task_id_list.append(int(self.taskTable.item(row, 0).text()))
-        self.revealDetailedHandler(task_id_list, hydra_taskboard, "WHERE id = %s")
+        self.revealDetailedHandler(task_ids, hydra_taskboard, "WHERE id = %s")
 
     def searchByTaskID(self):
         """~~UNTESTED~~
@@ -770,40 +756,33 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
 
     def nodeContextHandler(self):
-        def addItem(name, handler, statusTip):
-            action = QAction(name, self)
-            action.setStatusTip(statusTip)
-            action.triggered.connect(handler)
-            self.nodeMenu.addAction(action)
-            return action
-
         self.nodeMenu = QMenu(self)
 
         QObject.connect(self.nodeMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        addItem("Soft Update", self.doUpdate,
+        self.addItem(self.nodeMenu, "Soft Update", self.doUpdate,
                 "Update with the most important information from the Database")
-        addItem("Full Update", self.doFetch,
+        self.addItem(self.nodeMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.nodeMenu.addSeparator()
-        addItem("Online Nodes", self.onlineRenderNodesHandler,
+        self.addItem(self.nodeMenu, "Online Nodes", self.onlineRenderNodesHandler,
                 "Online all checked nodes")
-        addItem("Offline Nodes", self.offlineRenderNodesHandler,
+        self.addItem(self.nodeMenu, "Offline Nodes", self.offlineRenderNodesHandler,
                 "Offline all checked nodes without killing their current task")
-        addItem("Get Off Nodes", self.getOffRenderNodesHandler,
+        self.addItem(self.nodeMenu, "Get Off Nodes", self.getOffRenderNodesHandler,
                 "Kill task then offline all checked nodes")
         self.nodeMenu.addSeparator()
-        addItem("Select All Nodes", self.selectAllNodesHandler,
+        self.addItem(self.nodeMenu, "Select All Nodes", self.selectAllNodesHandler,
                 "Check all nodes in the Node Table")
-        addItem("Deselect All Node", self.selectNoneNodesHandler,
+        self.addItem(self.nodeMenu, "Deselect All Node", self.selectNoneNodesHandler,
                 "Uncheck all ndoes in the Node Table")
-        addItem("Select by Host Name...", self.selectByHostHandler,
+        self.addItem(self.nodeMenu, "Select by Host Name...", self.selectByHostHandler,
                 "Open a dialog to check nodes based on their host name")
         self.nodeMenu.addSeparator()
-        addItem("Reveal Detailed Data...", self.revealNodeDetailedHandler,
+        self.addItem(self.nodeMenu, "Reveal Detailed Data...", self.revealNodeDetailedHandler,
                 "Opens a dialog window the detailed data for the selected nodes.")
-        addItem("Edit Node...", self.nodeEditorTableHandler,
+        self.addItem(self.nodeMenu, "Edit Node...", self.nodeEditorTableHandler,
                 "Open a dialog to edit selected node's attributes. WIP.")
 
         self.nodeMenu.popup(QCursor.pos())
