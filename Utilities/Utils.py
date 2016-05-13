@@ -1,4 +1,4 @@
-"""Miscellaneous pieces of useful code"""
+"""Miscellaneous pieces of useful code that don't fit in elsewhere."""
 #Standard
 import ConfigParser
 import os
@@ -16,6 +16,7 @@ import Constants
 #Taken from Cogswell's Project Hydra
 
 def getInfoFromCFG(section, option):
+    """Return information from the local configuration file."""
     config = ConfigParser.RawConfigParser()
     config.read(Constants.SETTINGS)
     #Create a copy if it doesn't exist
@@ -36,6 +37,7 @@ def getInfoFromCFG(section, option):
     return config.get(section = section, option = option)
 
 def getDbInfo():
+    """Return the information used to login to the databse"""
     host = getInfoFromCFG("database", "host")
     db = getInfoFromCFG("database", "db")
     username = getInfoFromCFG("database", "username")
@@ -43,12 +45,13 @@ def getDbInfo():
     return host, db, username, password
 
 def myHostName():
-    """This computer's host name in the RenderHost table"""
+    """Return this computers hostname with the dns extension from the local
+    configuration file."""
     domain = getInfoFromCFG("network", "dnsDomainExtension")
     return socket.gethostname() + domain
 
 def getRedshiftPreference(attribute):
-    """Returns an attribute from the Redshift preferences.xml file"""
+    """Return an attribute from the Redshift preferences.xml file"""
     if sys.platform == "win32":
         try:
             tree = ET.parse(r"C:\ProgramData\Redshift\preferences.xml")
@@ -74,17 +77,13 @@ def nonFlanged(name):
     return not flanged(name)
 
 def sockRecvAll(sock):
-    """
-    Receive all bytes from a socket, with no buffer size limit
-    Generator to recieve strings from socket, will return
-    Empty strings(forever) upon EOF
-    """
+    """Receive all bytes from a socket, with no buffer size limit"""
     receivedStrings  = (sock.recv(Constants.MANYBYTES)
                         for i in itertools.count(0))
     #Concatenate the nonempty ones
     return ''.join(itertools.takewhile(len, receivedStrings))
 
 def flushOut(f):
-    "Flush and sync a file to disk"
+    """Flush and sync a file to disk"""
     f.flush()
     os.fsync(f.fileno())

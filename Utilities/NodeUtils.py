@@ -1,5 +1,4 @@
-"""Useful utilities to get info on or modify nodes listed on the DB.
-Probably need to move the rest of the node utilities into here."""
+"""Useful utilities to get info on or modify nodes listed on the database."""
 #Third Party
 from MySQLdb import Error as sqlerror
 
@@ -7,7 +6,7 @@ from MySQLdb import Error as sqlerror
 from Setups.MySQLSetup import *
 
 def getThisNodeData():
-    """Gets the row corresponding to localhost in the hydra_rendernode table."""
+    """Returns the current node's info from the DB, None if not found in the DB."""
     try:
         [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (Utils.myHostName(),))
     except ValueError:
@@ -15,9 +14,7 @@ def getThisNodeData():
     return thisNode
 
 def onlineNode(node):
-    """Onlines the node.
-    Precondition: node refers to a row from the hydra_rendernode table.
-    Raises MySQLdb.Error"""
+    """Sets a node to be online given it's node object"""
     if node.status == IDLE:
         return
     elif node.status == OFFLINE:
@@ -28,9 +25,7 @@ def onlineNode(node):
         node.update(t)
 
 def offlineNode(node):
-    """Onlines the node.
-    Precondition: node refers to a row from the hydra_rendernode table.
-    Raises MySQLdb.Error"""
+    """Sets a node to be offline given it's node object"""
     if node.status == OFFLINE:
             return
     elif node.task_id:

@@ -13,8 +13,12 @@ from Networking.Connections import TCPConnection
 import Utilities.Utils as Utils
 
 def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
-    """Changes the status of a single task given a new status and an optional
-    list of old statuses to limit which statuses are to be changed."""
+    """Change the status of a task given it's ID.
+
+    Keyword Arguments:
+        old_status_list -- A list of stauses subject to change, will change all
+            if left as the default. (default [])
+    """
     if type(old_status_list) is not list:
         logger.error("Bad Old Status List in TaskUtils!")
         raise Exception("Please use a list for old statuses")
@@ -31,8 +35,7 @@ def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
         t.cur.execute(command, commandTuple)
 
 def startTask(task_id):
-    """Start task if it is paused, ressurect task if it is killed/errored.
-    Pass over task if it is already Ready or Started"""
+    """Start task if it is paused, ressurect task if it is killed/errored."""
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     if task.status == READY or task.status == STARTED or task.status == FINISHED:
         logger.info("Passing Task {0} because it is either already started or ready".format(task_id))
@@ -45,14 +48,17 @@ def startTask(task_id):
         logger.info("Skipping...")
 
 def resetTask(task_id, newStatus = READY):
-    """Resets a task and puts it back on the job board with a new status.
-    @return: True means there was an error, false means there was not"""
+    """Reset a task. Returns True if successful, else False.
+
+    Keyword Arguments:
+        newStatus -- The status the task should assume after it's been reset. (default READY)
+    """
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     logger.info("Reseting Task {0}".format(task_id))
     if task.status == STARTED:
         if killTask(task.id):
             logger.error("Could not kill task {0}, unable to reset!".format(task_id))
-            return True
+            return False
     task.status = newStatus
     task.host = None
     task.startTime = None
@@ -61,17 +67,13 @@ def resetTask(task_id, newStatus = READY):
     task.exitCode = None
     with transaction() as t:
         task.update(t)
-    return False
+    return True
 
 
-def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
-    """Unsticks and rests a task. Particularly useful for a node that wakes up
-    with a task assinged to it that it has no memory of (like after an
-    unexpected shutdown or crash)."""
+def unstick(taskID=None, newTaskStatus = READY, host = None, newHostStatus = IDLE):
+    """Unstick and rests a task. Useful for when a node crashes."""
     if taskID:
         [task] = hydra_taskboard.secureFetch("WHERE id = %s", (taskID,))
-        #If the task is marked, say, CRASHED, leave the host name alone.
-        #Only READY would be confusing with a host named filled in. I think.
         if newTaskStatus == READY:
             task.host = None
         task.status = newTaskStatus
@@ -87,8 +89,8 @@ def unstick(taskID=None, newTaskStatus=READY, host=None, newHostStatus=IDLE):
                 host.update(t)
 
 def sendKillQuestion(renderhost, newStatus=KILLED):
-    """Tries to kill the current task running on the renderhost.
-    @return True if successful, otherwise False"""
+    """Kill the current task running on the renderhost. Return True if successful,
+    else False"""
     logger.info('Kill task on {0}'.format(renderhost))
     connection = TCPConnection(hostname=renderhost)
     answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
@@ -100,9 +102,7 @@ def sendKillQuestion(renderhost, newStatus=KILLED):
     return answer.childKilled
 
 def killTask(task_id, newStatus = KILLED):
-    """Kills the task with the specified id. If the task has been started, a
-    kill request is sent to the node running it.
-    @return: True if there were any errors, False if there were not."""
+    """Kill a task given it's task id. Return True if successful, else False."""
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     if task.status == newStatus:
         return True
@@ -116,11 +116,11 @@ def killTask(task_id, newStatus = KILLED):
         with transaction() as t:
             task.update(t)
         #If we reach this point: transaction successful, no exception raised
-        return False
+        return True
     elif task.status == STARTED:
         killed = sendKillQuestion(task.host, newStatus)
         #If we reach this point: TCPconnection successful, no exception raised
         return killed
     elif task.status == KILLED or task.status == FINISHED or task.status == PAUSED:
-        return False
-    return True
+        return True
+    return False

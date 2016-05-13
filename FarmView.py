@@ -425,7 +425,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                if True in responses:
+                if False in responses:
                     aboutBox(self, "Error",
                             "One or more nodes couldn't kill their tasks.")
                 map(JobUtils.manageNodeLimit, job_ids)
@@ -443,7 +443,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                if True in responses:
+                if False in responses:
                     aboutBox(self, "Error",
                             "One or more nodes couldn't kill their tasks.")
                 self.populateJobTree()
@@ -460,7 +460,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 logger.error(str(err))
                 aboutBox(self, "SQL Error", str(err))
             finally:
-                if True in responses:
+                if False in responses:
                     aboutBox(self, "Error",
                             "One or more nodes couldn't kill their tasks.")
                 self.populateJobTree()
@@ -636,7 +636,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if choice == QMessageBox.Yes:
             responses = [TaskUtils.resetTask(t_id, READY) for t_id in task_ids]
             self.updateTaskTable()
-            if True in responses:
+            if False in responses:
                 msg = "Unable to reset task {0} because there was an error communicating with it's host.".format(task_id)
                 aboutBox(self, "Reset Task Error", msg)
 
@@ -667,7 +667,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             for task_id in task_ids:
                 try:
                     response = TaskUtils.killTask(task_id)
-                    if response:
+                    if not response:
                         aboutBox(self, "Error",
                                 "Task couldn't be killed for some reason.")
                 except socketerror as err:
@@ -693,7 +693,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             for task_id in task_ids:
                 try:
                     response = TaskUtils.killTask(task_id, PAUSED)
-                    if response:
+                    if not response:
                         aboutBox(self, "Error",
                                 "Task couldn't be killed for some reason.")
                 except socketerror as err:
