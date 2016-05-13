@@ -83,7 +83,7 @@ CREATE TABLE `hydra_jobboard` (
   `timeout` smallint(6) DEFAULT '0' COMMENT 'Timeout measured in seconds',
   `projectName` varchar(60) DEFAULT 'UnknownProject',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -132,7 +132,7 @@ CREATE TABLE `hydra_taskboard` (
   `maxAttempts` int(4) DEFAULT '3' COMMENT 'Maximum number of attempts allowed',
   `failures` varchar(80) DEFAULT '' COMMENT 'List of nodes where this task has already failed seperated by spaces',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
