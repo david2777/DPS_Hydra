@@ -222,44 +222,44 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.addItem(self.jobMenu, "Soft Update", self.doUpdate,
                 "Update with the most important information from the Database")
-        self.self.addItem(self.jobMenu, "Full Update", self.doFetch,
+        self.addItem(self.jobMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.jobMenu.addSeparator()
-        self.self.addItem(self.jobMenu, "Start Jobs", self.startJobHandler,
+        self.addItem(self.jobMenu, "Start Jobs", self.startJobHandler,
                 "Start all jobs selected in Job List")
-        self.self.addItem(self.jobMenu, "Pause Jobs", self.pauseJobHandler,
+        self.addItem(self.jobMenu, "Pause Jobs", self.pauseJobHandler,
                 "Pause all jobs selected in Job List")
-        self.self.addItem(self.jobMenu, "Kill Jobs", self.killJobHandler,
+        self.addItem(self.jobMenu, "Kill Jobs", self.killJobHandler,
                 "Kill all jobs selected in Job List")
-        self.self.addItem(self.jobMenu, "Reset Jobs", self.resetJobHandler,
+        self.addItem(self.jobMenu, "Reset Jobs", self.resetJobHandler,
                 "Reset all jobs selected in Job List")
-        self.self.addItem(self.jobMenu, "Start Test Frames...", self.callTestFrameBox,
+        self.addItem(self.jobMenu, "Start Test Frames...", self.callTestFrameBox,
                 "Open a dialog to start the first X frames in each job "
                 "selected in the Job List")
         self.jobMenu.addSeparator()
-        self.self.addItem(self.jobMenu, "Archive/Unarchive Jobs", self.toggleArchiveHandler,
+        self.addItem(self.jobMenu, "Archive/Unarchive Jobs", self.toggleArchiveHandler,
                 "Toggle the Archived status on each job selected in he Job List")
-        self.self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.resetNodeManagementHandler,
+        self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.resetNodeManagementHandler,
                 "Reset the number of tasks which are ready to match the limit "
                 "of the number of concurant tasks.")
-        self.self.addItem(self.jobMenu, "Reveal Detailed Data...", self.revealJobDetailedHandler,
+        self.addItem(self.jobMenu, "Reveal Detailed Data...", self.revealJobDetailedHandler,
                 "Opens a dialog window the detailed data for the selected jobs.")
         self.jobMenu.addSeparator()
         #setJobPriorityHandler
-        self.self.addItem(self.jobMenu, "Set Job Priority...", self.setJobPriorityHandler,
+        self.addItem(self.jobMenu, "Set Job Priority...", self.setJobPriorityHandler,
         "Set priority on each job selected in the Job List")
-        editJob = self.self.addItem(self.jobMenu, "Edit Job...", self.doNothing,
+        editJob = self.addItem(self.jobMenu, "Edit Job...", self.doNothing,
                             "Edit Job, WIP")
         editJob.setEnabled(False)
         self.jobMenu.addSeparator()
 
-        uFA = self.self.addItem(self.jobMenu, "Only Show My Jobs", self.userFilterContextHandler,
+        uFA = self.addItem(self.jobMenu, "Only Show My Jobs", self.userFilterContextHandler,
                         "Only show the jobs belonging to the current user")
         uFA.setCheckable(True)
         if self.userFilter:
             uFA.setChecked(True)
 
-        aFA = self.self.addItem(self.jobMenu, "Show Archived Jobs", self.archivedFilterContextHandler,
+        aFA = self.addItem(self.jobMenu, "Show Archived Jobs", self.archivedFilterContextHandler,
                         "Show jobs which have been archived")
         aFA.setCheckable(True)
         if self.showArchivedFilter:
@@ -502,7 +502,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             try:
                 commandList = []
                 for job_id in job_ids:
-                    [job] = hydra_jobboard.secureFetch("WHERE id = %s",(job_id))
+                    [job] = hydra_jobboard.secureFetch("WHERE id = %s",(job_id,))
                     new = 0
                     if job.archived == 0:
                         new = 1

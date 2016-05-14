@@ -39,7 +39,7 @@ def startTask(task_id):
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     if task.status == READY or task.status == STARTED or task.status == FINISHED:
         logger.info("Passing Task {0} because it is either already started or ready".format(task_id))
-    elif task.status == PAUSED:
+    elif task.status == PAUSED or task.status == MANAGED:
         logger.info("Setting paused Task {0} to Ready".format(task_id))
         task.status = READY
         with transaction() as t:

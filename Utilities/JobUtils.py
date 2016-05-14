@@ -140,6 +140,7 @@ def setupNodeLimit(job_id, hold_status = MANAGED):
 
     tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
     startTasks = tasks[0:taskLimit]
+    startTasks = [int(task.id) for task in startTasks]
     holdTasks = tasks[taskLimit:]
 
     map(TaskUtils.startTask, startTasks)
