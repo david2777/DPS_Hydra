@@ -225,7 +225,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             owner,
                                             compatabilityList,
                                             testNodesP1,
-                                            timeout)
+                                            timeout,
+                                            "Unkown Project")
 
             p1_job_id = phase01Ticket.doSubmit()
             if jobStatus == "R":
@@ -256,7 +257,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             owner,
                                             compatabilityList,
                                             testNodesP2,
-                                            timeout)
+                                            timeout,
+                                            "Unkown Project")
 
             p2_job_id = phase02Ticket.doSubmit()
             if jobStatusOverride == "R":

@@ -114,7 +114,7 @@ class RenderTCPServer(TCPServer):
         queryString += " AND '{0}' LIKE requirements".format(thisNode.capabilities)
         queryString += " AND archived = '0'"
         queryString += " AND failures NOT LIKE '%{0}%'".format(thisNode.host)
-        queryString += " ORDER BY priority DESC, id DESC"
+        queryString += " ORDER BY priority DESC, id ASC"
 
         with transaction() as t:
             render_tasks = hydra_taskboard.fetch(queryString,
