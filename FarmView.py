@@ -105,10 +105,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         event.accept()
         sys.exit(0)
 
-    def addItem(self, menu, name, handler, statusTip):
+    def addItem(self, menu, name, handler, statusTip, arg = None):
         action = QAction(name, self)
         action.setStatusTip(statusTip)
-        action.triggered.connect(handler)
+        if arg:
+            action.triggered.connect(functools.partial(handler, arg))
+        else:
+            action.triggered.connect(handler)
         menu.addAction(action)
         return action
 
@@ -545,19 +548,19 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addItem(self.taskMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.taskMenu.addSeparator()
-        self.addItem(self.taskMenu, "Start Tasks", self.startTaskHandler,
-                "Start all tasks selected in the Task List")
-        self.addItem(self.taskMenu, "Pause Tasks", self.pauseTaskHandler,
-                "Pause all tasks selected in the Task List")
-        self.addItem(self.taskMenu, "Kill Tasks", self.killTaskHandler,
-                "Kill all tasks selected in the Task List")
-        self.addItem(self.taskMenu, "Reset Tasks", self.resetTaskHandler,
-                "Reset all tasks selected in the Task List")
+        self.addItem(self.taskMenu, "Start Tasks", self.taskHandler,
+                "Start all tasks selected in the Task List", "start")
+        self.addItem(self.taskMenu, "Pause Tasks", self.taskHandler,
+                "Pause all tasks selected in the Task List", "pause")
+        self.addItem(self.taskMenu, "Kill Tasks", self.taskHandler,
+                "Kill all tasks selected in the Task List", "kill")
+        self.addItem(self.taskMenu, "Reset Tasks", self.taskHandler,
+                "Reset all tasks selected in the Task List", "reset")
         self.taskMenu.addSeparator()
-        self.addItem(self.taskMenu, "Reveal Detailed Data...", self.revealTaskDetailedHandler,
-                "Opens a dialog window the detailed data for the selected tasks.")
-        self.addItem(self.taskMenu, "Load LogFile", self.loadLogHandler,
-                "Load the log file for all tasks selected in the Task List")
+        self.addItem(self.taskMenu, "Reveal Detailed Data...", self.taskHandler,
+                "Opens a dialog window the detailed data for the selected tasks.", "data")
+        self.addItem(self.taskMenu, "Load LogFile", self.taskHandler,
+                "Load the log file for all tasks selected in the Task List", "log")
         self.taskMenu.popup(QCursor.pos())
 
     def initTaskTable(self, job_id, shotItem):
@@ -629,23 +632,72 @@ class FarmView(QMainWindow, Ui_FarmView):
             logger.error("Bad taskTableHandler mode!")
             return
 
-    def startTaskHandler(self):
-        task_ids = self.taskTableHandler()
-        if task_ids:
+    def taskHandler(self, mode):
+        task_ids =  self.taskTableHandler()
+        if not task_ids:
+            return
+
+        #load Detailed Data
+        if mode == "data":
+            self.revealDetailedHandler(task_ids, hydra_taskboard, "WHERE id = %s")
+
+        #Start Task
+        if mode == "start":
             map(TaskUtils.startTask, task_ids)
             self.updateTaskTable()
 
-    def resetTaskHandler(self):
-        task_ids = self.taskTableHandler()
-        if not task_ids:
-            return
-        choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
-        if choice == QMessageBox.Yes:
-            responses = [TaskUtils.resetTask(t_id, READY) for t_id in task_ids]
-            self.updateTaskTable()
-            if False in responses:
-                msg = "Unable to reset task {0} because there was an error communicating with it's host.".format(task_id)
-                aboutBox(self, "Reset Task Error", msg)
+        #Reset Task
+        elif mode == "reset":
+            choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
+            if choice == QMessageBox.Yes:
+                responses = [TaskUtils.resetTask(t_id, READY) for t_id in task_ids]
+                self.updateTaskTable()
+                if False in responses:
+                    msg = "Unable to reset task {0} because there was an error communicating with it's host.".format(task_id)
+                    aboutBox(self, "Reset Task Error", msg)
+
+        #Pause or Kill Task
+        elif mode == "pause" or mode == "kill":
+            choice = yesNoBox(self, "Confirm", "Really {0} selected tasks?".format(mode))
+            if choice == QMessageBox.Yes:
+                if mode == "kill":
+                    statusAfterDeath = KILLED
+                else:
+                    statusAfterDeath = PAUSED
+                for task_id in task_ids:
+                    try:
+                        response = TaskUtils.killTask(task_id, statusAfterDeath)
+                        if not response:
+                            aboutBox(self, "Error",
+                                    "Task with id {0} couldn't be killed for some reason.".format(task_id))
+                    except socketerror as err:
+                        logger.error(str(err))
+                        aboutBox(self, "Error", "Task couldn't be killed because "
+                        "there was a problem communicating with the host running "
+                        "it.")
+                    except sqlerror as err:
+                        logger.error(str(err))
+                        aboutBox(self, "SQL Error", str(err))
+                [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
+                JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
+                self.updateTaskTable()
+                self.populateJobTree()
+
+        #Load LogFile
+        elif mode == "log":
+            if len(task_ids) > 1:
+                choice = yesNoBox(self, "Open logs?", "Note, this will open a text"
+                                " editor for EACH task selected. Continue?")
+                if choice == QMessageBox.Yes:
+                    for task_id in task_ids:
+                        [taskOBJ] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
+                        loadLog(self, taskOBJ)
+            else:
+                [taskOBJ] = hydra_taskboard.secureFetch("WHERE id = %s", (task_ids[0],))
+                loadLog(self, taskOBJ)
+
+        else:
+            logger.error("Bad task handler arg")
 
     def callTestFrameBox(self):
         job_ids = self.jobTreeHandler()
@@ -665,81 +717,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             logger.info("No test tasks started.")
 
-    def killTaskHandler(self):
-        task_ids = self.taskTableHandler()
-        if not task_ids:
-            return
-        choice = yesNoBox(self, "Confirm", "Really kill selected tasks?")
-        if choice == QMessageBox.Yes:
-            for task_id in task_ids:
-                try:
-                    response = TaskUtils.killTask(task_id)
-                    if not response:
-                        aboutBox(self, "Error",
-                                "Task couldn't be killed for some reason.")
-                except socketerror as err:
-                    logger.error(str(err))
-                    aboutBox(self, "Error", "Task couldn't be killed because "
-                    "there was a problem communicating with the host running "
-                    "it.")
-                except sqlerror as err:
-                    logger.error(str(err))
-                    aboutBox(self, "SQL Error", str(err))
-                [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
-                JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
-                JobUtils.manageNodeLimit(job.job_id)
-            self.updateTaskTable()
-            self.populateJobTree()
-
-    def pauseTaskHandler(self):
-        task_ids = self.taskTableHandler()
-        if not task_ids:
-            return
-        choice = yesNoBox(self, "Confirm", "Really kill selected tasks?")
-        if choice == QMessageBox.Yes:
-            for task_id in task_ids:
-                try:
-                    response = TaskUtils.killTask(task_id, PAUSED)
-                    if not response:
-                        aboutBox(self, "Error",
-                                "Task couldn't be killed for some reason.")
-                except socketerror as err:
-                    logger.error(str(err))
-                    aboutBox(self, "Error", "Task couldn't be killed because "
-                    "there was a problem communicating with the host running "
-                    "it.")
-                except sqlerror as err:
-                    logger.error(str(err))
-                    aboutBox(self, "SQL Error", str(err))
-                [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
-                JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
-            self.updateTaskTable()
-            self.populateJobTree()
-
-    def loadLogHandler(self):
-        task_ids = self.taskTableHandler()
-        if not task_ids:
-            return
-        if len(task_ids) > 1:
-            choice = yesNoBox(self, "Open logs?", "Note, this will open a text"
-                            " editor for EACH task selected. Continue?")
-            if choice == QMessageBox.Yes:
-                for task_id in task_ids:
-                    [taskOBJ] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
-                    loadLog(taskOBJ)
-        else:
-            [taskOBJ] = hydra_taskboard.secureFetch("WHERE id = %s", (task_ids[0],))
-            loadLog(taskOBJ)
-
     def advancedSearchHandler(self):
         #results = TaskSearchDialog.create()
         logger.error("Not Implemeted!")
-
-    def revealTaskDetailedHandler(self):
-        task_ids = self.taskTableHandler()
-        if not task_ids:
-            return
-        self.revealDetailedHandler(task_ids, hydra_taskboard, "WHERE id = %s")
 
     def searchByTaskID(self):
         """~~UNTESTED~~
@@ -1280,7 +1260,7 @@ def clearLayout(layout):
         elif child.layout() is not None:
             clearLayout(child.layout())
 
-def loadLog(record):
+def loadLog(self, record):
     logFile = record.logFile
     if logFile:
         logFile = os.path.abspath(logFile)
@@ -1297,7 +1277,7 @@ def loadLog(record):
             logger.error("Invalid log file path for task: {0}".format(record.id))
             logger.error(logFile)
     else:
-        aboutBox("No Log on File",
+        aboutBox(self, "No Log on File",
                 "No log on file for task: {0}\nJob was probably never started or was recently reset.".format(record.id))
         logger.warning("No log file on record for task: {0}".format(record.id))
 
