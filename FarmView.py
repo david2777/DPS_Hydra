@@ -120,23 +120,24 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.setColumnWidth(0, 200)     #Host
         self.renderNodeTable.setColumnWidth(1, 70)      #Status
         self.renderNodeTable.setColumnWidth(2, 70)      #Task ID
-        self.renderNodeTable.setColumnWidth(3, 70)      #Min Priority
+        self.renderNodeTable.setColumnWidth(3, 110)     #Version
         self.renderNodeTable.setColumnWidth(4, 100)     #Online Time
-        self.renderNodeTable.setColumnWidth(5, 100)      #Offline Time
+        self.renderNodeTable.setColumnWidth(5, 100)     #Offline Time
         self.renderNodeTable.setColumnWidth(6, 110)     #Heartbeat
-        self.renderNodeTable.setColumnWidth(7, 110)     #Version
-        self.renderNodeTable.setColumnWidth(8, 110)     #Capabilities
+        self.renderNodeTable.setColumnWidth(7, 110)     #Capabilities
 
         # Column widths on the taskTable
         self.taskTable.setColumnWidth(0, 60)        #ID
-        self.taskTable.setColumnWidth(1, 60)        #Priority
-        self.taskTable.setColumnWidth(2, 60)        #Frame
+        self.taskTable.setColumnWidth(1, 60)        #Start Frame
+        self.taskTable.setColumnWidth(2, 60)        #End Frame
         self.taskTable.setColumnWidth(3, 100)       #Host
         self.taskTable.setColumnWidth(4, 60)        #Status
-        self.taskTable.setColumnWidth(5, 120)       #Start Time
-        self.taskTable.setColumnWidth(6, 120)       #End Time
-        self.taskTable.setColumnWidth(7, 120)       #Duration
-        self.taskTable.setColumnWidth(8, 120)       #Code
+        self.taskTable.setColumnWidth(5, 60)        #Priority
+        self.taskTable.setColumnWidth(6, 120)       #Start Time
+        self.taskTable.setColumnWidth(7, 120)       #End Time
+        self.taskTable.setColumnWidth(8, 120)       #Duration
+        self.taskTable.setColumnWidth(9, 120)       #Code
+        self.taskTable.setColumnWidth(10, 120)      #Attempts
 
         #Set Job List splitter size
         #These numbers are really high so that they work proportionally
@@ -271,7 +272,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             return hydra_jobboard.fetch(cmd)
         except sqlerror as err:
-            logger.debug(str(err))
+            logger.error(str(err))
             aboutBox(self, "SQL error", str(err))
             return
 
@@ -283,8 +284,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             taskString = "0% (0/0)"
 
-        return [job.niceName, str(job.id), job.owner, niceNames[job.job_status],
-                taskString, str(job.priority)]
+        return [job.niceName, str(job.id), niceNames[job.job_status],
+                taskString, job.owner, str(job.priority), str(job.startFrame),
+                str(job.endFrame), str(job.maxNodes)]
 
     def jobTreeHandler(self, mode = "IDs"):
         self.resetStatusBar()
@@ -315,7 +317,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             if shotItem != []:
                 #If job was found update it
                 shotItem = shotItem[0]
-                for i in range(0,6):
+                for i in range(0,9):
                     shotItem.setData(i,0,jobData[i])
             else:
                 #If job was not found add it as a new item
@@ -328,25 +330,25 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Update colors and stuff
         if job.archived == 1:
-            for i in range(0,6):
+            for i in range(0,9):
                 shotItem.setBackgroundColor(i, QColor(200,200,200))
-        shotItem.setBackgroundColor(3, niceColors[job.job_status])
+        shotItem.setBackgroundColor(2, niceColors[job.job_status])
         if job.owner == self.username:
-            shotItem.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
+            shotItem.setFont(4, QFont('Segoe UI', 8, QFont.DemiBold))
 
     def updateJobTreeRow(self, job_id, shotItem):
         [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id,))
         data = self.getJobData(job)
 
-        for i in range(0, 6):
+        for i in range(0, 9):
             shotItem.setData(i,0,data[i])
             if job.archived == 1:
                 shotItem.setBackgroundColor(i, QColor(200,200,200))
 
-        shotItem.setBackgroundColor(3, niceColors[job.job_status])
+        shotItem.setBackgroundColor(2, niceColors[job.job_status])
 
         if job.owner == self.username:
-            shotItem.setFont(2, QFont('Segoe UI', 8, QFont.DemiBold))
+            shotItem.setFont(4, QFont('Segoe UI', 8, QFont.DemiBold))
 
     def populateJobTree(self):
         jobs = self.fetchJobs()
@@ -364,16 +366,19 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def initJobTree(self):
         self.jobTree.itemClicked.connect(self.jobTreeClickedHandler)
-        header = QTreeWidgetItem(["Name", "ID", "Owner", "Status", "Tasks",
-                                    "Priority"])
+        header = QTreeWidgetItem(["Name", "Job ID", "Status", "Tasks", "Owner",
+                                    "Priority", "Start", "End", "Max Nodes"])
         self.jobTree.setHeaderItem(header)
         #Must set widths AFTER setting header
-        self.jobTree.setColumnWidth(0, 250)        #Project/Name
-        self.jobTree.setColumnWidth(1, 50)         #ID
-        self.jobTree.setColumnWidth(2, 100)        #Owner
-        self.jobTree.setColumnWidth(3, 60)         #Status
-        self.jobTree.setColumnWidth(4, 60)         #Tasks
-        self.jobTree.setColumnWidth(5, 50)         #Priority
+        self.jobTree.setColumnWidth(0, 300)         #Project/Name
+        self.jobTree.setColumnWidth(1, 50)          #ID
+        self.jobTree.setColumnWidth(2, 60)          #Status
+        self.jobTree.setColumnWidth(3, 80)          #Percentage
+        self.jobTree.setColumnWidth(4, 100)         #Owner
+        self.jobTree.setColumnWidth(5, 50)          #Priority
+        self.jobTree.setColumnWidth(6, 70)          #Start Frame
+        self.jobTree.setColumnWidth(6, 70)          #End Frame
+        self.jobTree.setColumnWidth(6, 60)          #Max Nodes
         self.populateJobTree()
 
     def userFilterContextHandler(self):
@@ -586,16 +591,18 @@ class FarmView(QMainWindow, Ui_FarmView):
             #Remove first and last "%", replace with ", "
             reqsString = str(task.requirements)[1:-1].replace("%", ", ")
             self.taskTable.setItem(pos, 0, TableWidgetItem_int(str(task.id)))
-            self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.priority)))
-            self.taskTable.setItem(pos, 2, TableWidgetItem_int(str(task.startFrame)))
+            self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.startFrame)))
+            self.taskTable.setItem(pos, 2, TableWidgetItem_int(str(task.endFrame)))
             self.taskTable.setItem(pos, 3, TableWidgetItem(str(task.host)))
             self.taskTable.setItem(pos, 4, TableWidgetItem(str(niceNames[task.status])))
             self.taskTable.item(pos, 4).setBackgroundColor(niceColors[task.status])
-            self.taskTable.setItem(pos, 5, TableWidgetItem_dt(str(task.startTime)))
-            self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(task.endTime)))
-            self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(tdiff)))
-            self.taskTable.setItem(pos, 8, TableWidgetItem_int(str(task.exitCode)))
-            self.taskTable.setItem(pos, 9, TableWidgetItem_int(reqsString))
+            self.taskTable.setItem(pos, 5, TableWidgetItem_int(str(task.priority)))
+            self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(task.startTime)))
+            self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(task.endTime)))
+            self.taskTable.setItem(pos, 8, TableWidgetItem_dt(str(tdiff)))
+            self.taskTable.setItem(pos, 9, TableWidgetItem_int(str(task.exitCode)))
+            self.taskTable.setItem(pos, 10, TableWidgetItem(str(task.failures)))
+            self.taskTable.setItem(pos, 11, TableWidgetItem_int(reqsString))
 
         JobUtils.updateJobTaskCount(job_id, tasks = tasks, commit = True)
         self.updateJobTreeRow(job_id, shotItem)
@@ -793,10 +800,15 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.setRowCount(len(nodes))
         for row, node in enumerate(nodes):
             self.renderNodeTable.setItem(row, 0, TableWidgetItem(str(node.host)))
+
             self.renderNodeTable.setItem(row, 1, TableWidgetItem(str(niceNames[node.status])))
             self.renderNodeTable.item(row, 1).setBackgroundColor(niceColors[node.status])
+
             self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(node.task_id)))
-            self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(node.minPriority)))
+
+            nodeVersion  = getSoftwareVersionText(node.software_version)
+            self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(nodeVersion)))
+
             if node.onlineTime and node.offlineTime:
                 onlineTimeWidget = TableWidgetItem(str(node.onlineTime))
                 offlineTimeWidget = TableWidgetItem(str(node.offlineTime))
@@ -805,10 +817,9 @@ class FarmView(QMainWindow, Ui_FarmView):
             else:
                 self.renderNodeTable.setItem(row, 4, TableWidgetItem("Manual Control"))
                 self.renderNodeTable.setItem(row, 5, TableWidgetItem("Manual Control"))
-            nodeVersion  = getSoftwareVersionText(node.software_version)
+
             self.renderNodeTable.setItem(row, 6, TableWidgetItem_dt(node.pulse))
-            self.renderNodeTable.setItem(row, 7, TableWidgetItem(str(nodeVersion)))
-            self.renderNodeTable.setItem(row, 8, TableWidgetItem(str(node.capabilities)))
+            self.renderNodeTable.setItem(row, 7, TableWidgetItem(str(node.capabilities)))
             if node.host == self.thisNodeName:
                 self.renderNodeTable.item(row, 0).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
 

@@ -93,6 +93,40 @@
 
 -[Done]Cleanup imports
 
+-[Done]Change information displayed in FarmView
+    -Job Tree
+        -Nice name
+        -ID
+        -Status
+        -Percentage
+        -Owner
+        -Priority
+        -Start Frame
+        -End Frame
+        -Max Nodes
+    -Task Table
+        -ID
+        -Start Frame
+        -End Frame
+        -Host
+        -Status
+        -Priority
+        -Start Time
+        -End Time
+        -Duration
+        -Exit Code
+        -Attempts Summary
+        -Reqs
+    -Node Table
+        -Host
+        -Status
+        -Task ID
+        -Version
+        -Online Time
+        -Offline Time
+        -Heartbeat
+        -Capabilities
+
 -[Todo]Standardize if True or False means error on return
 
 -[Todo]Make sure Job_Statuses updated when changes are made
