@@ -229,25 +229,25 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addItem(self.jobMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.jobMenu.addSeparator()
-        self.addItem(self.jobMenu, "Start Jobs", self.startJobHandler,
-                "Start all jobs selected in Job List")
-        self.addItem(self.jobMenu, "Pause Jobs", self.pauseJobHandler,
-                "Pause all jobs selected in Job List")
-        self.addItem(self.jobMenu, "Kill Jobs", self.killJobHandler,
-                "Kill all jobs selected in Job List")
-        self.addItem(self.jobMenu, "Reset Jobs", self.resetJobHandler,
-                "Reset all jobs selected in Job List")
+        self.addItem(self.jobMenu, "Start Jobs", self.jobActionHandler,
+                "Start all jobs selected in Job List", "start")
+        self.addItem(self.jobMenu, "Pause Jobs", self.jobActionHandler,
+                "Pause all jobs selected in Job List", "pause")
+        self.addItem(self.jobMenu, "Kill Jobs", self.jobActionHandler,
+                "Kill all jobs selected in Job List", "kill")
+        self.addItem(self.jobMenu, "Reset Jobs", self.jobActionHandler,
+                "Reset all jobs selected in Job List", "reset")
         self.addItem(self.jobMenu, "Start Test Frames...", self.callTestFrameBox,
                 "Open a dialog to start the first X frames in each job "
                 "selected in the Job List")
         self.jobMenu.addSeparator()
-        self.addItem(self.jobMenu, "Archive/Unarchive Jobs", self.toggleArchiveHandler,
-                "Toggle the Archived status on each job selected in he Job List")
-        self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.resetNodeManagementHandler,
+        self.addItem(self.jobMenu, "Archive/Unarchive Jobs", self.jobActionHandler,
+                "Toggle the Archived status on each job selected in he Job List", "archive")
+        self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.jobActionHandler,
                 "Reset the number of tasks which are ready to match the limit "
-                "of the number of concurant tasks.")
-        self.addItem(self.jobMenu, "Reveal Detailed Data...", self.revealJobDetailedHandler,
-                "Opens a dialog window the detailed data for the selected jobs.")
+                "of the number of concurant tasks.", "manage")
+        self.addItem(self.jobMenu, "Reveal Detailed Data...", self.jobActionHandler,
+                "Opens a dialog window the detailed data for the selected jobs.", "data")
         self.jobMenu.addSeparator()
         #setJobPriorityHandler
         self.addItem(self.jobMenu, "Set Job Priority...", self.setJobPriorityHandler,
@@ -270,6 +270,11 @@ class FarmView(QMainWindow, Ui_FarmView):
             aFA.setChecked(True)
         self.jobMenu.popup(QCursor.pos())
 
+    def jobTreeClickedHandler(self):
+        shotItem = self.jobTree.currentItem()
+        if shotItem.parent():
+            self.initTaskTable(int(shotItem.text(1)), shotItem)
+
     def fetchJobs(self):
         cmd = self.jobCommandBuilder()
         try:
@@ -290,27 +295,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         return [job.niceName, str(job.id), niceNames[job.job_status],
                 taskString, job.owner, str(job.priority), str(job.startFrame),
                 str(job.endFrame), str(job.maxNodes)]
-
-    def jobTreeHandler(self, mode = "IDs"):
-        self.resetStatusBar()
-        mySel = self.jobTree.selectedItems()
-        if len(mySel) < 1:
-            aboutBox(self, "Selection Error",
-                    "Please select something from the Job Table and try again.")
-            return
-
-        if mode == "IDs":
-            data = [int(sel.text(1)) for sel in mySel if sel.parent()]
-
-        elif mode == "Rows":
-            data = mySel
-
-        return data if data != [] else None
-
-    def jobTreeClickedHandler(self):
-        shotItem = self.jobTree.currentItem()
-        if shotItem.parent():
-            self.initTaskTable(int(shotItem.text(1)), shotItem)
 
     def addJobTreeShot(self, jobData, job):
         proj = self.jobTree.findItems(str(job.projectName), Qt.MatchContains)
@@ -415,74 +399,109 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         return command.format(self.username) if command != "WHERE" else ""
 
-    def startJobHandler(self):
+    def jobTreeHandler(self, mode = "IDs"):
+        self.resetStatusBar()
+        mySel = self.jobTree.selectedItems()
+        if len(mySel) < 1:
+            aboutBox(self, "Selection Error",
+                    "Please select something from the Job Table and try again.")
+            return
+
+        if mode == "IDs":
+            data = [int(sel.text(1)) for sel in mySel if sel.parent()]
+
+        elif mode == "Rows":
+            data = mySel
+
+        return data if data != [] else None
+
+    def jobActionHandler(self, mode):
         job_ids = self.jobTreeHandler()
-        if job_ids:
+        if not job_ids:
+            return
+
+        #Start Job
+        if mode == "start":
             map(JobUtils.startJob, job_ids)
             self.populateJobTree()
 
-    def killJobHandler(self):
-        job_ids = self.jobTreeHandler()
-        if not job_ids:
-            return
-        choice = yesNoBox(self, "Confirm", "Really kill the selected jobs?")
-        if choice == QMessageBox.Yes:
-            try:
-                responses = map(JobUtils.killJob, job_ids)
-            except sqlerror as err:
-                logger.error(str(err))
-                aboutBox(self, "SQL Error", str(err))
-            finally:
-                if False in responses:
-                    aboutBox(self, "Error",
-                            "One or more nodes couldn't kill their tasks.")
-                map(JobUtils.manageNodeLimit, job_ids)
-                self.populateJobTree()
+        #Reveal Detailed Data
+        elif mode == "data":
+            self.revealDetailedHandler(job_ids, hydra_jobboard, "WHERE id = %s")
 
-    def pauseJobHandler(self):
-        job_ids = self.jobTreeHandler()
-        if not job_ids:
-            return
-        choice = yesNoBox(self, "Confirm", "Really pause the selected jobs?")
-        if choice == QMessageBox.Yes:
-            try:
-                responses = [JobUtils.killJob(job_id, PAUSED) for job_id in job_ids]
-            except sqlerror as err:
-                logger.error(str(err))
-                aboutBox(self, "SQL Error", str(err))
-            finally:
-                if False in responses:
-                    aboutBox(self, "Error",
-                            "One or more nodes couldn't kill their tasks.")
-                self.populateJobTree()
+        #Kill or Pause Job
+        elif mode == "kill" or mode == "pause":
+            choice = yesNoBox(self, "Confirm", "Really {0} the selected jobs?".format(mode))
+            if choice == QMessageBox.Yes:
+                if mode == "kill":
+                    statusAfterDeath =  KILLED
+                else:
+                    statusAfterDeath = PAUSED
+                try:
+                    responses = [JobUtils.killJob(job_id, statusAfterDeath) for job_id in job_ids]
+                except sqlerror as err:
+                    logger.error(str(err))
+                    aboutBox(self, "SQL Error", str(err))
+                finally:
+                    if False in responses:
+                        aboutBox(self, "Error",
+                                "One or more nodes couldn't kill their tasks.")
+                    map(JobUtils.manageNodeLimit, job_ids)
+                    self.populateJobTree()
 
-    def resetJobHandler(self):
-        job_ids = self.jobTreeHandler()
-        if not job_ids:
-            return
-        choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
-        if choice == QMessageBox.Yes:
-            try:
-                responses = [JobUtils.resetJob(job_id, READY) for job_id in job_ids]
-            except sqlerror as err:
-                logger.error(str(err))
-                aboutBox(self, "SQL Error", str(err))
-            finally:
-                if False in responses:
-                    aboutBox(self, "Error",
-                            "One or more nodes couldn't kill their tasks.")
-                self.populateJobTree()
+        #Reset Job
+        elif mode == "reset":
+            choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
+            if choice == QMessageBox.Yes:
+                try:
+                    responses = [JobUtils.resetJob(job_id, READY) for job_id in job_ids]
+                except sqlerror as err:
+                    logger.error(str(err))
+                    aboutBox(self, "SQL Error", str(err))
+                finally:
+                    if False in responses:
+                        aboutBox(self, "Error",
+                                "One or more nodes couldn't kill their tasks.")
+                    self.populateJobTree()
 
-    def resetNodeManagementHandler(self):
-        job_ids = self.jobTreeHandler()
-        if not job_ids:
-            return
-        cStr = "Are you sure you want to reset node managment on the selected Job?\n"
-        cStr += "This will hold all Tasks above the max node count set on the Job."
-        choice = yesNoBox(self, "Confirm", cStr)
-        if choice == QMessageBox.Yes:
-            map(JobUtils.setupNodeLimit, job_ids)
-        self.populateJobTree()
+        #Reset Node Management on Job
+        elif mode == "manage":
+            cStr = "Are you sure you want to reset node managment on the selected Job?\n"
+            cStr += "This will hold all Tasks above the max node count set on the Job."
+            choice = yesNoBox(self, "Confirm", cStr)
+            if choice == QMessageBox.Yes:
+                map(JobUtils.setupNodeLimit, job_ids)
+            self.populateJobTree()
+
+        #Toggle Archive on Job
+        elif mode == "archive":
+            choice = yesNoBox(self, "Confirm",
+                            "Really archive or unarchive the selected jobs?")
+            if choice == QMessageBox.Yes:
+                try:
+                    commandList = []
+                    for job_id in job_ids:
+                        [job] = hydra_jobboard.secureFetch("WHERE id = %s",(job_id,))
+                        new = 0
+                        if job.archived == 0:
+                            new = 1
+                        job_command = "UPDATE hydra_jobboard SET archived = %s WHERE id = %s"
+                        task_command = "UPDATE hydra_taskboard SET archived = %s WHERE job_id = %s"
+                        commandList.append(job_command.format(new, job_id))
+                        commandList.append(task_command.format(new, job_id))
+
+                    with transaction() as t:
+                        t.cur.execute(job_command, (new, job_id,))
+                        t.cur.execute(task_command, (new, job_id,))
+
+                except sqlerror as err:
+                    logger.error(str(err))
+                    aboutBox(self, "SQL Error", str(err))
+                finally:
+                    self.populateJobTree()
+
+        else:
+            logger.error("Bad job action handler arg")
 
     def setJobPriorityHandler(self):
         selection = self.jobTreeHandler("Rows")
@@ -499,41 +518,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             else:
                 logger.info("prioritizeJob skipped on {0}".format(job_id))
 
-    def toggleArchiveHandler(self):
-        #TODO:Secure this
-        job_ids = self.jobTreeHandler()
-        if not job_ids:
-            return
-        choice = yesNoBox(self, "Confirm",
-                        "Really archive or unarchive the selected jobs?")
-        if choice == QMessageBox.Yes:
-            try:
-                commandList = []
-                for job_id in job_ids:
-                    [job] = hydra_jobboard.secureFetch("WHERE id = %s",(job_id,))
-                    new = 0
-                    if job.archived == 0:
-                        new = 1
-                    job_command = "UPDATE hydra_jobboard SET archived = %s WHERE id = %s"
-                    task_command = "UPDATE hydra_taskboard SET archived = %s WHERE job_id = %s"
-                    commandList.append(job_command.format(new, job_id))
-                    commandList.append(task_command.format(new, job_id))
-
-                with transaction() as t:
-                    t.cur.execute(job_command, (new, job_id,))
-                    t.cur.execute(task_command, (new, job_id,))
-
-            except sqlerror as err:
-                logger.error(str(err))
-                aboutBox(self, "SQL Error", str(err))
-            finally:
-                self.populateJobTree()
-
-    def revealJobDetailedHandler(self):
-        job_ids = self.jobTreeHandler()
-        if job_ids:
-            self.revealDetailedHandler(job_ids, hydra_jobboard, "WHERE id = %s")
-
     #---------------------------------------------------------------------#
     #---------------------------TASK HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
@@ -548,18 +532,18 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addItem(self.taskMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.taskMenu.addSeparator()
-        self.addItem(self.taskMenu, "Start Tasks", self.taskHandler,
+        self.addItem(self.taskMenu, "Start Tasks", self.taskActionHandler,
                 "Start all tasks selected in the Task List", "start")
-        self.addItem(self.taskMenu, "Pause Tasks", self.taskHandler,
+        self.addItem(self.taskMenu, "Pause Tasks", self.taskActionHandler,
                 "Pause all tasks selected in the Task List", "pause")
-        self.addItem(self.taskMenu, "Kill Tasks", self.taskHandler,
+        self.addItem(self.taskMenu, "Kill Tasks", self.taskActionHandler,
                 "Kill all tasks selected in the Task List", "kill")
-        self.addItem(self.taskMenu, "Reset Tasks", self.taskHandler,
+        self.addItem(self.taskMenu, "Reset Tasks", self.taskActionHandler,
                 "Reset all tasks selected in the Task List", "reset")
         self.taskMenu.addSeparator()
-        self.addItem(self.taskMenu, "Reveal Detailed Data...", self.taskHandler,
+        self.addItem(self.taskMenu, "Reveal Detailed Data...", self.taskActionHandler,
                 "Opens a dialog window the detailed data for the selected tasks.", "data")
-        self.addItem(self.taskMenu, "Load LogFile", self.taskHandler,
+        self.addItem(self.taskMenu, "Load LogFile", self.taskActionHandler,
                 "Load the log file for all tasks selected in the Task List", "log")
         self.taskMenu.popup(QCursor.pos())
 
@@ -632,8 +616,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             logger.error("Bad taskTableHandler mode!")
             return
 
-    def taskHandler(self, mode):
-        task_ids =  self.taskTableHandler()
+    def taskActionHandler(self, mode):
+        task_ids = self.taskTableHandler()
         if not task_ids:
             return
 
@@ -642,7 +626,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.revealDetailedHandler(task_ids, hydra_taskboard, "WHERE id = %s")
 
         #Start Task
-        if mode == "start":
+        elif mode == "start":
             map(TaskUtils.startTask, task_ids)
             self.updateTaskTable()
 
@@ -1024,9 +1008,9 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         if thisNode:
             NodeUtils.onlineNode(thisNode)
+            self.updateStatusBar(thisNode)
 
         self.updateRenderNodeTable()
-        self.updateStatusBar()
 
     def offlineThisNodeHandler(self):
         """Changes the local render node's status to offline if it was idle,
@@ -1041,9 +1025,9 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         if thisNode:
             NodeUtils.offlineNode(thisNode)
+            self.updateStatusBar(thisNode)
 
         self.updateRenderNodeTable()
-        self.updateStatusBar()
 
     def getOffThisNodeHandler(self):
         """Offlines the node and sends a message to the render node server
@@ -1078,7 +1062,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             else:
                 aboutBox(self, "Success", "No job was found on node, node offlined")
             self.updateRenderNodeTable()
-            self.updateStatusBar()
+            if thiseNode:
+                self.updateStatusBar(thisNode)
         else:
             aboutBox(self, "Abort", "No action taken.")
 

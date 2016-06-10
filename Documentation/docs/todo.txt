@@ -127,6 +127,10 @@
         -Heartbeat
         -Capabilities
 
+-[Todo]Task kill does not kill managed tasks
+
+-[Todo]Statuses not auto refreshing in FarmView
+
 -[Todo]Standardize if True or False means error on return
 
 -[Todo]Make sure Job_Statuses updated when changes are made
