@@ -8,6 +8,7 @@ import fnmatch
 import datetime
 import functools
 import webbrowser
+import Constants
 from socket import error as socketerror
 
 #Third Party
@@ -45,30 +46,14 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Partial applications for convenience
         self.sqlErrorBox = (
-            functools.partial(
-                aboutBox,
-                parent = self,
-                title = "Error",
-                msg = "There was a problem while trying to fetch info"
-                " from the database. Check the FarmView log file for"
-                " more details about the error."))
-        self.noneCheckedBox = (
-            functools.partial(
-                aboutBox,
-                parent = self,
-                title = "None checked",
-                msg = "No nodes have been selected. Use the check boxes"
-                " to make a selection from the table."))
+            functools.partial(aboutBox, self, "SQL Error", Constants.SQLERR_STRING))
 
         self.nodeDoesNotExistBox = (
             functools.partial(
                 aboutBox,
                 parent = self,
                 title = "Notice",
-                msg = "Information about this node cannot be displayed because "
-                "it is not registered on the render farm. You may continue to "
-                "use Farm View, but it must be restarted after this node is "
-                "registered if you wish to see this node's information."))
+                msg = Constants.DOESNOTEXISTERR_STRING))
 
         self.thisNodeName = Utils.myHostName()
         logger.info("This host is {0}".format(self.thisNodeName))
@@ -466,9 +451,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Reset Node Management on Job
         elif mode == "manage":
-            cStr = "Are you sure you want to reset node managment on the selected Job?\n"
-            cStr += "This will hold all Tasks above the max node count set on the Job."
-            choice = yesNoBox(self, "Confirm", cStr)
+            choice = yesNoBox(self, "Confirm", Constants.RESETNODEMGMT_STRING)
             if choice == QMessageBox.Yes:
                 map(JobUtils.setupNodeLimit, job_ids)
             self.populateJobTree()
@@ -703,7 +686,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def advancedSearchHandler(self):
         #results = TaskSearchDialog.create()
-        logger.error("Not Implemeted!")
+        logger.warning("Not Implemeted!")
 
     def searchByTaskID(self):
         """~~UNTESTED~~
@@ -827,7 +810,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
 
         choice = yesNoBox(self, "Confirm", "Are you sure you want to online"
-                          " these nodes? <br>" + str(hosts))
+                          " these nodes?\n" + str(hosts))
         if choice == QMessageBox.Yes:
             try:
                 with transaction() as t:
@@ -847,7 +830,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
 
         choice = yesNoBox(self, "Confirm", "Are you sure you want to offline"
-                          " these nodes? <br>" + str(hosts))
+                          " these nodes?\n" + str(hosts))
         if choice == QMessageBox.Yes:
             with transaction() as t:
                 rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
@@ -863,10 +846,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not hosts:
             return
 
-        choice = yesNoBox(self, "Confirm", "<B>WARNING</B>: All progress on"
-                          " current tasks will be lost for the selected"
-                          " render nodes. Are you sure you want to stop these"
-                          " nodes? <br>" + str(hosts))
+        choice = yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
         if choice == QMessageBox.Yes:
             try:
                 with transaction() as t:
@@ -889,9 +869,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                             aboutBox(self, "Success", "Job was reset, node offlined.")
                     except socketerror:
                         logger.error(socketerror.message)
-                        aboutBox(self, "Error", "There was a problem communicating"
-                                 " with the render node software. Either it's not"
-                                 " running, or it has become unresponsive.")
+                        aboutBox(self, "Error", Constants.SOCKETERR_STRING)
                 else:
                     aboutBox(self, "Success", "No job was found on node, node offlined")
 
@@ -904,9 +882,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not hosts:
             return
         elif len(hosts) > 1:
-            choice = yesNoBox(self, "Confirm", "Are you sure you want to edit "
-                              "multiple nodes? A box will open for each node "
-                              "checked.")
+            choice = yesNoBox(self, "Confirm", Constants.MULTINODEEDIT_STRING)
             if choice == QMessageBox.No:
                 aboutBox(self, "Abort", "No action taken.")
             else:
@@ -1040,8 +1016,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.sqlErrorBox()
             return
 
-        choice = yesNoBox(self, "Confirm", "All progress on the current job"
-                          " will be lost. Are you sure you want to stop it?")
+        choice = yesNoBox(self, "Confirm", Constants.GETOFFLOCAL_STRING)
         if choice == QMessageBox.Yes:
             NodeUtils.offlineNode(thisNode)
             if thisNode.task_id:
@@ -1056,9 +1031,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                         aboutBox(self, "Success", "Job was reset, node offlined.")
                 except socketerror:
                     logger.error(socketerror.message)
-                    aboutBox(self, "Error", "There was a problem communicating"
-                             " with the render node software. Either it's not"
-                             " running, or it has become unresponsive.")
+                    aboutBox(self, "Error", Constants.SOCKETERR_STRING)
             else:
                 aboutBox(self, "Success", "No job was found on node, node offlined")
             self.updateRenderNodeTable()
@@ -1167,6 +1140,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.statusMsg = msg
         self.statusbar.showMessage(self.statusMsg)
 
+    def resetStatusBar(self):
+        self.statusbar.showMessage(self.statusMsg)
+
     def setThisNodeButtonsEnabled(self, choice):
         """Enables or disables buttons on This Node tab"""
         self.onlineThisNodeButton.setEnabled(choice)
@@ -1176,9 +1152,6 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def doNothing(self):
         pass
-
-    def resetStatusBar(self):
-        self.statusbar.showMessage(self.statusMsg)
 
 #------------------------------------------------------------------------#
 #---------------------------EXTERNAL FUNCTIONS---------------------------#
@@ -1204,19 +1177,6 @@ def getSoftwareVersionText(sw_ver):
 
     else:
         return "None"
-
-def getCheckedItems(table, itemColumn, checkBoxColumn):
-    """Given a table with a column of check boxes in it, returns a list of
-    the items in itemColumn which have a checked box in the same row."""
-
-    nRows = table.rowCount()
-    checks = list()
-    for rowIndex in range(0, nRows):
-        item = str(table.item(rowIndex, itemColumn).text())
-        checkState = table.item(rowIndex, checkBoxColumn).checkState()
-        if checkState:
-            checks.append(item)
-    return checks
 
 def setupDataGrid(records, columns, grid):
     """Populate a data grid. "colums" is a list of widget factory objects."""
@@ -1245,7 +1205,7 @@ def clearLayout(layout):
         elif child.layout() is not None:
             clearLayout(child.layout())
 
-def loadLog(self, record):
+def loadLog(parent, record):
     logFile = record.logFile
     if logFile:
         logFile = os.path.abspath(logFile)
@@ -1257,13 +1217,12 @@ def loadLog(self, record):
             logger.info("Opening Log File @ {0}".format(str(logFile)))
             webbrowser.open(logFile)
         else:
-            aboutBox("Invalid Log File Path",
+            aboutBox(parent, "Invalid Log File Path",
                     "Invalid log file path for task: {0}".format(record.id))
             logger.error("Invalid log file path for task: {0}".format(record.id))
             logger.error(logFile)
     else:
-        aboutBox(self, "No Log on File",
-                "No log on file for task: {0}\nJob was probably never started or was recently reset.".format(record.id))
+        aboutBox(parent, "No Log on File", Constants.NOLOG_STRING.format(record.id))
         logger.warning("No log file on record for task: {0}".format(record.id))
 
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
