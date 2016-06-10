@@ -127,13 +127,14 @@
         -Heartbeat
         -Capabilities
 
--[Todo]Task kill does not kill managed tasks
+-[Done]Task kill does not kill managed tasks
 
--[Todo]Statuses not auto refreshing in FarmView
+-[Done]Statuses not auto refreshing in FarmView
+    -They are updating locally but not on the database
 
 -[Todo]Standardize if True or False means error on return
 
--[Todo]Make sure Job_Statuses updated when changes are made
+-[Probably Done]Make sure Job_Statuses updated when changes are made
 
 -[Todo]Render consecutive frames
     -Needs to update the task board with the number of frames it actually

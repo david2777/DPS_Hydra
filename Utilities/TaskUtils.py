@@ -106,7 +106,7 @@ def killTask(task_id, newStatus = KILLED):
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     if task.status == newStatus:
         return True
-    elif task.status == READY or task.status == PAUSED:
+    elif task.status == READY or task.status == PAUSED or task.status == MANAGED:
         task.status = newStatus
         task.host = None
         task.startTime = None

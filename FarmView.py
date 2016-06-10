@@ -486,6 +486,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             logger.error("Bad job action handler arg")
 
+        JobUtils.updateJobTaskCount(self.currentJobSel)
+        self.doUpdate()
+
     def setJobPriorityHandler(self):
         selection = self.jobTreeHandler("Rows")
         if not selection:
@@ -574,7 +577,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.taskTable.setItem(pos, 10, TableWidgetItem(str(task.failures)))
             self.taskTable.setItem(pos, 11, TableWidgetItem_int(reqsString))
 
-        JobUtils.updateJobTaskCount(job_id, tasks = tasks, commit = True)
+        JobUtils.updateJobTaskCount(job_id)
         self.updateJobTreeRow(job_id, shotItem)
 
     def updateTaskTable(self):
@@ -646,7 +649,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                         logger.error(str(err))
                         aboutBox(self, "SQL Error", str(err))
                 [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
-                JobUtils.updateJobTaskCount(job.job_id, tasks = None, commit = True)
                 self.updateTaskTable()
                 self.populateJobTree()
 
@@ -665,6 +667,9 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         else:
             logger.error("Bad task handler arg")
+
+        JobUtils.updateJobTaskCount(self.currentJobSel)
+        self.doUpdate()
 
     def callTestFrameBox(self):
         job_ids = self.jobTreeHandler()
