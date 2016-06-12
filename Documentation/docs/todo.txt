@@ -132,7 +132,8 @@
 -[Done]Statuses not auto refreshing in FarmView
     -They are updating locally but not on the database
 
--[Todo]Standardize if True or False means error on return
+-[Probably Done]Standardize if True or False means error on return
+    -True == Successful False == Error/Failure
 
 -[Probably Done]Make sure Job_Statuses updated when changes are made
 

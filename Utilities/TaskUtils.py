@@ -12,7 +12,7 @@ from Networking.Questions import KillCurrentTaskQuestion
 from Networking.Connections import TCPConnection
 import Utilities.Utils as Utils
 
-def changeStatusViaTaskID(task_id, new_status, old_status_list=[]):
+def changeStatusViaTaskID(task_id, new_status, old_status_list = []):
     """Change the status of a task given it's ID.
 
     Keyword Arguments:
@@ -56,7 +56,7 @@ def resetTask(task_id, newStatus = READY):
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     logger.info("Reseting Task {0}".format(task_id))
     if task.status == STARTED:
-        if killTask(task.id):
+        if not killTask(task.id):
             logger.error("Could not kill task {0}, unable to reset!".format(task_id))
             return False
     task.status = newStatus
@@ -70,8 +70,9 @@ def resetTask(task_id, newStatus = READY):
     return True
 
 
-def unstick(taskID=None, newTaskStatus = READY, host = None, newHostStatus = IDLE):
+def unstick(taskID = None, newTaskStatus = READY, host = None, newHostStatus = IDLE):
     """Unstick and rests a task. Useful for when a node crashes."""
+    #Not sure why this function has so many optional arguments
     if taskID:
         [task] = hydra_taskboard.secureFetch("WHERE id = %s", (taskID,))
         if newTaskStatus == READY:
@@ -99,14 +100,14 @@ def sendKillQuestion(renderhost, newStatus=KILLED):
     logger.info("Child killed: {0}".format(answer.childKilled))
     if not answer.childKilled:
         logger.warning("{0} tried to kill its job but failed for some reason.".format(renderhost))
+    #answer.childKilled should be True when successfully killed and False otherwise
     return answer.childKilled
 
 def killTask(task_id, newStatus = KILLED):
     """Kill a task given it's task id. Return True if successful, else False."""
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
-    if task.status == newStatus:
-        return True
-    elif task.status == READY or task.status == PAUSED or task.status == MANAGED:
+    if task.status == READY or task.status == PAUSED or task.status == MANAGED:
+        #Change info in DB if it isn't already running
         task.status = newStatus
         task.host = None
         task.startTime = None
@@ -115,12 +116,13 @@ def killTask(task_id, newStatus = KILLED):
         task.exitCode = None
         with transaction() as t:
             task.update(t)
-        #If we reach this point: transaction successful, no exception raised
         return True
     elif task.status == STARTED:
+        #Kill if task is in progress
         killed = sendKillQuestion(task.host, newStatus)
-        #If we reach this point: TCPconnection successful, no exception raised
+        #This is the only way this function could return an error
         return killed
-    elif task.status == KILLED or task.status == FINISHED or task.status == PAUSED:
+    else:
+        #Else, skip it
+        logger.info("Task Kill is skipping task {0} because of status {1}".format(task.id, task.status))
         return True
-    return False
