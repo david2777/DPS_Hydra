@@ -45,15 +45,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.setupUi(self)
 
         #Partial applications for convenience
-        self.sqlErrorBox = (
-            functools.partial(aboutBox, self, "SQL Error", Constants.SQLERR_STRING))
+        self.sqlErrorBox = (functools.partial(aboutBox, self, "SQL Error",
+                                Constants.SQLERR_STRING))
 
-        self.nodeDoesNotExistBox = (
-            functools.partial(
-                aboutBox,
-                parent = self,
-                title = "Notice",
-                msg = Constants.DOESNOTEXISTERR_STRING))
+        self.nodeDoesNotExistBox = (functools.partial(aboutBox, parent = self,
+                                    title = "Notice",
+                                    msg = Constants.DOESNOTEXISTERR_STRING))
 
         self.thisNodeName = Utils.myHostName()
         logger.info("This host is {0}".format(self.thisNodeName))
@@ -214,6 +211,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addItem(self.jobMenu, "Full Update", self.doFetch,
                 "Update all of the latest information from the Database")
         self.jobMenu.addSeparator()
+
         self.addItem(self.jobMenu, "Start Jobs", self.jobActionHandler,
                 "Start all jobs selected in Job List", "start")
         self.addItem(self.jobMenu, "Pause Jobs", self.jobActionHandler,
@@ -226,6 +224,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "Open a dialog to start the first X frames in each job "
                 "selected in the Job List")
         self.jobMenu.addSeparator()
+
         self.addItem(self.jobMenu, "Archive/Unarchive Jobs", self.jobActionHandler,
                 "Toggle the Archived status on each job selected in he Job List", "archive")
         self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.jobActionHandler,
@@ -234,7 +233,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addItem(self.jobMenu, "Reveal Detailed Data...", self.jobActionHandler,
                 "Opens a dialog window the detailed data for the selected jobs.", "data")
         self.jobMenu.addSeparator()
-        #setJobPriorityHandler
+
         self.addItem(self.jobMenu, "Set Job Priority...", self.setJobPriorityHandler,
         "Set priority on each job selected in the Job List")
         editJob = self.addItem(self.jobMenu, "Edit Job...", self.doNothing,
@@ -242,17 +241,22 @@ class FarmView(QMainWindow, Ui_FarmView):
         editJob.setEnabled(False)
         self.jobMenu.addSeparator()
 
-        uFA = self.addItem(self.jobMenu, "Only Show My Jobs", self.userFilterContextHandler,
-                        "Only show the jobs belonging to the current user")
+        #User Filter Action
+        uFA = self.addItem(self.jobMenu, "Only Show My Jobs",
+                            self.userFilterContextHandler,
+                            "Only show the jobs belonging to the current user")
         uFA.setCheckable(True)
         if self.userFilter:
             uFA.setChecked(True)
 
-        aFA = self.addItem(self.jobMenu, "Show Archived Jobs", self.archivedFilterContextHandler,
-                        "Show jobs which have been archived")
+        #Archived Filter Action
+        aFA = self.addItem(self.jobMenu, "Show Archived Jobs",
+                            self.archivedFilterContextHandler,
+                            "Show jobs which have been archived")
         aFA.setCheckable(True)
         if self.showArchivedFilter:
             aFA.setChecked(True)
+
         self.jobMenu.popup(QCursor.pos())
 
     def jobTreeClickedHandler(self):
