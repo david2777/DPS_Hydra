@@ -137,6 +137,11 @@
 
 -[Probably Done]Make sure Job_Statuses updated when changes are made
 
+-[Done]Fix Submitter
+    -Add Project field and stuff
+
+-[Todo]Work on Maya Submitter Script
+
 -[Todo]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
     finished on termination.

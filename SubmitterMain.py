@@ -51,10 +51,10 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         #Get the -flag args
         try:
-            opts = getopt.getopt(sys.argv[2:],"s:e:n:p:r:x:m:c:")[0]
+            opts = getopt.getopt(sys.argv[2:],"s:e:n:p:r:x:m:c:q:")[0]
         except getopt.GetoptError:
             logger.error("Bad Opt!")
-            aboutBox(title = "Bad Opt!", msg = "One of the command line options you entered was invalid.\n"+
+            aboutBox(self, title = "Bad Opt!", msg = "One of the command line options you entered was invalid.\n"+
                 "\nPlease remove any unkown opts and try again.")
             sys.exit(2)
 
@@ -68,6 +68,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                             "-x":"",        #Executabe (Str)
                             "-m":"",        #CMD (Str)
                             "-c":"",        #Compatabilities (Str,Sep,By,Comma)
+                            "-q":"",        #Project Name (Str)
                             }
 
         #Apply the -flag args
@@ -141,6 +142,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         self.endSpinBox.setValue(int(float(self.settingsDict["-e"])))
         self.renderLayersLineEdit.setText(self.settingsDict["-r"])
         self.cmdLineEdit.setText(self.settingsDict["-m"])
+        self.projectNameLineEdit.setText(self.settingsDict["-q"])
 
     #------------------------------------------------------------------------#
     #----------------------------Button Handlers-----------------------------#
@@ -161,9 +163,10 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         niceName = str(self.niceNameLineEdit.text())
         owner = db_username
         compatabilityList = self.getReqs()
-        testNodesP1 = int(self.testNodesP1SpinBox.value())
-        testNodesP2 = int(self.testNodesP2SpinBox.value())
+        maxNodesP1 = int(self.maxNodesP1SpinBox.value())
+        maxNodesP2 = int(self.maxNodesP2SpinBox.value())
         timeout = int(self.timeoutSpinbox.value())
+        projectName = str(self.projectNameLineEdit.text())
 
         #Stuff not in JobTicket
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
@@ -172,37 +175,51 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         proj = str(self.projLineEdit.text())
         if len(proj) < 5:
-            aboutBox(title = "Please set Project Directory!", msg = "Project Directory must be more than 5 characters long.")
-            raise Exception("Please set Project Directory! Project Directory must be more than 5 characters long.")
+            aboutBox(self, title = "Please set Project Directory!", msg = "Project Directory must be more than 5 characters long.")
+            logger.error("Please set Project Directory! Project Directory must be more than 5 characters long.")
+            return
         else:
             baseCMD += " -proj {0}".format(proj)
 
         #Error Checking
         if len(baseCMD) > 1000:
-            aboutBox(title = "baseCMD too long!", msg = "baseCMD must be less than 1000 characters!")
-            raise Exception("baseCMD too long! baseCMD must be less than 1000 characters!")
+            aboutBox(self, title = "baseCMD too long!", msg = "baseCMD must be less than 1000 characters!")
+            logger.error("baseCMD too long! baseCMD must be less than 1000 characters!")
+            return
         if startFrame > endFrame:
-            aboutBox(title = "startFrame is greater than endFrame!", msg = "startFrame must be less than the endFrame!")
-            raise Exception("startFrame is greater than endFrame!")
+            aboutBox(self, title = "startFrame is greater than endFrame!", msg = "startFrame must be less than the endFrame!")
+            logger.error("startFrame is greater than endFrame!")
+            return
         if startFrame > 65535 or endFrame > 65535 or startFrame < 0 or endFrame < 0:
-            aboutBox(title = "Frame range out of range!", msg = "Start/End frames must be between 0 and 65535!")
-            raise Exception("Frame range out of range! Start/End frames must be between 0 and 65535!")
+            aboutBox(self, title = "Frame range out of range!", msg = "Start/End frames must be between 0 and 65535!")
+            logger.error("Frame range out of range! Start/End frames must be between 0 and 65535!")
+            return
         if byFrame > 255 or byFrame < 0:
-            aboutBox(title = "byFrame out of range!", msg = "byFrame must be between 0 and 255!")
-            raise Exception("byFrame out of range! byFrame must be between 0 and 255!")
+            aboutBox(self, title = "byFrame out of range!", msg = "byFrame must be between 0 and 255!")
+            logger.error("byFrame out of range! byFrame must be between 0 and 255!")
+            return
         if len(taskFile) > 255 or len(taskFile) < 5:
-            aboutBox(title = "taskFile out of range!", msg = "taskFile must be greater than 5 and less than 255 characters")
-            raise Exception("taskFile out of range! taskFile path must be greater than 5 and less than 255 characters!")
+            aboutBox(self, title = "taskFile out of range!", msg = "taskFile must be greater than 5 and less than 255 characters")
+            logger.error("taskFile out of range! taskFile path must be greater than 5 and less than 255 characters!")
+            return
         if priority > 255 or priority < 0:
-            aboutBox(title = "Priority out of range!", msg = "Priority must be between 0 and 255!")
-            raise Exception("Priority out of range! Priority must be between 0 and 255!")
+            aboutBox(self, title = "Priority out of range!", msg = "Priority must be between 0 and 255!")
+            logger.error("Priority out of range! Priority must be between 0 and 255!")
+            return
         if len(niceName) > 60 or len(niceName) < 1:
-            aboutBox(title = "NiceName out of range!", msg = "NiceName must be more than 1 and less than 60 characters!")
-            raise Exception("NiceName out of range! NiceName must be more than 1 and less than 60 characters!")
+            aboutBox(self, title = "NiceName out of range!", msg = "NiceName must be more than 1 and less than 60 characters!")
+            logger.error("NiceName out of range! NiceName must be more than 1 and less than 60 characters!")
+            return
         if len(owner) > 45:
-            aboutBox(title = "Owner out of range!", msg = "Owner must be less than 45 characters!")
-            raise Exception("Owner out of range! Owner must be less than 45 characters!")
+            aboutBox(self, title = "Owner out of range!", msg = "Owner must be less than 45 characters!")
+            logger.error("Owner out of range! Owner must be less than 45 characters!")
+            return
+        if len(projectName) > 60:
+            aboutBox(self, title = "Project Name out of range!", msg = "Project name must be less than 60 characters!")
+            return
 
+        if projectName == "":
+            projectName = "UnkownProject"
 
         phase01Status = False
         if self.testCheckBox.isChecked():
@@ -224,9 +241,9 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             niceNameOverride,
                                             owner,
                                             compatabilityList,
-                                            testNodesP1,
+                                            maxNodesP1,
                                             timeout,
-                                            "Unkown Project")
+                                            projectName)
 
             p1_job_id = phase01Ticket.doSubmit()
             if jobStatus == "R":
@@ -256,9 +273,9 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                             niceNameOverride,
                                             owner,
                                             compatabilityList,
-                                            testNodesP2,
+                                            maxNodesP2,
                                             timeout,
-                                            "Unkown Project")
+                                            projectName)
 
             p2_job_id = phase02Ticket.doSubmit()
             if jobStatusOverride == "R":
@@ -267,7 +284,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")
-        #aboutBox(title = "Submitted!", msg = "Job and Tasks have been submitted!\nCheck FarmView to view the status of your Jobs!")
+        #aboutBox(self, title = "Submitted!", msg = "Job and Tasks have been submitted!\nCheck FarmView to view the status of your Jobs!")
 
     def browseFileButtonHandler(self, QTTarget, startDir, caption, fileFilter):
         returnDir = QFileDialog.getOpenFileName(
@@ -331,16 +348,16 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
     def toggleTestBoxes(self):
         if self.testFramesSpinBox.isEnabled():
             self.testFramesSpinBox.setEnabled(False)
-            self.testNodesP1SpinBox.setEnabled(False)
+            self.maxNodesP1SpinBox.setEnabled(False)
         else:
             self.testFramesSpinBox.setEnabled(True)
-            self.testNodesP1SpinBox.setEnabled(True)
+            self.maxNodesP1SpinBox.setEnabled(True)
 
     def toggleFinalBoxes(self):
-        if self.testNodesP2SpinBox.isEnabled():
-            self.testNodesP2SpinBox.setEnabled(False)
+        if self.maxNodesP2SpinBox.isEnabled():
+            self.maxNodesP2SpinBox.setEnabled(False)
         else:
-            self.testNodesP2SpinBox.setEnabled(True)
+            self.maxNodesP2SpinBox.setEnabled(True)
     #------------------------------------------------------------------------#
     #----------------------------Get/Modify Data-----------------------------#
     #------------------------------------------------------------------------#
