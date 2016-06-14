@@ -140,7 +140,8 @@
 -[Done]Fix Submitter
     -Add Project field and stuff
 
--[Todo]Work on Maya Submitter Script
+-[In Progress]Work on Maya Submitter Script
+    -Maybe need to add more submitter args to be able to add quotes to them
 
 -[Todo]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
