@@ -1,6 +1,6 @@
 #Standard
 import subprocess
-#from base64 import b64encode
+import re
 
 #Third Party
 import maya.cmds as cmds
@@ -9,16 +9,30 @@ import maya.mel as mel
 #-----------------Get Data from Maya------------------#
 reqsList = []
 renderLayersList = []
-engineDict = {"redshift":"Redshift", "mentalRay":"MentalRay", "vray":"VRay", "renderMan":"RenderMan", "renderManRIS":"RenderMan", "arnold":"Arnold"}
+engineDict = {"redshift":"Redshift", "mentalRay":"MentalRay", "vray":"VRay",
+                "renderMan":"RenderMan", "renderManRIS":"RenderMan",
+                "arnold":"Arnold"}
 sceneFile = cmds.file(q = True, exn = True)
+sceneName = sceneFile.split("/")[-1]
 projectDir = cmds.workspace(q = True, rd = True)
-startFrame = cmds.getAttr("defaultRenderGlobals.startFrame")
-endFrame = cmds.getAttr("defaultRenderGlobals.endFrame")
+startFrame = cmds.playbackOptions(q = True, minTime = True)
+endFrame = cmds.playbackOptions(q = True, maxTime = True)
 camList = [x for x in cmds.ls(type="camera") if cmds.getAttr(x+".renderable")]
 try:
     renderCam = camList[0]
+    msgString = "Is this the correct render camera?\n\n{0}"
+    response = cmds.confirmDialog(title='Confirm',
+                                    message= msgString.format(renderCam),
+                                    button=["Yes","No"],
+                                    defaultButton= "Yes",
+                                    cancelButton= "No",
+                                    dismissString= "No")
+    if response == "No":
+        raise
 except IndexError:
-    renderCam = None
+    cmds.confirmDialog(title = "Error",
+                        message = "No Renderable Cameras were found! Aborting...")
+    raise
 
 currentEngine = mel.eval("currentRenderer")
 if currentEngine in engineDict.keys():
@@ -32,16 +46,16 @@ for layer in renderLayers:
 renderLayersReturn = ",".join(renderLayersList)
 
 #----------Setup Base Submitter Command Line Args----------#
-command = "python C:\\Users\\David\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py \"{0}\" -s \"{1}\" -e \"{2}\" -p \"{3}\"".format(sceneFile, startFrame, endFrame, projectDir)
+command = "python C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py \"{0}\" -s \"{1}\" -e \"{2}\" -p \"{3}\"".format(sceneFile, startFrame, endFrame, projectDir)
 
 #------------Build Extra Maya Command Line Args------------#
 extraCmdList = []
-#Confirm Camera Here
-if renderCam:
-    extraCmdList.append("-cam {0}".format(renderCam))
 
-#Build Render Directory here
-renderDir = "//This/Is/A/Test"
+extraCmdList.append("-r {0}".format(currentEngine))
+
+extraCmdList.append("-cam {0}".format(renderCam))
+
+renderDir = mel.eval("source GetRenderPath;string $renderDirectory = GetRenderPath();")
 if renderDir:
     extraCmdList.append("-rd {0}".format(renderDir))
 
@@ -49,10 +63,14 @@ if extraCmdList != []:
     command += " -m \"{0}\"".format(" ".join(extraCmdList))
 
 #----------Setup Extra Submitter Command Line Args----------#
-#Build Project Name Here
-projectName = "TestProject"
+projectName = re.search("_[0-9]{3}_[0-9]{4}.+$", sceneName)
 if projectName:
-    command += " -q \"{0}\"".format(projectName)
+    projectName = sceneName.replace(projectName.group(0), "")
+else:
+    projectName = "UnkownProject"
+
+command += " -q \"{0}\"".format(projectName)
+
 
 if reqsReturn != "":
     command += " -c \"{0}\"".format(reqsReturn)
