@@ -8,40 +8,37 @@ from PyQt4.QtCore import *
 
 #Hydra Qt
 from CompiledUI.UI_NodeEditor import Ui_nodeEditorDialog
+from Dialogs.NodeSchedulerDialog import NodeSchedulerDialog
 
 #Hydra
-from Setups.MySQLSetup import db_username, hydra_capabilities, hydra_executable
+from Setups.MySQLSetup import *
 
 class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
     def __init__(self, defaults, parent=None):
         QDialog.__init__(self, parent)
         self.setupUi(self)
+
+        self.schedEnabled = False
+
         #Connect Buttons
-        QObject.connect(self.cancelButton, SIGNAL("clicked()"),
-                        self.cancelButtonHandler)
-        QObject.connect(self.okButton, SIGNAL("clicked()"),
-                        self.okButtonHandler)
-        QObject.connect(self.schedCheckBox, SIGNAL("stateChanged(int)"),
-                        self.schedCheckBoxHandler)
+        self.cancelButton.clicked.connect(self.cancelButtonHandler)
+        self.okButton.clicked.connect(self.okButtonHandler)
+        self.schedulerEditButton.clicked.connect(self.schedulerEditButtonHandler)
+        self.schedCheckBox.stateChanged.connect(self.schedCheckBoxHandler)
 
         #Set globals
         self.save = False
 
         self.populateComps()
 
+        self.defaults = defaults
         if defaults:
-            title = "Editing {0}:".format(defaults["node"])
+            title = "Editing {0}:".format(defaults["host"])
             self.editorGroup.setTitle(title)
             self.minPrioritySpinbox.setValue(defaults["priority"])
-            if defaults["startTime"]:
-                self.schedEnabled = True
-                self.onlineTimeEdit.setTime(defaults["startTime"])
-                self.offlineTimeEdit.setTime(defaults["endTime"])
-            else:
-                #NOTE: This will be changed by the setCheckState call to
-                #       schedCheckBoxHandler
-                self.schedEnabled = True
-                self.schedCheckBox.setCheckState(0)
+            if defaults["scheduleEnabled"] == 1:
+                self.schedCheckBox.setCheckState(2)
+
 
             cbxList = defaults["comps"]
             for cbx in self.compChecks:
@@ -74,28 +71,29 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
         return sorted(compList)
 
     def getValues(self):
-        if self.schedEnabled:
-            startTime = str(self.onlineTimeEdit.time().toString())
-            endTime = str(self.offlineTimeEdit.time().toString())
-        else:
-            startTime = None
-            endTime = None
         comps = " ".join(self.getComps())
         rDict = {"priority" : int(self.minPrioritySpinbox.value()),
-                "startTime" : startTime,
-                "endTime" : endTime,
+                "schedEnabled" : self.schedEnabled,
                 "comps" : comps}
         return rDict
+
+    def schedulerEditButtonHandler(self):
+        edits = NodeSchedulerDialog.create(self.defaults)
+        if edits and self.defaults:
+            editsFormat = ",".join(edits)
+            if editsFormat != self.defaults["weekSchedule"]:
+                self.defaults["weekSchedule"] = editsFormat
+                with transaction() as t:
+                    cmd = "UPDATE hydra_rendernode SET weekSchedule = %s WHERE host = %s"
+                    t.cur.execute(cmd, (editsFormat, self.defaults["host"]))
 
     def schedCheckBoxHandler(self):
         if self.schedEnabled:
             self.schedEnabled = False
-            self.onlineTimeEdit.setEnabled(False)
-            self.offlineTimeEdit.setEnabled(False)
+            self.schedulerEditButton.setEnabled(False)
         elif not self.schedEnabled:
             self.schedEnabled = True
-            self.onlineTimeEdit.setEnabled(True)
-            self.offlineTimeEdit.setEnabled(True)
+            self.schedulerEditButton.setEnabled(True)
 
     def cancelButtonHandler(self):
         self.close()

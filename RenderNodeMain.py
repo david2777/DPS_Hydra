@@ -359,37 +359,25 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
     def nodeEditor(self):
         comps = self.thisNode.capabilities.split(" ")
-        if self.thisNode.onlineTime and self.thisNode.offlineTime:
-            sTimeData = self.thisNode.onlineTime.split(":")
-            sTimeData = [int(t) for t in sTimeData]
-            startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
-            eTimeData = self.thisNode.offlineTime.split(":")
-            eTimeData = [int(t) for t in eTimeData]
-            endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
-        else:
-            startTime = None
-            endTime = None
-        defaults = {"node" : self.thisNode.host,
+        defaults = {"host" : self.thisNode.host,
                     "priority" : self.thisNode.minPriority,
-                    "startTime" : startTime,
-                    "endTime" : endTime,
-                    "comps" : comps}
+                    "comps" : comps,
+                    "scheduleEnabled" : int(self.thisNode.scheduleEnabled),
+                    "weekSchedule" : self.thisNode.weekSchedule}
         edits = NodeEditorDialog.create(defaults)
         #logger.debug(edits)
         if edits:
-            query = "UPDATE hydra_rendernode"
-            query += " SET minPriority = '{0}'".format(edits["priority"])
-            if edits["startTime"] and edits["endTime"]:
-                query += ", onlineTime = '{0}'".format(edits["startTime"])
-                query += ", offlineTime = '{0}'".format(edits["endTime"])
+            if edits["schedEnabled"]:
+                schedEnabled = 1
             else:
-                query += ", onlineTime = NULL"
-                query += ", offlineTime = NULL"
-            query += ", capabilities = '{0}'".format(edits["comps"])
-            query += " WHERE host = '{0}'".format(self.thisNode.host)
-            #logger.debug(query)
+                schedEnabled = 0
+            query = "UPDATE hydra_rendernode SET minPriority = %s"
+            query += ", scheduleEnabled = %s, capabilities = %s"
+            query += " WHERE host = %s"
+            editsTuple = (edits["priority"], schedEnabled, edits["comps"], self.thisNode.host)
             with transaction() as t:
-                t.cur.execute(query)
+                t.cur.execute(query, editsTuple)
+            self.updateThisNodeInfo()
             return True
         else:
             return False
@@ -409,12 +397,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.nodeVersionLabel.setText(getSoftwareVersionText(self.thisNode.software_version))
         self.minPriorityLabel.setText(str(self.thisNode.minPriority))
         self.capabilitiesLabel.setText(self.thisNode.capabilities)
-        if self.thisNode.onlineTime and self.thisNode.offlineTime:
-            self.onlineTimeLabel.setText(str(self.thisNode.onlineTime))
-            self.offlineTimeLabel.setText(str(self.thisNode.offlineTime))
-        else:
-            self.onlineTimeLabel.setText("Manual Control")
-            self.offlineTimeLabel.setText("Manual Control")
+        self.scheduleEnabled.setText(str(self.thisNode.scheduleEnabled))
+        self.weekSchedule.setText(str(self.thisNode.weekSchedule))
         self.pulseLabel.setText(str(self.thisNode.pulse))
 
         if self.trayIconBool:
@@ -433,7 +417,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.hide()
 
     def schedulerMain(self):
-        #Do the stuff
+        #TODO: Make schedule work with holidays somehow
         if not self.thisNode:
             self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
             logger.error("Node OBJ not found by schedulerMain! Checking again in 24 hours.")
@@ -442,98 +426,23 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         self.updateThisNodeInfo()
 
-        if self.thisNode.onlineTime == None or self.thisNode.offlineTime == None:
-            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
-            logger.info("Node is in manual control mode! Checking again in 3 hours.")
-            #Sleep for 3 hours
-            return 10800
+        sleepTime, nowStatus = NodeUtils.calcuateSleepTimeFromNode(self.thisNode.host)
 
-        try:
-            now = datetime.datetime.now().replace(microsecond = 0, second = 0)
-            nowTime = now.time()
-            nowDate = now.date()
-
-            sTimeData = self.thisNode.onlineTime.split(":")
-            sTimeData = [int(t) for t in sTimeData]
-            startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
-
-            eTimeData = self.thisNode.offlineTime.split(":")
-            eTimeData = [int(t) for t in eTimeData]
-            endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
-
-            startDT = datetime.datetime.combine(nowDate, startTime)
-            endDT = datetime.datetime.combine(nowDate, endTime)
-            endDT = endDT + datetime.timedelta(days = 1)
-
-            holidayData = hydra_holidays.fetch()
-            holidayData = [x.date.split(",") for x in holidayData]
-            holidays = [datetime.date(int(x[0]), int(x[1]), int(x[2])) for x in holidayData]
-        except Exception, e:
-            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
-            logger.error("Unkown Error in schedulerMain! Checking again in 24 hours.")
-            #Sleep for 24 hours
-            return 86400
-
-        logger.info("Current time: {0}".format(str(now)))
-
-        if self.thisNode.status == OFFLINE or self.thisNode.status == PENDING:
-            if nowDate in holidays:
-                logger.info("Node is offline and today is a holiday. Starting then sleeping...")
-                sleepyTime = (endDT - now).total_seconds()
-                self.startupEvent()
-            elif nowDate.isoweekday() == 6:
-                logger.info("Node is offline and today is a Saturday. Starting then sleeping...")
-                endDT = endDT + datetime.timedelta(days = 1)
-                sleepyTime = (endDT - now).total_seconds()
-                self.startupEvent()
-            elif nowDate.isoweekday() == 7:
-                logger.info("Node is offline and today is a Sunday. Starting then sleeping...")
-                sleepyTime = (endDT - now).total_seconds()
-                self.startupEvent()
-            elif startDT > now:
-                logger.info("Node is offline and should be offline. Sleeping...")
-                sleepyTime = (startDT - now).total_seconds()
-            else:
-                logger.info("Node is offline and should be online. Starting then sleeping...")
-                sleepyTime = (endDT - now).total_seconds()
-                self.startupEvent()
-
+        if nowStatus == READY:
+            self.startupEvent()
         else:
-            if nowDate in holidays:
-                logger.info("Node is online and today is a holiday. Sleeping...")
-                sleepyTime = (endDT - now).total_seconds()
-            elif nowDate.isoweekday() == 6:
-                logger.info("Node is online and today is a Saturday. Sleeping...")
-                endDT = endDT + datetime.timedelta(days = 1)
-                sleepyTime = (endDT - now).total_seconds()
-                self.startupEvent()
-            elif nowDate.isoweekday() == 7:
-                logger.info("Node is online and today is a Sunday. Sleeping...")
-                sleepyTime = (endDT - now).total_seconds()
-                self.startupEvent()
-            elif startDT < now < endDT:
-                logger.info("Node is online and should be online. Sleeping...")
-                sleepyTime = (endDT - now).total_seconds()
-            else:
-                logger.info("Node is online and should be offline. Shutting down the sleeping...")
-                sleepyTime = (startDT - now).total_seconds()
-                self.shutdownEvent()
+            self.shutdownEvent()
 
-        if sleepyTime < 59.0:
-            logger.error("Bad sleep time!")
-            return 3600
-        else:
-            return int(sleepyTime)
+        #Add an extra minute just in case
+        return sleepTime + 60
 
     def startupEvent(self):
         logger.info("Triggering Startup Event")
-        #self.onlineThisNodeHandler()
-        return True
+        self.onlineThisNodeHandler()
 
     def shutdownEvent(self):
         logger.info("Triggering Shutdown Event")
-        #self.offlineThisNodeHandler()
-        return True
+        self.offlineThisNodeHandler()
 
 class schedulerThread(threading.Thread):
     def __init__(self, interval, target):

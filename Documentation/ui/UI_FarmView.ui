@@ -398,12 +398,7 @@
            </column>
            <column>
             <property name="text">
-             <string>Online Time</string>
-            </property>
-           </column>
-           <column>
-            <property name="text">
-             <string>Offline Time</string>
+             <string>ScheduleEnabled</string>
             </property>
            </column>
            <column>
@@ -436,8 +431,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>98</width>
-             <height>52</height>
+             <width>1250</width>
+             <height>601</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
@@ -575,28 +570,28 @@
           </widget>
          </item>
          <item row="6" column="0">
-          <widget class="QLabel" name="onlineTimeLabel_LABEL">
+          <widget class="QLabel" name="scheduleEnabled_LABEL">
            <property name="text">
-            <string>Online Time:</string>
+            <string>Schedule Enabled:</string>
            </property>
           </widget>
          </item>
          <item row="6" column="1">
-          <widget class="QLabel" name="onlineTimeLabel">
+          <widget class="QLabel" name="scheduleEnabled">
            <property name="text">
             <string>N/A</string>
            </property>
           </widget>
          </item>
          <item row="7" column="0">
-          <widget class="QLabel" name="offlineTimeLabel_LABEL">
+          <widget class="QLabel" name="weekSchedule_LABEL">
            <property name="text">
-            <string>Offline Time:</string>
+            <string>Schedule:</string>
            </property>
           </widget>
          </item>
          <item row="7" column="1">
-          <widget class="QLabel" name="offlineTimeLabel">
+          <widget class="QLabel" name="weekSchedule">
            <property name="text">
             <string>N/A</string>
            </property>

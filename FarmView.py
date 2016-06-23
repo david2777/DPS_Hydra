@@ -106,10 +106,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.setColumnWidth(1, 70)      #Status
         self.renderNodeTable.setColumnWidth(2, 70)      #Task ID
         self.renderNodeTable.setColumnWidth(3, 110)     #Version
-        self.renderNodeTable.setColumnWidth(4, 100)     #Online Time
-        self.renderNodeTable.setColumnWidth(5, 100)     #Offline Time
-        self.renderNodeTable.setColumnWidth(6, 110)     #Heartbeat
-        self.renderNodeTable.setColumnWidth(7, 110)     #Capabilities
+        self.renderNodeTable.setColumnWidth(4, 100)     #Schedule Enabled
+        self.renderNodeTable.setColumnWidth(5, 125)     #Heartbeat
+        self.renderNodeTable.setColumnWidth(6, 110)     #Capabilities
 
         # Column widths on the taskTable
         self.taskTable.setColumnWidth(0, 60)        #ID
@@ -765,17 +764,10 @@ class FarmView(QMainWindow, Ui_FarmView):
             nodeVersion  = getSoftwareVersionText(node.software_version)
             self.renderNodeTable.setItem(row, 3, TableWidgetItem(str(nodeVersion)))
 
-            if node.onlineTime and node.offlineTime:
-                onlineTimeWidget = TableWidgetItem(str(node.onlineTime))
-                offlineTimeWidget = TableWidgetItem(str(node.offlineTime))
-                self.renderNodeTable.setItem(row, 4, onlineTimeWidget)
-                self.renderNodeTable.setItem(row, 5, offlineTimeWidget)
-            else:
-                self.renderNodeTable.setItem(row, 4, TableWidgetItem("Manual Control"))
-                self.renderNodeTable.setItem(row, 5, TableWidgetItem("Manual Control"))
+            self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(node.scheduleEnabled)))
 
-            self.renderNodeTable.setItem(row, 6, TableWidgetItem_dt(node.pulse))
-            self.renderNodeTable.setItem(row, 7, TableWidgetItem(str(node.capabilities)))
+            self.renderNodeTable.setItem(row, 5, TableWidgetItem_dt(node.pulse))
+            self.renderNodeTable.setItem(row, 6, TableWidgetItem(str(node.capabilities)))
             if node.host == self.thisNodeName:
                 self.renderNodeTable.item(row, 0).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
 
@@ -785,7 +777,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         rows = self.renderNodeTable.rowCount()
         try:
             with transaction() as t:
-                query = "SELECT host, status, task_id, pulse FROM hydra_rendernode"
+                query = "SELECT host, status, task_id, pulse, scheduleEnabled FROM hydra_rendernode"
                 t.cur.execute(query)
                 nodeData = t.cur.fetchall()
         except sqlerror as err:
@@ -793,14 +785,15 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.sqlErrorBox()
 
         #h = host, s = status, t = task_id, p = pulse
-        nodeDict = {h:[s,t,p] for h, s, t, p in nodeData}
+        nodeDict = {h:[s,t,p,e] for h, s, t, p, e in nodeData}
         for row in range(rows):
             nodeName = str(self.renderNodeTable.item(row, 0).text())
-            status, task_id, pulse = nodeDict[nodeName]
+            status, task_id, pulse, scheduleEnabled = nodeDict[nodeName]
             self.renderNodeTable.setItem(row, 1, TableWidgetItem(str(niceNames[status])))
             self.renderNodeTable.item(row, 1).setBackgroundColor(niceColors[status])
             self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(task_id)))
-            self.renderNodeTable.setItem(row, 6, TableWidgetItem_dt(pulse))
+            self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(scheduleEnabled)))
+            self.renderNodeTable.setItem(row, 5, TableWidgetItem_dt(pulse))
 
     def renderNodeTableHandler(self):
         self.resetStatusBar()
@@ -901,42 +894,29 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.nodeEditor(hosts[0])
 
     def nodeEditor(self, nodeName):
-        #TODO:Cleanup and secure
         nodeExists = True
         if nodeExists:
             [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (nodeName,))
             comps = thisNode.capabilities.split(" ")
-            if thisNode.onlineTime and thisNode.offlineTime:
-                sTimeData = thisNode.onlineTime.split(":")
-                sTimeData = [int(t) for t in sTimeData]
-                startTime = datetime.time(sTimeData[0], sTimeData[1], sTimeData[2])
-                eTimeData = thisNode.offlineTime.split(":")
-                eTimeData = [int(t) for t in eTimeData]
-                endTime = datetime.time(eTimeData[0], eTimeData[1], eTimeData[2])
-            else:
-                startTime = None
-                endTime = None
-            defaults = {"node" : thisNode.host,
+            defaults = {"host" : thisNode.host,
                         "priority" : thisNode.minPriority,
-                        "startTime" : startTime,
-                        "endTime" : endTime,
-                        "comps" : comps}
+                        "comps" : comps,
+                        "scheduleEnabled" : int(thisNode.scheduleEnabled),
+                        "weekSchedule" : thisNode.weekSchedule}
             edits = NodeEditorDialog.create(defaults)
             #logger.debug(edits)
             if edits:
-                query = "UPDATE hydra_rendernode"
-                query += " SET minPriority = '{0}'".format(edits["priority"])
-                if edits["startTime"] and edits["endTime"]:
-                    query += ", onlineTime = '{0}'".format(edits["startTime"])
-                    query += ", offlineTime = '{0}'".format(edits["endTime"])
+                if edits["schedEnabled"]:
+                    schedEnabled = 1
                 else:
-                    query += ", onlineTime = NULL"
-                    query += ", offlineTime = NULL"
-                query += ", capabilities = '{0}'".format(edits["comps"])
-                query += " WHERE host = '{0}'".format(nodeName)
-                #logger.debug(query)
+                    schedEnabled = 0
+                query = "UPDATE hydra_rendernode SET minPriority = %s"
+                query += ", scheduleEnabled = %s, capabilities = %s"
+                query += " WHERE host = %s"
+                editsTuple = (edits["priority"], schedEnabled, edits["comps"], nodeName)
                 with transaction() as t:
-                    t.cur.execute(query)
+                    t.cur.execute(query, editsTuple)
+                self.updateRenderNodeTable()
 
     def revealNodeDetailedHandler(self):
         node_list = self.renderNodeTableHandler()
@@ -1119,12 +1099,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.nodeVersionLabel.setText(getSoftwareVersionText(thisNode.software_version))
         self.minPriorityLabel.setText(str(thisNode.minPriority))
         self.capabilitiesLabel.setText(thisNode.capabilities)
-        if thisNode.onlineTime and thisNode.offlineTime:
-            self.onlineTimeLabel.setText(str(thisNode.onlineTime))
-            self.offlineTimeLabel.setText(str(thisNode.offlineTime))
-        else:
-            self.onlineTimeLabel.setText("Manual Control")
-            self.offlineTimeLabel.setText("Manual Control")
+        self.scheduleEnabled.setText(str(thisNode.scheduleEnabled))
+        self.weekSchedule.setText(str(thisNode.weekSchedule))
         self.pulseLabel.setText(str(thisNode.pulse))
 
     def updateRenderJobGrid(self):

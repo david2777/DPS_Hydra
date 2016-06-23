@@ -1,0 +1,7 @@
+/*Node Scheduler Dialog*/
+QTableWidget#scheduleTable{
+  selection-background-color: rgb(100, 100, 100);
+  gridline-color: rgb(150, 150, 150);
+  color: rgba(0,0,0,0);
+  selection-color: rgba(0,0,0,0);
+}

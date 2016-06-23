@@ -101,8 +101,8 @@ CREATE TABLE `hydra_rendernode` (
   `software_version` varchar(255) DEFAULT NULL COMMENT 'The version of the RenderNodeMain.exe currently running on this node',
   `capabilities` varchar(255) DEFAULT '' COMMENT 'The render nodes current capabilites in alphabetical order. (ie VRay, RenderMan, SOuP)',
   `pulse` datetime DEFAULT NULL COMMENT 'The last time RenderNodeMain.exe was known to be running, if ever',
-  `onlineTime` char(8) DEFAULT NULL COMMENT 'Time for the node to be onlined, stored as a 24 hour time with HOUR:MINUTE:SECOND like 18:30:00',
-  `offlineTime` char(8) DEFAULT NULL COMMENT 'Time for the node to be offlined, stored as a 24 hour time with HOUR:MINUTE:SECOND like 08:30:00',
+  `scheduleEnabled` int(1) DEFAULT '0',
+  `weekSchedule` varchar(255) DEFAULT '',
   PRIMARY KEY (`host`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Describes all of the RenderNodes. Made in MySQL Workbench. ';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -144,4 +144,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-05-01 20:58:57
+-- Dump completed on 2016-06-23 12:59:53
