@@ -347,15 +347,19 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
 
         #Start Schedule Thread
-        try:
-            self.schedThread = schedulerThread(900, self.schedulerMain)
-            self.schedThread.start()
-            self.schedThreadStatus = True
-            self.scheduleThreadPixmap.setPixmap(self.donePixmap)
-            logger.info("Schedule Thread started!")
-        except Exception, e:
-            logger.error("Exception: {0}".format(traceback.format_exc()))
-            self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
+        if int(self.thisNode.scheduleEnabled) == 1:
+            try:
+                self.schedThread = schedulerThread(900, self.schedulerMain)
+                self.schedThread.start()
+                self.schedThreadStatus = True
+                self.scheduleThreadPixmap.setPixmap(self.donePixmap)
+                logger.info("Schedule Thread started!")
+            except Exception, e:
+                logger.error("Exception: {0}".format(traceback.format_exc()))
+                self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
+        else:
+            logger.info("Schedule disabled. Running in manual control mode.")
+            self.scheduleThreadPixmap.setPixmap(self.nonePixmap)
 
     def nodeEditor(self):
         comps = self.thisNode.capabilities.split(" ")

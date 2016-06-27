@@ -80,6 +80,7 @@ def findNextEvent(now, data):
         return None
 
     sched = None
+    logger.info(todaySchedule)
     for todayTime in todaySchedule:
         if todayTime[0] > nowTime:
             sched = todayTime
@@ -87,12 +88,14 @@ def findNextEvent(now, data):
     if not sched:
         newDayOfWeek += 1
         todaySchedule, newDayOfWeek = findSchedule(newDayOfWeek, dataDict)
-        for todayTime in todaySchedule:
-            if todayTime[0] > nowTime:
-                sched = todayTime
+        #logger.info(newDayOfWeek)
+        #logger.info(todaySchedule)
+        sched = todaySchedule[0]
 
     if not sched:
         logger.error("Could not find schedule")
+
+    logger.info([newDayOfWeek] + sched)
 
     return [newDayOfWeek] + sched
 
@@ -135,14 +138,14 @@ def calcuateSleepTime(now, data):
 
     #These are reversed as they're going to be the oposite of the status after the event
     if nextEvent[2] == 1:
-        status = READY
-    else:
         status = OFFLINE
+    else:
+        status = READY
 
     return sleepyTime, status
 
 def calcuateSleepTimeFromNode(nodeName):
-    """A convience function that does calcuateSleepTime given a host name""""
+    """A convience function that does calcuateSleepTime given a host name"""
     [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (nodeName,))
     return calcuateSleepTime(datetime.datetime.now().replace(microsecond = 0), thisNode.weekSchedule)
 
