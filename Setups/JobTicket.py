@@ -11,7 +11,7 @@ class UberJobTicket:
     """A Ticket Class for submitting jobs and their subtasks."""
     def __init__(self, execName, baseCMD, startFrame, endFrame, byFrame,
                 taskFile, priority, phase, jobStatus, niceName, owner,
-                compatabilityList, maxNodes, timeout, project):
+                compatabilityList, maxNodes, timeout, project, singleTask):
         self.execName = execName        #VARCHAR(20)
         self.baseCMD = baseCMD          #VARCHAR(255)
         self.startFrame = startFrame    #SMALLINT(6)    ie.(0-65535)
@@ -29,11 +29,17 @@ class UberJobTicket:
         self.timeout = int(timeout * 60)#SMALLINT(6)    ie.(0-65535)
         self.project = project          #VARCHAR(60)
 
-        self.frameRange = range(self.startFrame, self.endFrame)
-        self.frameList = self.frameRange[0::self.byFrame]
-        if self.endFrame not in self.frameList:
-            self.frameList.append(self.endFrame)
-        self.frameCount = len(self.frameList)
+        self.singleTask = singleTask    #Not in DB
+
+        if not self.singleTask:
+            self.frameRange = range(self.startFrame, self.endFrame)
+            self.frameList = self.frameRange[0::self.byFrame]
+            if self.endFrame not in self.frameList:
+                self.frameList.append(self.endFrame)
+            self.frameCount = len(self.frameList)
+        else:
+            self.frameList = [self.startFrame, self.endFrame]
+            self.frameCount = 2
 
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}
@@ -72,17 +78,28 @@ class UberJobTicket:
         """Function for creating and inserting tasks for a range of frames."""
         taskList = []
         for frame in self.frameList:
+            if not self.singleTask:
+                startFrame = frame
+                endFrame = frame
+            else:
+                startFrame = self.frameList[0]
+                endFrame = self.frameList[1]
+
             task = hydra_taskboard(job_id = self.job_id,
                                     status = self.jobStatus,
                                     priority = self.priority,
                                     requirements = self.compatabilityPattern,
-                                    startFrame = frame,
-                                    endFrame = frame)
+                                    startFrame = startFrame,
+                                    endFrame = endFrame)
             taskList.append(task)
 
         with transaction() as t:
-            for task in taskList:
-                task.insert(transaction=t)
+            logger.debug(taskList)
+            if not self.singleTask:
+                for task in taskList:
+                    task.insert(transaction=t)
+            else:
+                taskList[0].insert(transaction=t)
 
     def doSubmit(self):
         """The actual function to submit the job and tasks to the DB"""
@@ -109,13 +126,15 @@ def testJobs():
         uberPhase01 = UberJobTicket("maya2015Render", baseCMD + "-x 640 -y 360",
                                     startFrame, endFrame, 10, mayaFile, priority,
                                     1, READY, niceName + "_PHASE_01", owner,
-                                    compatabilityList, 1, 170, "TEST_PROJECT_01")
+                                    compatabilityList, 1, 170, "TEST_PROJECT_01",
+                                    False)
         uberPhase01.doSubmit()
 
         uberPhase02 = UberJobTicket("maya2015Render", baseCMD, startFrame,
                                     endFrame, 1, mayaFile, priority, 2, PAUSED,
                                     niceName + "_PHASE_02", owner,
-                                    compatabilityList, 0, 170, "TEST_PROJECT_01")
+                                    compatabilityList, 0, 170, "TEST_PROJECT_01",
+                                    False)
         uberPhase02.doSubmit()
 
     raw_input("DONE...")

@@ -167,6 +167,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         maxNodesP2 = int(self.maxNodesP2SpinBox.value())
         timeout = int(self.timeoutSpinbox.value())
         projectName = str(self.projectNameLineEdit.text())
+        singleTask = self.singleTaskCheckbox.isChecked()
 
         #Stuff not in JobTicket
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
@@ -229,21 +230,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             niceNameOverride = "{0}_Test".format(niceName)
             baseCMDOverride = baseCMD + " -x 640 -y 360"
             priorityOverride = int(priority * 1.25)
-            phase01Ticket = UberJobTicket(execName,
-                                            baseCMDOverride,
-                                            startFrame,
-                                            endFrame,
-                                            byFrame,
-                                            taskFile,
-                                            priorityOverride,
-                                            phase,
-                                            jobStatus,
-                                            niceNameOverride,
-                                            owner,
-                                            compatabilityList,
-                                            maxNodesP1,
-                                            timeout,
-                                            projectName)
+            phase01Ticket = UberJobTicket(execName, baseCMDOverride, startFrame,
+                                            endFrame, byFrame, taskFile,
+                                            priorityOverride, phase,
+                                            jobStatus, niceNameOverride,
+                                            owner, compatabilityList,
+                                            maxNodesP1, timeout, projectName,
+                                            False)
 
             p1_job_id = phase01Ticket.doSubmit()
             if jobStatus == "R":
@@ -261,21 +254,12 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                 jobStatusOverride = "U"
             else:
                 jobStatusOverride = jobStatus
-            phase02Ticket = UberJobTicket(execName,
-                                            baseCMD,
-                                            startFrame,
-                                            endFrame,
-                                            byFrameOverride,
-                                            taskFile,
-                                            priority,
-                                            phase,
-                                            jobStatusOverride,
-                                            niceNameOverride,
-                                            owner,
-                                            compatabilityList,
-                                            maxNodesP2,
-                                            timeout,
-                                            projectName)
+            phase02Ticket = UberJobTicket(execName, baseCMD, startFrame,
+                                            endFrame, byFrameOverride, taskFile,
+                                            priority, phase, jobStatusOverride,
+                                            niceNameOverride, owner,
+                                            compatabilityList, maxNodesP2,
+                                            timeout, projectName, singleTask)
 
             p2_job_id = phase02Ticket.doSubmit()
             if jobStatusOverride == "R":

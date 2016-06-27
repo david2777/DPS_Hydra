@@ -248,12 +248,12 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="legoLayersCheckBox">
+           <widget class="QCheckBox" name="singleTaskCheckbox">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="text">
-             <string>LEGO Layers</string>
+             <string>Single Task</string>
             </property>
            </widget>
           </item>
@@ -550,7 +550,7 @@
   <tabstop>testFramesSpinBox</tabstop>
   <tabstop>testCheckBox</tabstop>
   <tabstop>finalCheckBox</tabstop>
-  <tabstop>legoLayersCheckBox</tabstop>
+  <tabstop>singleTaskCheckbox</tabstop>
   <tabstop>tabWidget</tabstop>
   <tabstop>sceneLineEdit</tabstop>
   <tabstop>sceneButton</tabstop>
