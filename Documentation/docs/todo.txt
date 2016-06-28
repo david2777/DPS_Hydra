@@ -140,16 +140,18 @@
 -[Done]Fix Submitter
     -Add Project field and stuff
 
+-[Done]Setup schedule update checks in RenderNodeMain
+
 -[In Progress]Work on Maya Submitter Script
     -Maybe need to add more submitter args to be able to add quotes to them
 
--[Todo]Setup schedule update checks in RenderNodeMain
+-[In Progress]Fix Bugs
 
--[Todo]Make scheduler handle holidays
-
--[Todo]Render consecutive frames
+-[In Progress]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
     finished on termination.
+
+-[Todo]Make scheduler handle holidays
 
 -[Todo]Detect GPUs and render one job on each GPU
     -Need to start a Render Server thread for each GPU

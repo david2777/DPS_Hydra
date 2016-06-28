@@ -3,4 +3,3 @@ cd ..
 cd ..
 python SubmitterMain-setup.py py2exe
 del SubmitterMain-setup.py
-pause

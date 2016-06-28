@@ -39,9 +39,10 @@ h1.setFormatter(complexFormatter)
 logger.addHandler(h1)
 
 #File Logger
-h2 = logging.handlers.TimedRotatingFileHandler(logfileName, when='midnight')
+h2 = logging.handlers.TimedRotatingFileHandler(logfileName, when='midnight',
+                                                backupCount = 7)
 h2.setLevel(logging.INFO)
-h2.setFormatter(simpleFormatter)
+h2.setFormatter(complexFormatter)
 logger.addHandler(h2)
 
 

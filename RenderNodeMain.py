@@ -8,11 +8,6 @@ import threading
 import datetime
 import time
 
-#Third Party
-from MySQLdb import Error as sqlerror
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-
 #Logging and Logging Setup
 from Setups.LoggingSetup import logger, simpleFormatter
 
@@ -20,6 +15,13 @@ if sys.argv[0].split(".")[-1] == "exe":
     logger.removeHandler(logger.handlers[0])
     logger.propagate = False
     logger.debug("Running as exe!")
+
+sys.stderr = sys.stdout
+
+#Third Party
+from MySQLdb import Error as sqlerror
+from PyQt4.QtGui import *
+from PyQt4.QtCore import *
 
 #Hydra Qt
 from CompiledUI.UI_RenderNodeMain import Ui_RenderNodeMainWindow
@@ -62,6 +64,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.thisNode = None
         try:
             self.thisNode = NodeUtils.getThisNodeData()
+            self.currentSchedule = self.thisNode.weekSchedule
+            self.currentScheduleEnabled = self.thisNode.scheduleEnabled
         except sqlerror as err:
             logger.error(str(err))
             self.onlineButton.setEnabled(False)
@@ -347,7 +351,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
 
         #Start Schedule Thread
-        if int(self.thisNode.scheduleEnabled) == 1:
+        self.startScheduleThread()
+
+    def startScheduleThread(self):
+        if int(self.currentScheduleEnabled) == 1 and self.currentSchedule:
             try:
                 self.schedThread = schedulerThread(900, self.schedulerMain)
                 self.schedThread.start()
@@ -387,10 +394,17 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             return False
 
     def updateThisNodeInfo(self):
-        """Updates widgets on the "This Node" tab with the most recent
-        information available."""
-        #Update thisNode if it is already set (so we don't error over and over)
         [self.thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (self.thisNode.host,))
+
+        #Check for changes in schedule
+        if self.thisNode.weekSchedule != self.currentSchedule or self.thisNode.scheduleEnabled != self.currentScheduleEnabled:
+            self.currentSchedule = self.thisNode.weekSchedule
+            self.currentScheduleEnabled = self.thisNode.scheduleEnabled
+            if self.schedThreadStatus:
+                self.schedThread.terminate()
+                app.processEvents()
+            self.startScheduleThread()
+
         self.nodeNameLabel.setText(self.thisNode.host)
         self.nodeStatusLabel.setText(niceNames[self.thisNode.status])
         if self.thisNode.task_id:

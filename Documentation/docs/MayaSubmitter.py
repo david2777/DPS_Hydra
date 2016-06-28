@@ -46,7 +46,7 @@ for layer in renderLayers:
 renderLayersReturn = ",".join(renderLayersList)
 
 #----------Setup Base Submitter Command Line Args----------#
-command = "python C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py \"{0}\" -s \"{1}\" -e \"{2}\" -p \"{3}\"".format(sceneFile, startFrame, endFrame, projectDir)
+command = "start \\\\zed\\Apps\\_Hydra_RenderFarm\\_Shortcuts\\Submitter.lnk \"{0}\" -s \"{1}\" -e \"{2}\" -p \"{3}\"".format(sceneFile, startFrame, endFrame, projectDir)
 
 #------------Build Extra Maya Command Line Args------------#
 extraCmdList = []
@@ -79,4 +79,4 @@ if renderLayersReturn != "":
     command += " -r \"{0}\"".format(renderLayersReturn)
 
 print command
-subprocess.check_call(command)
+subprocess.Popen(command, shell = True)

@@ -86,6 +86,11 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
                 with transaction() as t:
                     cmd = "UPDATE hydra_rendernode SET weekSchedule = %s WHERE host = %s"
                     t.cur.execute(cmd, (editsFormat, self.defaults["host"]))
+        elif not edits:
+            with transaction() as t:
+                cmd = "UPDATE hydra_rendernode SET weekSchedule = %s, scheduleEnabled = 0 WHERE host = %s"
+                t.cur.execute(cmd, (None, self.defaults["host"]))
+            self.schedCheckBox.setCheckState(0)
 
     def schedCheckBoxHandler(self):
         if self.schedEnabled:

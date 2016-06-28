@@ -1,8 +1,22 @@
 from distutils.core import setup
 import py2exe
 
+dataFiles = [("", ["C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\HydraSettings.cfg",
+                    "C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\styleSheet.css"]),
+
+            ("Images", ["C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\Images\\refresh.png",
+                        r"C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\Images\\RIcon.png"]),
+
+            ("Images\\status", [r"C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\Images\\status\\done.png",
+                                r"C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\Images\\status\\inProgress.png",
+                                r"C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\Images\\status\\needsAttention.png",
+                                r"C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\Images\\status\\none.png",
+                                r"C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\Images\\status\\notStarted.png"])]
+
 setup(options = {
         "py2exe": {
+            'unbuffered':True,
+            'optimize':2,
             'bundle_files': 1,
             'compressed': True,
             "includes":["sip"],
@@ -31,5 +45,7 @@ setup(options = {
                              "w9xpopen.exe"]
             }
       },
+      skip_archive = True,
+      data_files = dataFiles,
       windows=["RenderNodeMain.py"],
       zipfile = None)

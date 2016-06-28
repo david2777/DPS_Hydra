@@ -65,6 +65,8 @@ def resetTask(task_id, newStatus = READY):
     task.endTime = None
     task.logFile = None
     task.exitCode = None
+    task.failures = None
+    task.atempts = 0
     with transaction() as t:
         task.update(t)
     return True
@@ -107,12 +109,9 @@ def killTask(task_id, newStatus = KILLED):
     """Kill a task given it's task id. Return True if successful, else False."""
     [task] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
     if task.status == READY or task.status == PAUSED or task.status == MANAGED:
-        #Change info in DB if it isn't already running
         task.status = newStatus
-        task.host = None
         task.startTime = None
         task.endTime = None
-        task.logFile = None
         task.exitCode = None
         with transaction() as t:
             task.update(t)
@@ -120,9 +119,7 @@ def killTask(task_id, newStatus = KILLED):
     elif task.status == STARTED:
         #Kill if task is in progress
         killed = sendKillQuestion(task.host, newStatus)
-        #This is the only way this function could return an error
         return killed
     else:
-        #Else, skip it
         logger.info("Task Kill is skipping task {0} because of status {1}".format(task.id, task.status))
         return True

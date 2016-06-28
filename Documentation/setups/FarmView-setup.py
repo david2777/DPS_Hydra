@@ -1,6 +1,9 @@
 from distutils.core import setup
 import py2exe
 
+dataFiles = [("", ["C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\HydraSettings.cfg",
+                    "C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\styleSheet.css"])]
+
 setup(options = {
         "py2exe": {
             'bundle_files': 1,
@@ -31,5 +34,6 @@ setup(options = {
                              "w9xpopen.exe"]
             }
       },
-      console=["FarmView.py"],
+      data_files = dataFiles,
+      windows=["FarmView.py"],
       zipfile = None)

@@ -11,6 +11,16 @@ import webbrowser
 import Constants
 from socket import error as socketerror
 
+#Logging and Logging Setup
+from Setups.LoggingSetup import logger
+
+if sys.argv[0].split(".")[-1] == "exe":
+    logger.removeHandler(logger.handlers[0])
+    logger.propagate = False
+    logger.debug("Running as exe!")
+
+sys.stderr = sys.stdout
+
 #Third Party
 from MySQLdb import Error as sqlerror
 from PyQt4.QtGui import *
@@ -26,7 +36,6 @@ from Dialogs.MessageBoxes import aboutBox, yesNoBox, intBox, strBox
 
 #Hydra
 from Setups.MySQLSetup import *
-from Setups.LoggingSetup import logger
 from Setups.Threads import workerSignalThread
 import Utilities.Utils as Utils
 import Utilities.TaskUtils as TaskUtils
@@ -142,7 +151,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.onlineThisNodeButton.clicked.connect(self.onlineThisNodeHandler)
         self.offlineThisNodeButton.clicked.connect(self.offlineThisNodeHandler)
         self.getOffThisNodeButton.clicked.connect(self.getOffThisNodeHandler)
-        self.updateButton.clicked.connect(self.doUpdate)
         self.autoUpdateCheckbox.stateChanged.connect(self.autoUpdateHandler)
         self.editThisNodeButton.clicked.connect(self.nodeEditorHandler)
 
@@ -205,12 +213,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        self.addItem(self.jobMenu, "Soft Update", self.doUpdate,
-                "Update with the most important information from the Database")
-        self.addItem(self.jobMenu, "Full Update", self.doFetch,
-                "Update all of the latest information from the Database")
-        self.jobMenu.addSeparator()
-
         self.addItem(self.jobMenu, "Start Jobs", self.jobActionHandler,
                 "Start all jobs selected in Job List", "start")
         self.addItem(self.jobMenu, "Pause Jobs", self.jobActionHandler,
@@ -238,23 +240,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         editJob = self.addItem(self.jobMenu, "Edit Job...", self.doNothing,
                             "Edit Job, WIP")
         editJob.setEnabled(False)
-        self.jobMenu.addSeparator()
-
-        #User Filter Action
-        uFA = self.addItem(self.jobMenu, "Only Show My Jobs",
-                            self.userFilterContextHandler,
-                            "Only show the jobs belonging to the current user")
-        uFA.setCheckable(True)
-        if self.userFilter:
-            uFA.setChecked(True)
-
-        #Archived Filter Action
-        aFA = self.addItem(self.jobMenu, "Show Archived Jobs",
-                            self.archivedFilterContextHandler,
-                            "Show jobs which have been archived")
-        aFA.setCheckable(True)
-        if self.showArchivedFilter:
-            aFA.setChecked(True)
 
         self.jobMenu.popup(QCursor.pos())
 
@@ -325,14 +310,26 @@ class FarmView(QMainWindow, Ui_FarmView):
         if job.owner == self.username:
             shotItem.setFont(4, QFont('Segoe UI', 8, QFont.DemiBold))
 
-    def populateJobTree(self):
+    def populateJobTree(self, clear = False):
         jobs = self.fetchJobs()
         if not jobs:
             return
 
+        topLevelOpenList = []
+        for i in range(0,self.jobTree.topLevelItemCount()):
+            if self.jobTree.topLevelItem(i).isExpanded():
+                topLevelOpenList.append(str(self.jobTree.topLevelItem(i).text(0)))
+
+        if clear:
+            self.jobTree.clear()
+
         for job in jobs:
             jobData = self.getJobData(job)
             self.addJobTreeShot(jobData, job)
+
+        for i in range(0,self.jobTree.topLevelItemCount()):
+            if str(self.jobTree.topLevelItem(i).text(0)) in topLevelOpenList:
+                self.jobTree.topLevelItem(i).setExpanded(True)
 
         labelText = "Job List"
         labelText += " (This User Only)" if self.userFilter else ""
@@ -369,14 +366,12 @@ class FarmView(QMainWindow, Ui_FarmView):
     def userFilterActionHandler(self):
         self.userFilterCheckbox.setChecked(0) if self.userFilter else 2
         self.userFilter = False if self.userFilter else True
-        self.jobTree.clear()
-        self.populateJobTree()
+        self.populateJobTree(clear = True)
 
     def archivedFilterActionHandler(self):
         self.archivedCheckBox.setChecked(0) if self.showArchivedFilter else 2
         self.showArchivedFilter = False if self.showArchivedFilter else True
-        self.jobTree.clear()
-        self.populateJobTree()
+        self.populateJobTree(clear = True)
 
     def jobCommandBuilder(self):
         #TODO:Secure this
@@ -516,11 +511,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        self.addItem(self.taskMenu, "Soft Update", self.doUpdate,
-                "Update with the most important information from the Database")
-        self.addItem(self.taskMenu, "Full Update", self.doFetch,
-                "Update all of the latest information from the Database")
-        self.taskMenu.addSeparator()
         self.addItem(self.taskMenu, "Start Tasks", self.taskActionHandler,
                 "Start all tasks selected in the Task List", "start")
         self.addItem(self.taskMenu, "Pause Tasks", self.taskActionHandler,
@@ -584,10 +574,28 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.updateJobTreeRow(job_id, shotItem)
 
     def updateTaskTable(self):
-        #TODO:Make this work
         if self.currentJobSel:
-            #Update here
-            pass
+            cmd = "SELECT host, status, startTime, endTime ,exitCode, failures FROM hydra_taskboard WHERE job_id = %s"
+            with transaction() as t:
+                t.cur.execute(cmd, (self.currentJobSel,))
+                tasks = t.cur.fetchall()
+
+            for pos, task in enumerate(tasks):
+                if len(task) < 5:
+                    break
+                tdiff = None
+                if task[3]:
+                    tdiff = task[3] - task[2]
+                elif task[2]:
+                    tdiff = datetime.datetime.now().replace(microsecond=0) - task[2]
+                self.taskTable.setItem(pos, 3, TableWidgetItem(str(task[0])))
+                self.taskTable.setItem(pos, 4, TableWidgetItem(str(niceNames[task[1]])))
+                self.taskTable.item(pos, 4).setBackgroundColor(niceColors[task[1]])
+                self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(task[2])))
+                self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(task[3])))
+                self.taskTable.setItem(pos, 8, TableWidgetItem_dt(str(tdiff)))
+                self.taskTable.setItem(pos, 9, TableWidgetItem_int(str(task[4])))
+                self.taskTable.setItem(pos, 10, TableWidgetItem(str(task[5])))
 
     def taskTableHandler(self, mode = "IDs"):
         self.resetStatusBar()
@@ -723,11 +731,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.nodeMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        self.addItem(self.nodeMenu, "Soft Update", self.doUpdate,
-                "Update with the most important information from the Database")
-        self.addItem(self.nodeMenu, "Full Update", self.doFetch,
-                "Update all of the latest information from the Database")
-        self.nodeMenu.addSeparator()
         self.addItem(self.nodeMenu, "Online Nodes", self.onlineRenderNodesHandler,
                 "Online all checked nodes")
         self.addItem(self.nodeMenu, "Offline Nodes", self.offlineRenderNodesHandler,
@@ -735,13 +738,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addItem(self.nodeMenu, "Get Off Nodes", self.getOffRenderNodesHandler,
                 "Kill task then offline all checked nodes")
         self.nodeMenu.addSeparator()
-        self.addItem(self.nodeMenu, "Select All Nodes", self.selectAllNodesHandler,
-                "Check all nodes in the Node Table")
-        self.addItem(self.nodeMenu, "Deselect All Node", self.selectNoneNodesHandler,
-                "Uncheck all ndoes in the Node Table")
         self.addItem(self.nodeMenu, "Select by Host Name...", self.selectByHostHandler,
                 "Open a dialog to check nodes based on their host name")
-        self.nodeMenu.addSeparator()
         self.addItem(self.nodeMenu, "Reveal Detailed Data...", self.revealNodeDetailedHandler,
                 "Opens a dialog window the detailed data for the selected nodes.")
         self.addItem(self.nodeMenu, "Edit Node...", self.nodeEditorTableHandler,
@@ -804,6 +802,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
         rows = [item.row() for item in rows]
         nodes = [str(self.renderNodeTable.item(row, 0).text()) for row in rows]
+        logger.debug(nodes)
         return nodes
 
     def onlineRenderNodesHandler(self):
@@ -850,30 +849,23 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         choice = yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
         if choice == QMessageBox.Yes:
-            try:
-                with transaction() as t:
-                    rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
-            except sqlerror as err:
-                logger.error(str(err))
-                self.sqlErrorBox()
-                return
-
-            for thisNode in rendernode_rows:
+            for renderHost in hosts:
+                [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (renderHost,))
                 NodeUtils.offlineNode(thisNode)
                 if thisNode.task_id:
                     try:
                         response = TaskUtils.killTask(thisNode.task_id, READY)
                         if not response:
-                            logger.warning("Problem killing task durring GetOff")
+                            logger.warning("Problem killing task durring GetOff on {0}".format(thisNode.host))
                             aboutBox(self, "Error",
-                                    "There was a problem killing the task during GetOff!")
+                                    "There was a problem killing the task during GetOff on {0}".format(thisNode.host))
                         else:
-                            aboutBox(self, "Success", "Job was reset, node offlined.")
+                            aboutBox(self, "Success", "Job was reset, {0} offlined.".format(thisNode.host))
                     except socketerror:
                         logger.error(socketerror.message)
                         aboutBox(self, "Error", Constants.SOCKETERR_STRING)
                 else:
-                    aboutBox(self, "Success", "No job was found on node, node offlined")
+                    aboutBox(self, "Success", "No job was found on {0}, node offlined".format(thisNode.host))
 
                 self.updateRenderNodeTable()
         else:
@@ -922,17 +914,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         node_list = self.renderNodeTableHandler()
         if node_list:
             self.revealDetailedHandler(node_list, hydra_rendernode, "WHERE host = %s")
-
-    def selectAllNodesHandler(self):
-        rows = self.renderNodeTable.rowCount()
-        colCount = self.renderNodeTable.columnCount() - 1
-        rows = [x for x in range(rows)]
-        for row in rows:
-            mySel = QTableWidgetSelectionRange(row, 0 , row, colCount)
-            self.renderNodeTable.setRangeSelected(mySel, True)
-
-    def selectNoneNodesHandler(self):
-        self.renderNodeTable.clearSelection()
 
     def selectByHostHandler(self):
         reply = strBox(self, "Select By Host Name", "Host (using * as wildcard):")
@@ -1043,7 +1024,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             #Node setup and updaters
             self.thisNodeExists = False
             allNodes = hydra_rendernode.fetch(order = "ORDER BY host")
-            logger.info(allNodes)
             thisNode = None
             for node in allNodes:
                 if node.host == self.thisNodeName:
@@ -1149,7 +1129,7 @@ def getSoftwareVersionText(sw_ver):
     #Get RenderNodeMain version number if exists
     if sw_ver:
         #Case 1: executable in a versioned directory
-        v = re.search("rendernodemain-dist-([0-9]+)", sw_ver, re.IGNORECASE)
+        v = re.search("Hydra_RenderFarm_([0-9]+)", sw_ver, re.IGNORECASE)
         if v:
             return v.group(1)
 

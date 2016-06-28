@@ -3,4 +3,3 @@ cd ..
 cd ..
 python FarmView-setup.py py2exe
 del FarmView-setup.py
-pause

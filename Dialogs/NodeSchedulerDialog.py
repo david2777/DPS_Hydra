@@ -7,7 +7,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra
-from Utilities.NodeUtils import decodeScheduleData, encodeScheduleData, makeScheduleReadable
+from Utilities.NodeUtils import simplifyScheduleData, expandScheduleData, makeScheduleReadable
 
 #Hydra Qt
 from CompiledUI.UI_NodeScheduler import Ui_nodeSchedulerDialog
@@ -20,7 +20,7 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
 
         if self.defaults:
             self.editorGroup.setTitle("Week Schedule for {0}".format(self.defaults["host"]))
-            self.defaultSchedule = encodeScheduleData(self.defaults["weekSchedule"])
+            self.defaultSchedule = expandScheduleData(self.defaults["weekSchedule"])
 
         self.buildUI()
 
@@ -53,11 +53,11 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
         for i in range(0, rowCount):
             for j in range(0, colCount):
                 self.scheduleTable.setItem(i, j, QTableWidgetItem())
-                if not self.defaults:
+                if not self.defaultSchedule:
                     self.scheduleTable.item(i, j).setBackgroundColor(self.onlineColor)
                     self.scheduleTable.item(i, j).setText("1")
 
-        if self.defaults:
+        if self.defaultSchedule:
             schedList = []
             for i in range(0, len(self.defaultSchedule)):
                 startRow = int(self.defaultSchedule[i].split(":")[0])
@@ -145,7 +145,9 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
                     current = item
                     valueList.append("{0}:{1}:{2}".format(i, j, item))
 
-        scheduleData = decodeScheduleData(valueList)
+        scheduleData = simplifyScheduleData(valueList)
+        if len(scheduleData) < 2:
+            scheduleData = None
         return scheduleData
 
     @classmethod

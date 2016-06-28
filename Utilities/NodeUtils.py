@@ -10,58 +10,66 @@ from Constants import TIMEDICT, TIMEDICT_REV, DAYDICT, EVENTDICT
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
 
-def decodeScheduleData(data):
+def simplifyScheduleData(qtDataList):
     """Take data from the QTableWidget, simplifty it for storage in the DB"""
-    returnList = []
+    if not qtDataList:
+        return None
+    simpleDataList = []
     firstAction = None
-    for eventItem in data:
+    for eventItem in qtDataList:
         eventList = eventItem.split(":")
         time = TIMEDICT[int(eventList[1])]
-        returnList.append("{0}-{1}-{2}".format(eventList[0], time, eventList[2]))
+        simpleDataList.append("{0}-{1}-{2}".format(eventList[0], time, eventList[2]))
         if not firstAction:
             firstAction = eventList[2]
         lastAction = eventList[2]
 
     if firstAction == lastAction:
-        returnList.pop(0)
+        simpleDataList.pop(0)
 
-    return returnList
+    return simpleDataList
 
-def makeScheduleReadable(data):
+def makeScheduleReadable(simpleDataList):
     """Returns a more human readable list of schedule actions given an decoded
     schedule data list"""
-    returnList = []
-    for eventItem in data:
+    if not simpleDataList:
+        return []
+    readableDataList = []
+    for eventItem in simpleDataList:
         eventList = eventItem.split("-")
         day = DAYDICT[int(eventList[0])]
         action = EVENTDICT[int(eventList[2])]
-        returnList.append("{0} @ {1} do {2}".format(day, eventList[1], action))
+        readableDataList.append("{0} @ {1} do {2}".format(day, eventList[1], action))
 
-    return returnList
+    return readableDataList
 
-def encodeScheduleData(data):
-    """Take schedule data from the database and encode it for application to
+def expandScheduleData(dbData):
+    """Take schedule dbData from the dbDatabase and encode it for application to
     the QTableWidget on load"""
-    returnList = []
-    data = data.split(",")
-    for eventItem in data:
+    if not dbData:
+        return None
+    expandedDataList = []
+    dbData = dbData.split(",")
+    if len(dbData) < 2:
+        return None
+    for eventItem in dbData:
         eventList = eventItem.split("-")
         time = TIMEDICT_REV[eventList[1]]
-        returnList.append("{0}:{1}:{2}".format(eventList[0], time, eventList[2]))
+        expandedDataList.append("{0}:{1}:{2}".format(eventList[0], time, eventList[2]))
 
-    if int(returnList[0].split(":")[0]) != 0 and int(returnList[1].split(":")[0]) != 0:
-        returnList = [("0:0:{0}".format(int(returnList[-1].split(":")[2])))] + returnList
+    if int(expandedDataList[0].split(":")[0]) != 0 and int(expandedDataList[1].split(":")[0]) != 0:
+        expandedDataList = [("0:0:{0}".format(int(expandedDataList[-1].split(":")[2])))] + expandedDataList
 
-    return returnList
+    return expandedDataList
 
-def findNextEvent(now, data):
+def findNextEvent(now, dbData):
     """Take the current datetime and the decoded schedule data from the DB and
     find the next scheduling event"""
     nowDate = now.date()
     nowDayOfWeek = now.isoweekday()
     nowTime = now.time()
 
-    dataList = data.split(",")
+    dataList = dbData.split(",")
     if len(dataList) < 2:
         return None
 
@@ -116,14 +124,14 @@ def findSchedule(tempDayOfWeek, dataDict):
 
     return todaySchedule, tempDayOfWeek
 
-def calcuateSleepTime(now, data):
+def calcuateSleepTime(now, dbData):
     """Takes the current datetime and the decoded schedule data from the DB
     and finds the time to sleep until the next event"""
     nowDate = now.date()
     nowDayOfWeek = now.isoweekday()
     nowTime = now.time()
 
-    nextEvent = findNextEvent(now, data)
+    nextEvent = findNextEvent(now, dbData)
 
     if nowDayOfWeek <= nextEvent[0]:
         nextTime = datetime.datetime.combine(nowDate, nextEvent[1])

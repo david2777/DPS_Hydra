@@ -130,7 +130,6 @@ class RenderTCPServer(TCPServer):
             self.taskFile = '"{0}"'.format(render_job.taskFile)
             self.renderCMD = " ".join([self.execsDict[render_job.execName],
                                     render_job.baseCMD,
-                                    '-mr:v', '5',
                                     '-s', str(render_task.startFrame),
                                     '-e', str(render_task.endFrame),
                                     self.taskFile])

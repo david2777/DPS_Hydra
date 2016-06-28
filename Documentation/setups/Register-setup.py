@@ -1,6 +1,8 @@
 from distutils.core import setup
 import py2exe
 
+dataFiles = [("", ["C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\HydraSettings.cfg"])]
+
 setup(options = {
         "py2exe": {
             'bundle_files': 1,
@@ -31,5 +33,6 @@ setup(options = {
                              "w9xpopen.exe"]
             }
       },
+      data_files = dataFiles,
       console=["Register.py"],
       zipfile = None)
