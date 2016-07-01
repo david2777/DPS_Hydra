@@ -66,7 +66,7 @@ def resetTask(task_id, newStatus = READY):
     task.logFile = None
     task.exitCode = None
     task.failures = None
-    task.atempts = 0
+    task.attempts = 0
     with transaction() as t:
         task.update(t)
     return True

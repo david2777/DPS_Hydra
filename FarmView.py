@@ -813,15 +813,15 @@ class FarmView(QMainWindow, Ui_FarmView):
         choice = yesNoBox(self, "Confirm", "Are you sure you want to online"
                           " these nodes?\n" + str(hosts))
         if choice == QMessageBox.Yes:
-            try:
-                with transaction() as t:
-                    rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
-                for node_row in rendernode_rows:
-                    NodeUtils.onlineNode(node_row)
-                self.updateRenderNodeTable()
-            except sqlerror as err:
-                logger.error(str(err))
-                self.sqlErrorBox()
+            for renderHost in hosts:
+                try:
+                    [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (renderHost,))
+                    NodeUtils.onlineNode(thisNode)
+                except sqlerror as err:
+                    logger.error(str(err))
+                    self.sqlErrorBox()
+                finally:
+                    self.updateRenderNodeTable()
         else:
             aboutBox(self, "Aborted", "No action taken.")
 
@@ -833,12 +833,15 @@ class FarmView(QMainWindow, Ui_FarmView):
         choice = yesNoBox(self, "Confirm", "Are you sure you want to offline"
                           " these nodes?\n" + str(hosts))
         if choice == QMessageBox.Yes:
-            with transaction() as t:
-                rendernode_rows = hydra_rendernode.fetch(explicitTransaction=t)
-                for node_row in rendernode_rows:
-                    if node_row.host in hosts:
-                        NodeUtils.offlineNode(node_row)
-            self.updateRenderNodeTable()
+            for renderHost in hosts:
+                try:
+                    [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (renderHost,))
+                    NodeUtils.offlineNode(thisNode)
+                except sqlerror as err:
+                    logger.error(str(err))
+                    self.sqlErrorBox()
+                finally:
+                    self.updateRenderNodeTable()
         else:
             aboutBox(self, "Aborted", "No action taken.")
 
@@ -884,6 +887,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                     self.nodeEditor(host)
         else:
             self.nodeEditor(hosts[0])
+
+        self.doFetch()
 
     def nodeEditor(self, nodeName):
         nodeExists = True
