@@ -11,16 +11,6 @@ import webbrowser
 import Constants
 from socket import error as socketerror
 
-#Logging and Logging Setup
-from Setups.LoggingSetup import logger
-
-if sys.argv[0].split(".")[-1] == "exe":
-    logger.removeHandler(logger.handlers[0])
-    logger.propagate = False
-    logger.debug("Running as exe!")
-
-sys.stderr = sys.stdout
-
 #Third Party
 from MySQLdb import Error as sqlerror
 from PyQt4.QtGui import *
@@ -35,6 +25,7 @@ from Dialogs.DetailedDialog import DetailedDialog
 from Dialogs.MessageBoxes import aboutBox, yesNoBox, intBox, strBox
 
 #Hydra
+from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
 from Setups.Threads import workerSignalThread
 import Utilities.Utils as Utils

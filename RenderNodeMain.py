@@ -8,16 +8,6 @@ import threading
 import datetime
 import time
 
-#Logging and Logging Setup
-from Setups.LoggingSetup import logger, simpleFormatter
-
-if sys.argv[0].split(".")[-1] == "exe":
-    logger.removeHandler(logger.handlers[0])
-    logger.propagate = False
-    logger.debug("Running as exe!")
-
-sys.stderr = sys.stdout
-
 #Third Party
 from MySQLdb import Error as sqlerror
 from PyQt4.QtGui import *
@@ -30,6 +20,7 @@ from Dialogs.MessageBoxes import aboutBox, yesNoBox, strBox
 
 #Hydra
 import RenderNode
+from Setups.LoggingSetup import logger, simpleFormatter
 from Setups.MySQLSetup import *
 from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
@@ -42,12 +33,6 @@ class EmittingStream(QObject):
     textWritten = pyqtSignal(str)
     def write(self, text):
         self.textWritten.emit(str(text))
-
-class Blackhole(object):
-    def write(self,text):
-        pass
-    def flush(self):
-        pass
 
 class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def __init__(self):

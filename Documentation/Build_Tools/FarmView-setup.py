@@ -1,7 +1,11 @@
 from distutils.core import setup
 import py2exe
+from os.path import expanduser, join
 
-dataFiles = [("", ["C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\HydraSettings.cfg"])]
+home = expanduser("~")
+
+dataFiles = [("", [join(home, "Documents\\GitHub\\DPS_Hydra\\HydraSettings.cfg"),
+                    join(home, "Documents\\GitHub\\DPS_Hydra\\styleSheet.css")])]
 
 setup(options = {
         "py2exe": {
@@ -34,5 +38,5 @@ setup(options = {
             }
       },
       data_files = dataFiles,
-      console=["Register.py"],
+      windows=["FarmView.py"],
       zipfile = None)

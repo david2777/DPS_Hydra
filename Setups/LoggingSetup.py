@@ -3,7 +3,7 @@
 import os
 import logging
 import logging.handlers
-from sys import argv
+import sys
 
 #Hydra
 from Constants import BASELOGDIR
@@ -14,8 +14,8 @@ from Constants import BASELOGDIR
 logger = logging.getLogger()
 logger.setLevel(logging.NOTSET)
 
-if argv[0]:
-    appname = argv[0].split('\\')[-1]
+if sys.argv[0]:
+    appname = sys.argv[0].split('\\')[-1]
     appname = os.path.splitext(appname)[0]
 else:
     appname = "interpreter_output"
@@ -32,13 +32,17 @@ complexFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
 simpleFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
                                       "%(asctime)s\n")
 
-#Console Logger
-h1 = logging.StreamHandler()
-h1.setLevel(logging.DEBUG)
-h1.setFormatter(complexFormatter)
-logger.addHandler(h1)
+#Open Console Logger if Console exsits, else redirect stderr to stdout
+try:
+    if sys.stdout.isatty():
+        h1 = logging.StreamHandler()
+        h1.setLevel(logging.DEBUG)
+        h1.setFormatter(complexFormatter)
+        logger.addHandler(h1)
+except AttributeError:
+    sys.stderr = sys.stdout
 
-#File Logger
+#Always log to file but only INFO and above
 h2 = logging.handlers.TimedRotatingFileHandler(logfileName, when='midnight',
                                                 backupCount = 7)
 h2.setLevel(logging.INFO)

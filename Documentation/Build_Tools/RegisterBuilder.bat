@@ -3,3 +3,4 @@ cd ..
 cd ..
 python Register-setup.py py2exe
 del Register-setup.py
+pause
