@@ -1082,7 +1082,11 @@ class FarmView(QMainWindow, Ui_FarmView):
     def updateRenderJobGrid(self):
         command = "WHERE archived = '0' ORDER BY id DESC LIMIT %s"
         records = hydra_jobboard.secureFetch(command, (self.limitSpinBox.value(),))
-        columns = records[0].__dict__.keys()
+        try:
+            columns = records[0].__dict__.keys()
+        except IndexError:
+            return None
+
         columns = [labelFactory(col) for col in columns if col.find("__") is not 0]
 
         clearLayout(self.taskGrid)
