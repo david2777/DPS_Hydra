@@ -10,7 +10,7 @@ from PyQt4.QtCore import *
 from CompiledUI.UI_Login import Ui_Login
 
 #Hydra
-from Utilities.Utils import getDbInfo
+from Utilities.Utils import getInfoFromCFG
 from Setups.LoggingSetup import logger
 from Dialogs.MessageBoxes import aboutBox
 
@@ -20,7 +20,9 @@ class DatabaseLogin(QWidget, Ui_Login):
         QWidget.__init__(self)
         self.setupUi(self)
 
-        self._db_host, self._db_name, self._db_username, self._db_password = getDbInfo()
+        self.host = getInfoFromCFG("database", "host")
+        self.databseName = getInfoFromCFG("database", "db")
+        self.port = int(getInfoFromCFG("database", "port"))
 
         QObject.connect(self.loginButton, SIGNAL("clicked()"),
                         self.loginButtonHandler)
@@ -30,9 +32,9 @@ class DatabaseLogin(QWidget, Ui_Login):
 
     def getValues(self):
         if self.loginSuccess:
-            return self._db_host, self._db_name, self._db_username, self._db_password
+            return self.db_username, self._db_password
         else:
-            return None, None, None, None
+            return None, None
 
     def closeEvent(self, event):
         """Make it so when the user presses the X in the window it exits
@@ -43,21 +45,18 @@ class DatabaseLogin(QWidget, Ui_Login):
 
 
     def loginButtonHandler(self):
-        self._db_username = str(self.user.text())
+        self.db_username = str(self.user.text())
         self._db_password = str(self.password.text())
 
         if self.remoteAccess.isChecked():
             #self.host = "REMOTE"
             pass
 
-        try:
-            MySQLdb.connect(self._db_host,
-                                        user=self._db_username,
-                                        passwd = self._db_password,
-                                        db=self._db_name)
-            self.loginSuccess = True
-            self.close()
-        except MySQLdb.Error:
-            aboutBox(self,
-            "Could Not Login",
-            "Invalid username/password or server is down...")
+        MySQLdb.connect(host = self.host,
+                            user = self.db_username,
+                            passwd = self._db_password,
+                            db = self.databseName,
+                            port = self.port)
+
+        self.loginSuccess = True
+        self.close()

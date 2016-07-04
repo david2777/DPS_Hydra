@@ -36,13 +36,17 @@ def getInfoFromCFG(section, option):
 
     return config.get(section = section, option = option)
 
-def getDbInfo():
-    """Return the information used to login to the databse"""
-    host = getInfoFromCFG("database", "host")
-    db = getInfoFromCFG("database", "db")
-    username = getInfoFromCFG("database", "username")
-    password = getInfoFromCFG("database", "password")
-    return host, db, username, password
+def writeInfoToCFG(section, option, value):
+    config = ConfigParser.RawConfigParser()
+    config.read(Constants.SETTINGS)
+    #Make sure it exists
+    if not os.path.exists(Constants.SETTINGS):
+        return None
+
+    config.set(section, option, value)
+
+    with open(Constants.SETTINGS, "wb") as configFile:
+        config.write(configFile)
 
 def myHostName():
     """Return this computers hostname with the dns extension from the local

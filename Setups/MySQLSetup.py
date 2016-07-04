@@ -7,18 +7,29 @@ import MySQLdb
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
-#Hydra Qt
-from Dialogs.LoginWidget import DatabaseLogin
-
 #Hydra
 from Setups.LoggingSetup import logger
+from Setups import PasswordStorage
 import Utilities.Utils as Utils
 
-##########AUTO LOGIN##########
-autoLogin = eval(Utils.getInfoFromCFG("database", "autologin"))
-#Constants
-db_username = "UNKOWN"
+host = Utils.getInfoFromCFG("database", "host")
+databaseName = Utils.getInfoFromCFG("database", "db")
+port = int(Utils.getInfoFromCFG("database", "port"))
+db_username = Utils.getInfoFromCFG("database", "username")
 
+autoLogin = eval(Utils.getInfoFromCFG("database", "autologin"))
+if autoLogin:
+    _db_password = PasswordStorage.loadPassword(db_username)
+    if not _db_password:
+        autoLogin = False
+
+if not autoLogin:
+    returnValues = PasswordStorage.qtPrompt()
+    if not returnValues[0]:
+        logger.error("Could not login!")
+        sys.exit(1)
+    else:
+        _db_password = returnValues[1]
 
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
@@ -203,31 +214,20 @@ class hydra_holidays(tupleObject):
 
 
 class transaction:
-    global autoLogin
-    if autoLogin:
-        logger.debug("Auto login enabled.")
-        _db_host, _db_name, _db_username, _db_password = Utils.getDbInfo()
-    else:
-        app = QApplication(sys.argv)
-        loginWin = DatabaseLogin()
-        loginWin.show()
-        retcode = app.exec_()
-        _db_host, _db_name, _db_username, _db_password  = loginWin.getValues()
-        if retcode != 0:
-            sys.exit(retcode)
-        if _db_host ==  None:
-            sys.exit(0)
-
-    #Set Global username for other stuff to use
+    global host
     global db_username
-    db_username = _db_username
+    global _db_password
+    global databaseName
+    global port
+    print host, db_username, _db_password, databaseName, port
 
     def __init__(self):
         #Open DB Connection
-        self.db = MySQLdb.connect(transaction._db_host,
-                                    user=transaction._db_username,
-                                    passwd = transaction._db_password,
-                                    db=transaction._db_name)
+        self.db = MySQLdb.connect(host = host,
+                                    user = db_username,
+                                    passwd = _db_password,
+                                    db = databaseName,
+                                    port = port)
         self.cur = self.db.cursor()
         self.cur.execute("set autocommit = 1")
 
