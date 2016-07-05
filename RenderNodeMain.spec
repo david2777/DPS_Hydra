@@ -1,18 +1,12 @@
 # -*- mode: python -*-
 a = Analysis(['RenderNodeMain.py'],
-             pathex = ["\\"],
-             hiddenimports = [],
-             runtime_hooks = None)
+             pathex = ["C:/Users/DPSPurple/Documents/GitHub/DPS_Hydra"],
+             hiddenimports = [])
 
-a.datas += [("styleSheet.css", "styleSheet.css", "DATA")]
-a.datas += [("Images/refresh.png", "Images/refresh.png", "DATA")]
-a.datas += [("Images/refresh.png", "Images/refresh.png", "DATA")]
-a.datas += [("Images/RIcon.png", "Images/RIcon.png", "DATA")]
-a.datas += [("Images/status/done.png", "Images/status/done.png", "DATA")]
-a.datas += [("Images/status/inProgress.png", "Images/status/inProgress.png", "DATA")]
-a.datas += [("Images/status/needsAttention.png", "Images/status/needsAttention.png", "DATA")]
-a.datas += [("Images/status/none.png", "Images/status/none.png", "DATA")]
-a.datas += [("Images/status/notStarted.png", "Images/status/notStarted.png", "DATA")]
+#a.datas += [("styleSheet.css", "styleSheet.css", "DATA")]
+#a.datas += [("Images", "Images", "DIR")]
+a.datas += [("LocalIcon", "Images/RIcon.png", "DATA")]
+#a.datas += [("Images\\status", "Images\\status", "DIR")]
 
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
@@ -24,5 +18,5 @@ exe = EXE(pyz,
           debug = False,
           strip = None,
           upx = True,
-          console = True,
+          console = False,
           icon = "Images/RenderNodeMain.ico")

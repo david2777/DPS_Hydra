@@ -41,10 +41,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         inst = RenderNode.checkRenderNodeInstances()
         if not inst:
+            logger.error("No instances found!")
             aboutBox(self, "Error!", "More than one RenderNode found!"
                     "You cannot run more than one RenderNode at the same time")
             sys.exit(1)
-
 
         self.thisNode = None
         try:

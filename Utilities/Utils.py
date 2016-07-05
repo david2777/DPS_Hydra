@@ -6,6 +6,7 @@ import sys
 import itertools
 import shutil
 import socket
+import subprocess
 import xml.etree.ElementTree as ET
 
 #Hydra
@@ -14,6 +15,26 @@ import Constants
 
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
+
+def buildSubprocessArgs(include_stdout = False):
+    if hasattr(subprocess, 'STARTUPINFO'):
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        env = os.environ
+    else:
+        si = None
+        env = None
+
+    if include_stdout:
+        ret = {'stdout:': subprocess.PIPE}
+    else:
+        ret = {}
+
+    ret.update({'stdin': subprocess.PIPE,
+                'stderr': subprocess.PIPE,
+                'startupinfo': si,
+                'env': env })
+    return ret
 
 def getInfoFromCFG(section, option):
     """Return information from the local configuration file."""

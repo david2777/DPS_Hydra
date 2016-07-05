@@ -161,12 +161,12 @@ class RenderTCPServer(TCPServer):
             if sys.platform == "win32":
                 self.childProcess = subprocess.Popen(self.renderCMD,
                                                     stdout = log,
-                                                    stderr = subprocess.STDOUT,
-                                                    startupinfo = self.si)
+                                                    **Utils.buildSubprocessArgs(False))
             else:
                 self.childProcess = subprocess.Popen(self.renderCMD,
                                                     stdout = log,
-                                                    stderr = subprocess.STDOUT)
+                                                    **Utils.buildSubprocessArgs(False))
+
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
                                                                 render_task.id))
 
@@ -177,10 +177,9 @@ class RenderTCPServer(TCPServer):
                 self.startTimeoutThread(render_job.timeout)
 
             #Wait until the job is finished or terminated
-            #NOTE: This lockes up the main thread!
-            #TODO:Communicate prevents deadlocking but seems to cause a window
-            #     to popup for a split second after rendering. Will check out later
             self.childProcess.communicate()
+
+            #Gather info on exit and record
             render_task.exitCode = self.childProcess.returncode
             if tThread:
                 self.timeoutThread.cancel()
@@ -322,11 +321,12 @@ def heartbeat(interval = 5):
 def checkRenderNodeInstances():
     #TODO: Fix This
     if sys.platform == "win32":
+        subprocessOutput = subprocess.check_output('tasklist', **Utils.buildSubprocessArgs(False))
         nInstances = len(filter(lambda line: 'RenderNode' in line,
-                        subprocess.check_output('tasklist').split('\n')))
+                        subprocessOutput.split('\n')))
     else:
         nInstances = len(filter(lambda line: 'RenderNode' in line,
-                        subprocess.check_output(["ps", "-af"]).split('\n')))
+                        subprocess.check_output(["ps", "-af"], **Utils.buildSubprocessArgs(False)).split('\n')))
     logger.info("{0} RenderNode instances running.".format(nInstances))
 
     if nInstances > 2:
