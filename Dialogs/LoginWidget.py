@@ -52,11 +52,16 @@ class DatabaseLogin(QWidget, Ui_Login):
             #self.host = "REMOTE"
             pass
 
-        MySQLdb.connect(host = self.host,
-                            user = self.db_username,
-                            passwd = self._db_password,
-                            db = self.databseName,
-                            port = self.port)
+        try:
+            MySQLdb.connect(host = self.host,
+                                user = self.db_username,
+                                passwd = self._db_password,
+                                db = self.databseName,
+                                port = self.port)
+            self.loginSuccess = True
+            self.close()
 
-        self.loginSuccess = True
-        self.close()
+        except MySQLdb.Error:
+            aboutBox(self,
+            "Could Not Login",
+            "Invalid username/password or server is down...")

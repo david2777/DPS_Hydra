@@ -16,11 +16,10 @@ config = ConfigParser.RawConfigParser ()
 config.read(Constants.SETTINGS)
 
 me = Utils.myHostName()
-minJobPriority = config.get(section="rendernode", option="minJobPriority")
 
 try:
     with transaction() as t:
-        hydra_rendernode(host = me, status = OFFLINE, minPriority = minJobPriority).insert(t)
+        hydra_rendernode(host = me, status = OFFLINE, minPriority = 0).insert(t)
 except IntegrityError:
     logger.info("Host {0} already exists in the hydra_rendernode table on the databse".format(me))
 

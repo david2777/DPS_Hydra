@@ -36,7 +36,7 @@ class TCPConnection(Connection):
         if not hostname:
             hostname = getInfoFromCFG("database", "host")
         if not port:
-            port = int(getInfoFromCFG("database", "port"))
+            port = int(getInfoFromCFG("network", "port"))
         self.hostname = hostname
         self.port = port
 

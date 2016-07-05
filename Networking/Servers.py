@@ -42,7 +42,7 @@ class MySocketServer(SocketServer.TCPServer):
 class TCPServer(Server):
     def __init__(self, port = None):
         if not port:
-            port = int(getInfoFromCFG("database", "port"))
+            port = int(getInfoFromCFG("network", "port"))
         MyTCPHandler.TCPserver = self
         logger.info('Open TCPServer Socket @ Port {0}'.format(port))
         self.threadVar = True
