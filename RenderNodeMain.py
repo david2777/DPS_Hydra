@@ -27,6 +27,7 @@ from FarmView import getSoftwareVersionText
 from Setups.Threads import stoppableThread, workerSignalThread
 import Utilities.NodeUtils as NodeUtils
 import Utilities.TaskUtils as TaskUtils
+import Utilities.Utils as Utils
 
 class EmittingStream(QObject):
     """For writing text to the console output"""
@@ -80,15 +81,15 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         logger.info('Starting in {0}'.format(os.getcwd()))
         logger.info('arglist is {0}'.format(sys.argv))
         #Get Pixmaps and Icon
-        self.donePixmap = QPixmap("Images/status/done.png")
-        self.inProgPixmap = QPixmap("Images/status/inProgress.png")
-        self.needsAttentionPixmap = QPixmap("Images/status/needsAttention.png")
-        self.nonePixmap = QPixmap("Images/status/none.png")
-        self.notStartedPixmap = QPixmap("Images/status/notStarted.png")
-        self.refreshPixmap = QPixmap("Images/refresh.png")
+        self.donePixmap = QPixmap(Utils.findResource("Images/status/done.png"))
+        self.inProgPixmap = QPixmap(Utils.findResource("Images/status/inProgress.png"))
+        self.needsAttentionPixmap = QPixmap(Utils.findResource("Images/status/needsAttention.png"))
+        self.nonePixmap = QPixmap(Utils.findResource("Images/status/none.png"))
+        self.notStartedPixmap = QPixmap(Utils.findResource("Images/status/notStarted.png"))
+        self.refreshPixmap = QPixmap(Utils.findResource("Images/refresh.png"))
         self.refreshIcon = QIcon()
         self.refreshIcon.addPixmap(self.refreshPixmap)
-        self.RIcon = QIcon('Images/RIcon.png')
+        self.RIcon = QIcon(Utils.findResource("Images/RenderNodeMain.png"))
 
         self.buildUI()
         self.connectButtons()

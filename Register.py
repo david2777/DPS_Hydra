@@ -1,7 +1,6 @@
 """Registers a node with the database."""
 #Standard
 import os
-import ConfigParser
 
 #Third Party
 from MySQLdb import IntegrityError
@@ -11,9 +10,6 @@ import Constants
 from Setups.LoggingSetup import logger
 import Utilities.Utils as Utils
 from Setups.MySQLSetup import hydra_rendernode, OFFLINE, transaction
-
-config = ConfigParser.RawConfigParser ()
-config.read(Constants.SETTINGS)
 
 me = Utils.myHostName()
 

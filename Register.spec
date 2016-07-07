@@ -1,7 +1,7 @@
 # -*- mode: python -*-
 block_cipher = None
 
-a = Analysis(['SubmitterMain.py'],
+a = Analysis(['Register.py'],
              pathex = ['.'],
              binaries = None,
              datas = None,
@@ -13,8 +13,7 @@ a = Analysis(['SubmitterMain.py'],
              win_private_assemblies = False,
              cipher = block_cipher)
 
-a.datas += [("styleSheet.css", "styleSheet.css", "DATA"),
-            ("HydraSettings.cfg", "HydraSettings.cfg", "DATA")]
+a.datas += [("HydraSettings.cfg", "HydraSettings.cfg", "DATA")]
 
 pyz = PYZ(a.pure,
             a.zipped_data,
@@ -25,9 +24,9 @@ exe = EXE(pyz,
           a.binaries,
           a.zipfiles,
           a.datas,
-          name = 'SubmitterMain',
+          name = 'Register',
           debug = False,
           strip = False,
           upx = True,
-          console = False,
-          icon = "Images/SubmitterMain.ico")
+          console = True,
+          icon = "Images/Register.ico")

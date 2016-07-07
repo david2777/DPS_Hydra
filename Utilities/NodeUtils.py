@@ -88,7 +88,7 @@ def findNextEvent(now, dbData):
         return None
 
     sched = None
-    logger.info(todaySchedule)
+    #logger.info(todaySchedule)
     for todayTime in todaySchedule:
         if todayTime[0] > nowTime:
             sched = todayTime
@@ -103,7 +103,7 @@ def findNextEvent(now, dbData):
     if not sched:
         logger.error("Could not find schedule")
 
-    logger.info([newDayOfWeek] + sched)
+    #logger.info([newDayOfWeek] + sched)
 
     return [newDayOfWeek] + sched
 

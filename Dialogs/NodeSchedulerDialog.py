@@ -8,6 +8,7 @@ from PyQt4.QtCore import *
 
 #Hydra
 from Utilities.NodeUtils import simplifyScheduleData, expandScheduleData, makeScheduleReadable
+from Utilities.Utils import findResource
 
 #Hydra Qt
 from CompiledUI.UI_NodeScheduler import Ui_nodeSchedulerDialog
@@ -29,7 +30,7 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
 
     def buildUI(self):
         #Load style sheet
-        with open("styleSheet.css","r") as myStyles:
+        with open(findResource("styleSheet.css"),"r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
         #Global colors

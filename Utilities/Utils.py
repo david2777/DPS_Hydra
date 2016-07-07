@@ -16,6 +16,10 @@ import Constants
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
+def findResource(relativePath):
+    basePath = getattr(sys, "_MEIPASS", os.path.abspath("."))
+    return os.path.join(basePath, relativePath)
+
 def buildSubprocessArgs(include_stdout = False):
     if hasattr(subprocess, 'STARTUPINFO'):
         si = subprocess.STARTUPINFO()
@@ -49,7 +53,7 @@ def getInfoFromCFG(section, option):
         else:
             logger.info('Make {0}'.format(folder))
             os.mkdir(folder)
-        cfgFile = os.path.join(os.path.dirname(sys.argv[0]), os.path.basename(Constants.SETTINGS))
+        cfgFile = findResource(os.path.basename(Constants.SETTINGS))
         logger.info('Copy {0}'.format(cfgFile))
         shutil.copyfile(cfgFile, Constants.SETTINGS)
 
