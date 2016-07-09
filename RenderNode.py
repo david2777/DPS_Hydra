@@ -21,7 +21,6 @@ import psutil
 import Constants
 from Networking.Servers import TCPServer
 from Setups.LoggingSetup import logger
-from Networking.Answers import RenderAnswer
 from Setups.MySQLSetup import *
 import Utilities.Utils as Utils
 import Utilities.JobUtils as JobUtils
@@ -187,7 +186,6 @@ class RenderTCPServer(TCPServer):
             log.write(logString.format(render_task.exitCode,
                                         datetime.datetime.now().replace(microsecond=0),
                                         self.thisNodeName))
-            return RenderAnswer()
 
         except Exception, e:
             traceback.print_exc(e, log)

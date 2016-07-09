@@ -19,16 +19,6 @@ class Connection:
         """Protocol for getting the server to answer a question. Must be implemented in subclasses."""
         raise exceptions.NotImplementedError
 
-class LocalConnection(Connection):
-    """A connection to a local Hydra server"""
-    def __init__(self, localServer = Servers.Server()):
-        """Constructor. By default it creates a new local server if you don't supply one."""
-        self.localServer = localServer
-
-    def getAnswer(self, question):
-        #Call computeAnswer directly, since we have the server right here
-        return question.computeAnswer(self.localServer)
-
 class TCPConnection(Connection):
     """A connection to a remote Hydra server, using TCP"""
     def __init__(self, hostname = None, port = None):

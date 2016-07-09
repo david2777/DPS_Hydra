@@ -14,8 +14,6 @@ from Utilities.Utils import getInfoFromCFG
 #Authors: David Gladstein and Aaron Cohn
 #Taken from Cogswell's Project Hydra
 
-#TODO: Figure out why this is here...
-
 class Server:
     def createIdleLoop(self, interval, function):
         self.idleThread = threading.Thread(target = self.idleLoop,
@@ -32,9 +30,6 @@ class Server:
         while self.threadVar:
             function()
             time.sleep(interval)
-
-class LocalServer(Server):
-    pass
 
 class MySocketServer(SocketServer.TCPServer):
     allow_reuse_address = True
