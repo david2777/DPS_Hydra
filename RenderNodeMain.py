@@ -20,7 +20,7 @@ from Dialogs.MessageBoxes import aboutBox, yesNoBox, strBox
 
 #Hydra
 import RenderNode
-from Setups.LoggingSetup import logger, simpleFormatter
+from Setups.LoggingSetup import logger, outputWindowFormatter
 from Setups.MySQLSetup import *
 from Constants import BASELOGDIR
 from FarmView import getSoftwareVersionText
@@ -72,14 +72,14 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         emStream = EmittingStream(textWritten=self.normalOutputWritten)
         handler = logging.StreamHandler(emStream)
         handler.setLevel(logging.INFO)
-        handler.setFormatter(simpleFormatter)
+        handler.setFormatter(outputWindowFormatter)
         logger.addHandler(handler)
 
         sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
         sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
 
-        logger.info('Starting in {0}'.format(os.getcwd()))
-        logger.info('arglist is {0}'.format(sys.argv))
+        logger.debug('Starting in {0}'.format(os.getcwd()))
+        logger.debug('arglist is {0}'.format(sys.argv))
         #Get Pixmaps and Icon
         self.donePixmap = QPixmap(Utils.findResource("Images/status/done.png"))
         self.inProgPixmap = QPixmap(Utils.findResource("Images/status/inProgress.png"))
@@ -103,7 +103,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.updateThisNodeInfo)
         self.autoUpdateThread.start()
 
-        logger.info("LIVE LIVE LIVE")
+        logger.info("Render Node Main is live! Waiting for tasks...")
 
     def normalOutputWritten(self, text):
         """Append text to the QTextEdit."""

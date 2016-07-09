@@ -43,7 +43,6 @@ def buildSubprocessArgs(include_stdout = False):
 def getInfoFromCFG(section, option):
     """Return information from the local configuration file."""
     config = ConfigParser.RawConfigParser()
-    config.read(Constants.SETTINGS)
     #Create a copy if it doesn't exist
     if not os.path.exists(Constants.SETTINGS):
         folder = os.path.dirname(Constants.SETTINGS)
@@ -58,7 +57,6 @@ def getInfoFromCFG(section, option):
         shutil.copyfile(cfgFile, Constants.SETTINGS)
 
     config.read(Constants.SETTINGS)
-
     return config.get(section = section, option = option)
 
 def writeInfoToCFG(section, option, value):

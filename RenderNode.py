@@ -58,7 +58,7 @@ class RenderTCPServer(TCPServer):
         self.thisNodeName = Utils.myHostName()
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
-        logger.info("Housekeeping...")
+        logger.debug("Housekeeping...")
         [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (self.thisNodeName,))
         query = "UPDATE hydra_rendernode SET status = %s WHERE host = %s"
         if thisNode.task_id:
@@ -327,7 +327,7 @@ def checkRenderNodeInstances():
     else:
         nInstances = len(filter(lambda line: 'RenderNode' in line,
                         subprocess.check_output(["ps", "-af"], **Utils.buildSubprocessArgs(False)).split('\n')))
-    logger.info("{0} RenderNode instances running.".format(nInstances))
+    logger.debug("{0} RenderNode instances running.".format(nInstances))
 
     if nInstances > 2:
         logger.error("Blocked RenderNodeMain from running because another"
@@ -340,8 +340,8 @@ def checkRenderNodeInstances():
     return True
 
 def main():
-    logger.info('Starting in {0}'.format(os.getcwd()))
-    logger.info('arglist {0}'.format(sys.argv))
+    logger.debug('Starting in {0}'.format(os.getcwd()))
+    logger.debug('arglist {0}'.format(sys.argv))
     socketServer = RenderTCPServer()
     socketServer.createIdleLoop(5, socketServer.processRenderTasks)
     pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))

@@ -4,16 +4,58 @@ import os
 import logging
 import logging.handlers
 import sys
+import ConfigParser
 
 #Hydra
-from Constants import BASELOGDIR
+from Constants import BASELOGDIR, SETTINGS
 
 #Originally By : David Gladstein
 #Taken from Cogswell's Project Hydra
 
+#-------------------------------Initialize-------------------------------------#
 logger = logging.getLogger()
 logger.setLevel(logging.NOTSET)
 
+#-------------------------------Load Config------------------------------------#
+#Logs will be much more verbose if debug is set to True in the config file
+try:
+    config = ConfigParser.RawConfigParser()
+    config.read(SETTINGS)
+    debugMode = config.get(section = "hydra", option = "debug")
+    debugMode = True if str(debugMode).lower() == "true" else False
+    configErr = False
+except ConfigParser.NoSectionError:
+    debugMode = True
+    configErr = True
+
+#-------------------------------Formatters-------------------------------------#
+consoleFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
+                                      "%(pathname)s line %(lineno)s\n"
+                                      "%(asctime)s\n")
+
+outputWindowFormatter = logging.Formatter("%(levelname)-9s [%(asctime)s]: %(message)s\n",
+                                            "%m-%d %H:%M:%S")
+
+if debugMode:
+    fileFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
+                                          "%(pathname)s line %(lineno)s\n"
+                                          "%(asctime)s\n")
+else:
+    fileFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
+                                          "%(asctime)s\n", "%Y-%m-%d %H:%M:%S")
+
+#-----------------------------Console Logger-----------------------------------#
+#Make sure we have a console window attached
+try:
+    if sys.stdout.isatty():
+        consoleLogger = logging.StreamHandler()
+        consoleLogger.setLevel(logging.DEBUG)
+        consoleLogger.setFormatter(consoleFormatter)
+        logger.addHandler(consoleLogger)
+except AttributeError:
+    sys.stderr = sys.stdout
+
+#-------------------------------File Logger------------------------------------#
 if sys.argv[0]:
     appname = sys.argv[0].split('\\')[-1]
     appname = os.path.splitext(appname)[0]
@@ -25,35 +67,12 @@ if not os.path.isdir(BASELOGDIR):
 
 logfileName = os.path.join(BASELOGDIR, appname + '.txt')
 
-complexFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
-                                      "%(pathname)s line %(lineno)s\n"
-                                      "%(asctime)s\n")
+fileLogger = logging.handlers.TimedRotatingFileHandler(logfileName,
+                                                        when = 'midnight',
+                                                        backupCount = 7)
+fileLogger.setLevel(logging.DEBUG if debugMode else logging.INFO)
+fileLogger.setFormatter(fileFormatter)
+logger.addHandler(fileLogger)
 
-simpleFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
-                                      "%(asctime)s\n")
-
-#Open Console Logger if Console exsits, else redirect stderr to stdout
-try:
-    if sys.stdout.isatty():
-        h1 = logging.StreamHandler()
-        h1.setLevel(logging.DEBUG)
-        h1.setFormatter(complexFormatter)
-        logger.addHandler(h1)
-except AttributeError:
-    sys.stderr = sys.stdout
-
-#Always log to file but only INFO and above
-h2 = logging.handlers.TimedRotatingFileHandler(logfileName, when='midnight',
-                                                backupCount = 7)
-h2.setLevel(logging.INFO)
-h2.setFormatter(complexFormatter)
-logger.addHandler(h2)
-
-
-#'application' code
-if __name__ == '__main__':
-        logger.debug('debug message')
-        logger.info('info message')
-        logger.warn('warn message')
-        logger.error('error message')
-        logger.critical('critical message')
+if configErr:
+    logger.error("Could not find config file when setting up formatter! Maybe because node had yet to be registered.")
