@@ -180,7 +180,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.offlineButton.clicked.connect(self.offlineThisNodeHandler)
         self.getoffButton.clicked.connect(self.getOffThisNodeHandler)
         self.clearButton.clicked.connect(self.clearOutputHandler)
-        self.runCmdButton.clicked.connect(self.runCommandHandler)
         self.refreshButton.clicked.connect(self.updateThisNodeInfo)
         self.editThisNodeButton.clicked.connect(self.nodeEditorHandler)
         self.autoUpdateCheckBox.stateChanged.connect(self.autoUpdateHandler)
@@ -286,13 +285,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         else:
             self.aboutBoxHidden("Task Kill Error",
                     "No tasks found on current node. Set status to Offline.")
-
-    def runCommandHandler(self):
-        reply = strBox(self, "Eval", "Eval this code:")
-        if reply[1]:
-            command = str(reply[0])
-            value = eval(command)
-            logger.info(value)
 
     def clearOutputHandler(self):
         choice = yesNoBox(self, "Confirm", "Really clear output?")
@@ -402,7 +394,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.minPriorityLabel.setText(str(self.thisNode.minPriority))
         self.capabilitiesLabel.setText(self.thisNode.capabilities)
         self.scheduleEnabled.setText(str(self.thisNode.scheduleEnabled))
-        self.weekSchedule.setText(str(self.thisNode.weekSchedule))
         self.pulseLabel.setText(str(self.thisNode.pulse))
 
         if self.trayIconBool:

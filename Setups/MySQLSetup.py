@@ -17,7 +17,8 @@ databaseName = Utils.getInfoFromCFG("database", "db")
 port = int(Utils.getInfoFromCFG("database", "port"))
 db_username = Utils.getInfoFromCFG("database", "username")
 
-autoLogin = eval(Utils.getInfoFromCFG("database", "autologin"))
+autoLogin = Utils.getInfoFromCFG("database", "autologin")
+autoLogin = True if str(autoLogin).lower() == "true" else False
 if autoLogin:
     _db_password = PasswordStorage.loadPassword(db_username)
     if not _db_password:
