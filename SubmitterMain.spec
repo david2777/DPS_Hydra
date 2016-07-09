@@ -14,7 +14,8 @@ a = Analysis(['SubmitterMain.py'],
              cipher = block_cipher)
 
 a.datas += [("styleSheet.css", "styleSheet.css", "DATA"),
-            ("HydraSettings.cfg", "HydraSettings.cfg", "DATA")]
+            ("HydraSettings.cfg", "HydraSettings.cfg", "DATA"),
+            ("Images/SubmitterMain.png", "Images/SubmitterMain.png", "DATA")]
 
 pyz = PYZ(a.pure,
             a.zipped_data,

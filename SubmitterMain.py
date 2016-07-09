@@ -19,12 +19,14 @@ from Setups.LoggingSetup import logger
 from Dialogs.MessageBoxes import aboutBox, yesNoBox
 from Setups.JobTicket import UberJobTicket
 import Utilities.JobUtils as JobUtils
+from Utilities.Utils import findResource
 
 class SubmitterMain(QMainWindow, Ui_MainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
         #Built-in UI Setup
         self.setupUi(self)
+        self.setWindowIcon(QIcon(findResource("Images/SubmitterMain.png")))
 
         #Setup the UI with my fuctions
         self.setupGlobals()

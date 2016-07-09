@@ -58,6 +58,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         #My UI Setup Functions
         self.setupTables()
         self.connectButtons()
+        self.setWindowIcon(QIcon(Utils.findResource("Images/FarmView.png")))
 
         #Enable this node buttons
         self.thisNodeButtonsEnabled = True

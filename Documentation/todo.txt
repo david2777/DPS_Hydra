@@ -153,6 +153,8 @@
     -Needs to update the task board with the number of frames it actually
     finished on termination.
 
+-[Todo]Make better icons
+
 -[Todo]Make scheduler handle holidays
 
 -[Todo]Detect GPUs and render one job on each GPU
