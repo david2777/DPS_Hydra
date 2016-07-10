@@ -13,9 +13,6 @@ import xml.etree.ElementTree as ET
 from Setups.LoggingSetup import logger
 import Constants
 
-#Authors: David Gladstein and Aaron Cohn
-#Taken from Cogswell's Project Hydra
-
 def findResource(relativePath):
     basePath = getattr(sys, "_MEIPASS", os.path.abspath("."))
     return os.path.join(basePath, relativePath)

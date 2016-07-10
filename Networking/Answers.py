@@ -1,6 +1,4 @@
 """Answers for Questions"""
-#Original Authors: David Gladstein and Aaron Cohn
-#Taken from Cogswell's Project Hydra
 
 class Answer:
     """Interface for Answer objects"""

@@ -7,9 +7,6 @@ import exceptions
 #Hydra
 from Networking.Answers import CMDAnswer, KillCurrentJobAnswer
 
-#Authors: David Gladstein and Aaron Cohn
-#Taken from Cogswell's Project Hydra
-
 class Question:
     """Interface for Question objects."""
     def computeAnswer(self, server):

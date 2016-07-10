@@ -2,9 +2,6 @@
 #Third Party
 from PyQt4.QtGui import QMessageBox, QInputDialog
 
-#Original Author: Aaron Cohn
-#Taken from Cogswell's Project Hydra
-
 def aboutBox(parent=None, title="", msg=""):
     """Creates a message box with an OK button, suitable for displaying short
     messages to the user."""

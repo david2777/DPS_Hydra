@@ -6,9 +6,6 @@ from PyQt4.QtCore import QObject, SIGNAL
 #Hydra Qt
 from CompiledUI.UI_TaskSearchDialog import Ui_taskSearchDialog
 
-#Original Author: Aaron Cohn
-#Taken from Cogswell's Project Hydra
-
 class TaskSearchDialog(QDialog, Ui_taskSearchDialog):
     """A dialog box for running queries on hydra_taskboard."""
 

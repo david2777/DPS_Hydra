@@ -32,9 +32,6 @@ if not autoLogin:
     else:
         _db_password = returnValues[1]
 
-#Authors: David Gladstein and Aaron Cohn
-#Taken from Cogswell's Project Hydra
-
 #Statuses for jobs/tasks
 MANAGED = 'M'               #Job is being managed by the max node manager
 PAUSED = 'U'                #Job was paused

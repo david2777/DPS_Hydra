@@ -9,9 +9,6 @@ import ConfigParser
 #Hydra
 from Constants import BASELOGDIR, SETTINGS
 
-#Originally By : David Gladstein
-#Taken from Cogswell's Project Hydra
-
 #-------------------------------Initialize-------------------------------------#
 logger = logging.getLogger()
 logger.setLevel(logging.NOTSET)

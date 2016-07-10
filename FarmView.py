@@ -33,8 +33,6 @@ import Utilities.TaskUtils as TaskUtils
 import Utilities.JobUtils as JobUtils
 import Utilities.NodeUtils as NodeUtils
 
-#Parts taken from Cogswell's Project Hydra by David Gladstein and Aaron Cohn
-
 #------------------------------------------------------------------------------#
 #--------------------------------Farm View-------------------------------------#
 #------------------------------------------------------------------------------#

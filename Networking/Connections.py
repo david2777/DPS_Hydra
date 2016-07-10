@@ -10,9 +10,6 @@ import Constants
 from Setups.LoggingSetup import logger
 from Utilities.Utils import getInfoFromCFG
 
-#Original Authors: David Gladstein and Aaron Cohn
-#Taken from Cogswell's Project Hydra
-
 class Connection:
     "A connection to a Hydra server. Base class, must be subclassed."
     def getAnswer(self, question):

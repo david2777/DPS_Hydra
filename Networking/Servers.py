@@ -11,9 +11,6 @@ import Constants
 from Setups.LoggingSetup import logger
 from Utilities.Utils import getInfoFromCFG
 
-#Authors: David Gladstein and Aaron Cohn
-#Taken from Cogswell's Project Hydra
-
 class Server:
     def createIdleLoop(self, interval, function):
         self.idleThread = threading.Thread(target = self.idleLoop,
