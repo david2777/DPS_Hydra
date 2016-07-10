@@ -79,81 +79,62 @@ class tupleObject:
     autoColumn = None
 
     def __init__(self, **kwargs):
-        self.__dict__['__dirty__'] = set ()
-        for k, v in kwargs.iteritems ():
+        self.__dict__['__dirty__'] = set()
+        for k, v in kwargs.iteritems():
             self.__dict__[k] = v
 
     def __setattr__(self, k, v):
         self.__dict__[k] = v
         if Utils.nonFlanged(k):
             self.__dirty__.add(k)
-            logger.debug (('dirty', k, v))
+            logger.debug(('dirty', k, v))
 
     @classmethod
-    def fetch(cls, whereClause = "", order = None, limit = None, explicitTransaction=None):
-        """A deprecated method for easily fethcing information from the SQL server.
-        This is insecure and vulnerable to SQL injection so don't use it where possible."""
-        orderClause = "" if order is None else " " + order + " "
-        limitClause = "" if limit is None else " LIMIT {0} ".format(limit)
-        select = "SELECT * FROM {0} {1} {2} {3}".format(cls.tableName(), whereClause, orderClause, limitClause)
-        logger.debug(select)
-
-        def doFetch(t):
-            t.cur.execute(select)
-            names = [desc[0] for desc in t.cur.description]
-            return [cls (**dict(zip(names, tup)))
-                    for tup in t.cur.fetchall()]
-        if explicitTransaction:
-            return doFetch(explicitTransaction)
-        else:
-            with transaction() as t:
-                return doFetch(t)
-
-    @classmethod
-    def secureFetch(cls, whereClause, whereTuple, cols = None, orderTuples = None,
-                    limit = None, explicitTransaction=None):
+    def fetch(cls, whereClause = "", whereTuple = None, cols = None,
+                    orderTuples = None, limit = None, multiReturn = False,
+                    explicitTransaction=None):
         """A fetch function with paramater binding.
-        ie. [thisNode] = hydra_rendernode.fetch("WHERE host = %s", ("test",))
+        ie. thisNode = hydra_rendernode.fetch("WHERE host = %s", ("test",))
             idAttr = thisNode.id"""
-        #orderClause = "" if order is None else " " + order + " "
-        #limitClause = "" if limit is None else " LIMIT %s "
+        queryTuple = tuple()
+        #Where Clause
+        if whereClause and whereTuple:
+            queryTuple += whereTuple
+
+        #Order Clause
+        orderClause = ""
         if orderTuples:
-            if type(orderTuples) is not tuple:
-                logger.error("Bad orderTuple!")
-                return None
-            for oTuple in orderTuples:
-                if type(oTuple) is not tuple or len(oTuple) != 2:
-                    logger.error("Bad orderTuple!")
-                    return None
             orderClause = " ORDER BY"
             for oTuple in orderTuples:
                 orderClause += " %s %s"
-                whereTuple = whereTuple + oTuple
-            orderClause += " "
-        else:
-            orderClause = ""
+                queryTuple += oTuple
 
+        #Limit Clause
+        limitClause = ""
         if limit:
             limitClause = " LIMIT %s "
-            whereTuple = whereTuple + (limit,)
-        else:
-            limitClause = ""
+            queryTuple += (limit,)
 
+        #Column Clause
+        colStatement = "*"
         if cols:
             cols = [str(x) for x in cols]
             colStatement = ",".join(cols)
-            select = "SELECT " + colStatement + " FROM {0} {1} {2} {3}"
-        else:
-            select = "SELECT * FROM {0} {1} {2} {3}"
 
+        #Build Select Statement
+        select = "SELECT " + colStatement + " FROM {0} {1} {2} {3}"
         select =  select.format(cls.tableName(), whereClause, orderClause, limitClause)
-        logger.debug(select % whereTuple)
+        logger.debug(select % queryTuple)
 
+        #Fetch the data
         def doFetch(t):
-            t.cur.execute(select, whereTuple)
+            t.cur.execute(select, queryTuple)
             names = [desc[0] for desc in t.cur.description]
-            return [cls (**dict(zip(names, tup)))
-                    for tup in t.cur.fetchall()]
+            returnList = [cls(**dict(zip(names, tup))) for tup in t.cur.fetchall()]
+            if multiReturn:
+                return returnList
+            return returnList[0] if len(returnList) == 1 else returnList
+
         if explicitTransaction:
             return doFetch(explicitTransaction)
         else:
@@ -220,7 +201,6 @@ class transaction:
     global _db_password
     global databaseName
     global port
-    print host, db_username, _db_password, databaseName, port
 
     def __init__(self):
         #Open DB Connection
@@ -233,7 +213,7 @@ class transaction:
         self.cur.execute("set autocommit = 1")
 
     def __enter__(self):
-        logger.debug("enter transaction %s", self)
+        #logger.debug("enter transaction %s", self)
         self.cur.execute("start transaction")
         return self
 
@@ -244,5 +224,5 @@ class transaction:
         else:
             logger.error("rollback %s", self)
             self.cur.execute ("rollback")
-        logger.debug("exit transaction %s", self)
+        #logger.debug("exit transaction %s", self)
         self.db.close()

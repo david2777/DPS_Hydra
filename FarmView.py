@@ -191,7 +191,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.centralMenu.popup(QCursor.pos())
 
     def revealDetailedHandler(self, data_ids, sqlTable, sqlWhere):
-        dataList = [sqlTable.secureFetch(sqlWhere, (d_id,))[0] for d_id in data_ids]
+        dataList = [sqlTable.fetch(sqlWhere, (d_id,))[0] for d_id in data_ids]
         DetailedDialog.create(dataList)
 
     #---------------------------------------------------------------------#
@@ -241,9 +241,9 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.initTaskTable(int(shotItem.text(1)), shotItem)
 
     def fetchJobs(self):
-        cmd = self.jobCommandBuilder()
+        command, commandTuple = self.jobCommandBuilder()
         try:
-            return hydra_jobboard.fetch(cmd)
+            return hydra_jobboard.fetch(command, commandTuple)
         except sqlerror as err:
             logger.error(str(err))
             aboutBox(self, "SQL error", str(err))
@@ -289,7 +289,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             shotItem.setFont(4, QFont('Segoe UI', 8, QFont.DemiBold))
 
     def updateJobTreeRow(self, job_id, shotItem):
-        [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id,))
+        job = hydra_jobboard.fetch("WHERE id = %s", (job_id,))
         data = self.getJobData(job)
 
         for i in range(0, 9):
@@ -366,13 +366,14 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.populateJobTree(clear = True)
 
     def jobCommandBuilder(self):
-        #TODO:Secure this
         command = "WHERE"
-        command += " owner = '{0}'" if self.userFilter else ""
+        command += " owner = %s" if self.userFilter else ""
         command += " AND" if command != "WHERE" and not self.showArchivedFilter else ""
         command += " archived = 0" if not self.showArchivedFilter else ""
 
-        return command.format(self.username) if command != "WHERE" else ""
+        commandTuple = (self.username,) if self.userFilter else tuple()
+
+        return [command, commandTuple] if command != "WHERE" else ["", tuple()]
 
     def jobTreeHandler(self, mode = "IDs"):
         self.resetStatusBar()
@@ -454,7 +455,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 try:
                     commandList = []
                     for job_id in job_ids:
-                        [job] = hydra_jobboard.secureFetch("WHERE id = %s",(job_id,))
+                        job = hydra_jobboard.fetch("WHERE id = %s",(job_id,))
                         new = 0
                         if job.archived == 0:
                             new = 1
@@ -520,7 +521,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def initTaskTable(self, job_id, shotItem):
         try:
-            [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id,))
+            job = hydra_jobboard.fetch("WHERE id = %s", (job_id,))
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
             logger.error(str(err))
@@ -531,7 +532,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskTableLabel.setText(sString)
 
         try:
-            tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
+            tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
         except sqlerror as err:
             aboutBox(self, "SQL Error", str(err))
             logger.error(str(err))
@@ -651,7 +652,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     except sqlerror as err:
                         logger.error(str(err))
                         aboutBox(self, "SQL Error", str(err))
-                [job] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
+                job = hydra_taskboard.fetch("WHERE id = %s", (task_id,))
                 self.updateTaskTable()
                 self.populateJobTree()
 
@@ -662,11 +663,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                                 " editor for EACH task selected. Continue?")
                 if choice == QMessageBox.Yes:
                     for task_id in task_ids:
-                        [taskOBJ] = hydra_taskboard.secureFetch("WHERE id = %s", (task_id,))
-                        loadLog(self, taskOBJ)
+                        task = hydra_taskboard.fetch("WHERE id = %s", (task_id,))
+                        loadLog(self, task)
             else:
-                [taskOBJ] = hydra_taskboard.secureFetch("WHERE id = %s", (task_ids[0],))
-                loadLog(self, taskOBJ)
+                task = hydra_taskboard.fetch("WHERE id = %s", (task_ids[0],))
+                loadLog(self, task)
 
         else:
             logger.error("Bad task handler arg")
@@ -682,7 +683,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
         if reply[1]:
             logger.info("Starting {0} test frames on job_id {1}".format(reply[0], job_id))
-            tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
+            tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
 
             map(TaskUtils.startTask, tasks[0:reply[0]])
             logger.info("Test Tasks Started!")
@@ -807,7 +808,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
                 try:
-                    [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (renderHost,))
+                    thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,))
                     NodeUtils.onlineNode(thisNode)
                 except sqlerror as err:
                     logger.error(str(err))
@@ -827,7 +828,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
                 try:
-                    [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (renderHost,))
+                    thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,))
                     NodeUtils.offlineNode(thisNode)
                 except sqlerror as err:
                     logger.error(str(err))
@@ -845,7 +846,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         choice = yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
-                [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (renderHost,))
+                thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,))
                 NodeUtils.offlineNode(thisNode)
                 if thisNode.task_id:
                     try:
@@ -885,7 +886,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def nodeEditor(self, nodeName):
         nodeExists = True
         if nodeExists:
-            [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (nodeName,))
+            thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,))
             comps = thisNode.capabilities.split(" ")
             defaults = {"host" : thisNode.host,
                         "priority" : thisNode.minPriority,
@@ -1020,7 +1021,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             #Node setup and updaters
             self.thisNodeExists = False
-            allNodes = hydra_rendernode.fetch(order = "ORDER BY host")
+            allNodes = hydra_rendernode.fetch(orderTuples = (("host", "ASC"),), multiReturn = True)
             thisNode = None
             for node in allNodes:
                 if node.host == self.thisNodeName:
@@ -1045,7 +1046,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def doUpdate(self):
         curTab = self.tabWidget.currentIndex()
         try:
-            [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (self.thisNodeName,))
+            thisNode = hydra_rendernode.fetch("WHERE host = %s", (self.thisNodeName,))
             self.updateStatusBar(thisNode)
             if curTab == 0:
                 #Job List
@@ -1082,7 +1083,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def updateRenderJobGrid(self):
         command = "WHERE archived = '0' ORDER BY id DESC LIMIT %s"
-        records = hydra_jobboard.secureFetch(command, (self.limitSpinBox.value(),))
+        records = hydra_jobboard.fetch(command, (self.limitSpinBox.value(),), multiReturn = True)
         try:
             columns = records[0].__dict__.keys()
         except IndexError:

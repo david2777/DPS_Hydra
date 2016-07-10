@@ -154,13 +154,13 @@ def calcuateSleepTime(now, dbData):
 
 def calcuateSleepTimeFromNode(nodeName):
     """A convience function that does calcuateSleepTime given a host name"""
-    [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (nodeName,))
+    thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,))
     return calcuateSleepTime(datetime.datetime.now().replace(microsecond = 0), thisNode.weekSchedule)
 
 def getThisNodeData():
     """Returns the current node's info from the DB, None if not found in the DB."""
     try:
-        [thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (Utils.myHostName(),))
+        thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),))
     except ValueError:
         thisNode = None
     return thisNode

@@ -44,7 +44,7 @@ def updateJobTaskCount(job_id, tasks = None, commit = True):
         commit -- If False the results will not be commited to databse (default True)
     """
     if not tasks:
-        tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
+        tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
     taskCount = len(tasks)
     tasksComplete = 0
     error = False
@@ -92,7 +92,7 @@ def updateJobTaskCount(job_id, tasks = None, commit = True):
 
 def startJob(job_id):
     """Start every subtask of a job."""
-    tasks = hydra_taskboard.fetch("WHERE job_id = '{0}'".format(job_id))
+    tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
     map(TaskUtils.startTask, [task.id for task in tasks])
     updateJobTaskCount(job_id, tasks)
 
@@ -102,7 +102,7 @@ def killJob(job_id, newStatus = KILLED):
     Keyword Arguments:
         newStatus -- The status each task should assume after it's death. (default KILLED)
     """
-    tasks =  hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
+    tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
     if tasks:
         responses = [TaskUtils.killTask(task.id, newStatus) for task in tasks]
         updateJobTaskCount(job_id, tasks)
@@ -116,7 +116,7 @@ def resetJob(job_id, newStatus = READY):
     Keyword Arguments:
         newStatus -- The status each task should assume after it's been reset. (default READY)
     """
-    tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
+    tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
     responses = [TaskUtils.resetTask(task.id, newStatus) for task in tasks]
     updateJobTaskCount(job_id, tasks)
     return False if False in responses else True
@@ -133,12 +133,12 @@ def setupNodeLimit(job_id, hold_status = MANAGED):
     Keyword Arguments:
         hold_status -- The status of the remainder (paused) tasks. (default MANAGED)
     """
-    [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id,))
+    job = hydra_jobboard.fetch("WHERE id = %s", (job_id,))
     taskLimit = job.maxNodes
     if taskLimit < 1:
         return
 
-    tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
+    tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
     startTasks = tasks[0:taskLimit]
     startTasks = [int(task.id) for task in startTasks]
     holdTasks = tasks[taskLimit:]
@@ -155,12 +155,12 @@ def manageNodeLimit(job_id, hold_status = MANAGED):
     Keyword Arguments:
         hold_status -- The status of the remainder (paused) tasks. (default MANAGED)
     """
-    [job] = hydra_jobboard.secureFetch("WHERE id = %s", (job_id,))
+    job = hydra_jobboard.fetch("WHERE id = %s", (job_id,))
     taskLimit = job.maxNodes
     if taskLimit < 1:
         return
 
-    tasks = hydra_taskboard.secureFetch("WHERE job_id = %s", (job_id,))
+    tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
     startList = []
 
     for task in tasks:

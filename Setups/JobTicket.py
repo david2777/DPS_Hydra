@@ -41,7 +41,7 @@ class UberJobTicket:
             self.frameList = [self.startFrame, self.endFrame]
             self.frameCount = 2
 
-        execs = hydra_executable.fetch()
+        execs = hydra_executable.fetch(multiReturn = True)
         self.execsDict = {ex.name: ex.path for ex in execs}
 
         if len(self.compatabilityPattern) > 255:

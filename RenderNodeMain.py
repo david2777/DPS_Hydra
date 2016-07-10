@@ -372,7 +372,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             return False
 
     def updateThisNodeInfo(self):
-        [self.thisNode] = hydra_rendernode.secureFetch("WHERE host = %s", (self.thisNode.host,))
+        self.thisNode = hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
 
         #Check for changes in schedule
         if self.thisNode.weekSchedule != self.currentSchedule or self.thisNode.scheduleEnabled != self.currentScheduleEnabled:

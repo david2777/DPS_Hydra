@@ -101,8 +101,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
     def populateReqs(self):
         #Get requirements master list from the DB
-        #Hardcoded for now
-        requirements = hydra_capabilities.fetch()
+        requirements = hydra_capabilities.fetch(multiReturn = True)
         requirements = [req.name for req in requirements]
         self.reqChecks = []
         col = 0
@@ -124,8 +123,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
     def populateExecs(self):
         #Get execs
-        #Stored in Constants for now
-        execs = hydra_executable.fetch()
+        execs = hydra_executable.fetch(multiReturn = True)
         execs.reverse()
 
         for execute in execs:
