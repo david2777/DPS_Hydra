@@ -147,7 +147,7 @@
 
 -[In Progress]Fix Bugs
 
--[High Priority]Do Password Storage
+-[Done]Do Password Storage
 
 -[In Progress]Render consecutive frames
     -Needs to update the task board with the number of frames it actually

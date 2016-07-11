@@ -12,11 +12,13 @@ from Setups.LoggingSetup import logger
 from Setups import PasswordStorage
 import Utilities.Utils as Utils
 
+#Get databse information
 host = Utils.getInfoFromCFG("database", "host")
 databaseName = Utils.getInfoFromCFG("database", "db")
 port = int(Utils.getInfoFromCFG("database", "port"))
 db_username = Utils.getInfoFromCFG("database", "username")
 
+#Get login information
 autoLogin = Utils.getInfoFromCFG("database", "autologin")
 autoLogin = True if str(autoLogin).lower() == "true" else False
 if autoLogin:
@@ -63,10 +65,6 @@ niceNames = {PAUSED: 'Paused',
             MANAGED: 'Managed',
             TIMEOUT: "Timed Out",
             }
-
-
-class AUTOINCREMENT:
-    pass
 
 class tupleObject:
     @classmethod
@@ -207,7 +205,7 @@ class transaction:
                                     db = databaseName,
                                     port = port)
         self.cur = self.db.cursor()
-        self.cur.execute("set autocommit = 1")
+        self.cur.execute("SET autocommit = 1")
 
     def __enter__(self):
         #logger.debug("enter transaction %s", self)
