@@ -42,9 +42,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         inst = RenderNode.checkRenderNodeInstances()
         if not inst:
-            logger.error("No instances found!")
-            aboutBox(self, "Error!", "More than one RenderNode found!"
-                    "You cannot run more than one RenderNode at the same time")
+            self.aboutBox("Error!", "More than one RenderNode found!\n"
+                    "You cannot run more than one RenderNode at the same time. Closing...")
             sys.exit(1)
 
         self.thisNode = None
@@ -57,11 +56,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.onlineButton.setEnabled(False)
             self.offlineButton.setEnabled(False)
             self.getoffButton.setEnabled(False)
-            self.sqlErrorBox()
 
         if not self.thisNode:
             logger.error("Node does not exist in database!")
-            aboutBox(self, "Error",
+            self.aboutBox("Error",
                 "This node was not found in the database! If you wish to render  "
                 "on this node it must be registered with the databse. Run "
                 "Register.exe or Register.py to regiester this node and "
@@ -250,7 +248,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             logger.info("Node Onlined")
         except sqlerror as err:
             logger.error(str(err))
-            self.sqlErrorBox()
 
     def offlineThisNodeHandler(self):
        try:
@@ -259,7 +256,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
            logger.info("Node Offlined")
        except sqlerror as err:
            logger.error(str(err))
-           self.sqlErrorBox()
 
     def getOffThisNodeHandler(self):
         self.updateThisNodeInfo()
@@ -319,8 +315,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         #Start Render Server
         try:
             self.renderServer = RenderNode.RenderTCPServer()
-            self.renderServer.createIdleLoop(5,
-                                            self.renderServer.processRenderTasks)
+            self.renderServer.createIdleLoop(5, self.renderServer.processRenderTasks)
             self.renderServerStatus = True
             self.renderServerPixmap.setPixmap(self.donePixmap)
             logger.info("Render Server Started!")

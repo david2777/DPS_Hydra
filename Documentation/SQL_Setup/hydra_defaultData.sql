@@ -21,7 +21,7 @@
 
 LOCK TABLES `hydra_capabilities` WRITE;
 /*!40000 ALTER TABLE `hydra_capabilities` DISABLE KEYS */;
-INSERT INTO `hydra_capabilities` VALUES ('Fusion'),('FXCache'),('HighPower'),('Houdini'),('Maya2014'),('Maya2015'),('MentalRay'),('Photoshop'),('Redshift'),('RenderMan'),('SOuP');
+INSERT INTO `hydra_capabilities` VALUES ('Fusion'),('FXCache'),('HighPower'),('Maya2014'),('Maya2015'),('Photoshop'),('Redshift');
 /*!40000 ALTER TABLE `hydra_capabilities` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -31,19 +31,10 @@ UNLOCK TABLES;
 
 LOCK TABLES `hydra_executable` WRITE;
 /*!40000 ALTER TABLE `hydra_executable` DISABLE KEYS */;
-INSERT INTO `hydra_executable` VALUES ('maya2014_Proper','C:/Program Files/Autodesk/maya2014/bin/maya.exe'),('maya2014_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe'),('maya2015_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe');
+INSERT INTO `hydra_executable` VALUES ('maya2014_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe'),('maya2015_Render','C:/Program Files/Autodesk/maya2015/bin/render.exe');
 /*!40000 ALTER TABLE `hydra_executable` ENABLE KEYS */;
 UNLOCK TABLES;
 
---
--- Dumping data for table `hydra_holidays`
---
-
-LOCK TABLES `hydra_holidays` WRITE;
-/*!40000 ALTER TABLE `hydra_holidays` DISABLE KEYS */;
-INSERT INTO `hydra_holidays` VALUES (1,'2015,11,26'),(2,'2015,12,24'),(3,'2015,12,25');
-/*!40000 ALTER TABLE `hydra_holidays` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

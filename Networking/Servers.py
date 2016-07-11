@@ -59,8 +59,7 @@ def runTheServer(serverObject):
 
 class MyTCPHandler(SocketServer.StreamRequestHandler):
     TCPserver = None #The Hydra server object, NOT the SocketServer.
-    def handle( self ):
-        logger.info ("request")
+    def handle(self):
         try:
             questionBytes = self.rfile.read()
             question = pickle.loads(questionBytes)
@@ -68,7 +67,7 @@ class MyTCPHandler(SocketServer.StreamRequestHandler):
 
             answer = question.computeAnswer(self.TCPserver)
 
-            answerBytes = pickle.dumps( answer )
-            self.wfile.write( answerBytes )
+            answerBytes = pickle.dumps(answer)
+            self.wfile.write(answerBytes)
         except:
             logger.error("Exception caught in Servers: {0}".format(traceback.format_exc()))

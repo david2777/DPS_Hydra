@@ -65,14 +65,14 @@ def resetTask(task_id, newStatus = READY):
     task.endTime = None
     task.logFile = None
     task.exitCode = None
-    task.failures = None
+    task.failures = ""
     task.attempts = 0
     with transaction() as t:
         task.update(t)
     return True
 
 
-def unstick(taskID = None, newTaskStatus = READY, host = None, newHostStatus = IDLE):
+def unstickTask(taskID = None, newTaskStatus = READY, host = None, newHostStatus = IDLE):
     """Unstick and rests a task. Useful for when a node crashes."""
     #Not sure why this function has so many optional arguments
     if taskID:
