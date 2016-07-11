@@ -230,7 +230,7 @@
                 <enum>Qt::CustomContextMenu</enum>
                </property>
                <property name="editTriggers">
-                <set>QAbstractItemView::NoEditTriggers</set>
+                <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
                </property>
                <property name="alternatingRowColors">
                 <bool>false</bool>
@@ -346,7 +346,7 @@
             <enum>Qt::ScrollBarAlwaysOn</enum>
            </property>
            <property name="editTriggers">
-            <set>QAbstractItemView::NoEditTriggers</set>
+            <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
            </property>
            <property name="selectionBehavior">
             <enum>QAbstractItemView::SelectRows</enum>

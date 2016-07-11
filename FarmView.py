@@ -157,6 +157,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.taskTable.setContextMenuPolicy(Qt.CustomContextMenu)
         self.taskTable.customContextMenuRequested.connect(self.taskContextHandler)
+        self.taskTable.itemChanged.connect(self.taskTableEditHandler)
 
         self.renderNodeTable.setContextMenuPolicy(Qt.CustomContextMenu)
         self.renderNodeTable.customContextMenuRequested.connect(self.nodeContextHandler)
@@ -517,6 +518,29 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "Load the log file for all tasks selected in the Task List", "log")
         self.taskMenu.popup(QCursor.pos())
 
+    def taskTableEditHandler(self, item):
+        #TODO:Verify data, verify changes with user?
+        row = int(item.row())
+        col = int(item.column())
+        newValue = str(item.text())
+        task_id = int(self.taskTable.item(row, 0).text())
+        valueMap = {1 : "startFrame", 2 : "endFrame", 3 : "host", 5 : "priority",
+                    9 : "exitCode", 10 : "failures", 11 : "requirements"}
+        if col in [0,4,6,7,8]:#ID, Status, Start Time, End Time, Duration
+            logger.warning("You probably shouldn't edit those...")
+            return
+        elif col in [1,2,5,9]:#Start Frame, End Frame, Priority, Exit Code
+            newValue = int(newValue)
+        try:
+            query = "UPDATE hydra_taskboard SET {0} = %s WHERE id = %s".format(valueMap[col])
+            with transaction() as t:
+                t.cur.execute(query, (newValue, task_id))
+        except sqlerror as err:
+            aboutBox(self, "SQL Error", str(err))
+            logger.error(str(err))
+
+        self.updateTaskTable()
+
     def initTaskTable(self, job_id, shotItem):
         try:
             job = hydra_jobboard.fetch("WHERE id = %s", (job_id,))
@@ -537,6 +561,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
 
         self.taskTable.setRowCount(len(tasks))
+        self.taskTable.itemChanged.disconnect(self.taskTableEditHandler)
         for pos, task in enumerate(tasks):
             #Calcuate time difference
             tdiff = None
@@ -561,6 +586,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.taskTable.setItem(pos, 10, TableWidgetItem(str(task.failures)))
             self.taskTable.setItem(pos, 11, TableWidgetItem_int(reqsString))
 
+        self.taskTable.itemChanged.connect(self.taskTableEditHandler)
         JobUtils.updateJobTaskCount(job_id)
         self.updateJobTreeRow(job_id, shotItem)
 
@@ -571,6 +597,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 t.cur.execute(cmd, (self.currentJobSel,))
                 tasks = t.cur.fetchall()
 
+            self.taskTable.itemChanged.disconnect(self.taskTableEditHandler)
             for pos, task in enumerate(tasks):
                 if len(task) < 5:
                     break
@@ -587,6 +614,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 8, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 9, TableWidgetItem_int(str(task[4])))
                 self.taskTable.setItem(pos, 10, TableWidgetItem(str(task[5])))
+
+            self.taskTable.itemChanged.connect(self.taskTableEditHandler)
 
     def taskTableHandler(self, mode = "IDs"):
         self.resetStatusBar()
