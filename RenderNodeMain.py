@@ -16,8 +16,7 @@ from PyQt4.QtCore import *
 #Hydra Qt
 from CompiledUI.UI_RenderNodeMain import Ui_RenderNodeMainWindow
 from Dialogs.NodeEditorDialog import NodeEditorDialog
-from Dialogs.MessageBoxes import aboutBox, yesNoBox, strBox
-
+from Dialogs.MessageBoxes import aboutBox, yesNoBox
 #Hydra
 import RenderNode
 from Setups.LoggingSetup import logger, outputWindowFormatter
@@ -42,7 +41,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         inst = RenderNode.checkRenderNodeInstances()
         if not inst:
-            self.aboutBox("Error!", "More than one RenderNode found!\n"
+            aboutBox(self, "Error!", "More than one RenderNode found!\n"
                     "You cannot run more than one RenderNode at the same time. Closing...")
             sys.exit(1)
 
@@ -59,7 +58,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         if not self.thisNode:
             logger.error("Node does not exist in database!")
-            self.aboutBox("Error",
+            aboutBox(self, "Error",
                 "This node was not found in the database! If you wish to render  "
                 "on this node it must be registered with the databse. Run "
                 "Register.exe or Register.py to regiester this node and "
@@ -136,6 +135,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.trayIcon.show()
             self.trayIcon.setVisible(True)
             self.trayIcon.activated.connect(self.activate)
+            self.trayIcon.messageClicked.connect(self.activate)
 
             #Tray Icon Context Menu
             self.taskIconMenu = QMenu(self)
@@ -166,10 +166,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.trayIcon.setContextMenu(self.taskIconMenu)
         else:
             logger.error("Tray Icon Error! Could not create tray icon.")
-            aboutBox(self,
-                    "Tray Icon Error",
-                    "Could not create tray icon. Minimizing to tray has been"
-                    " disabled.")
+            aboutBox(self, "Tray Icon Error",
+                    "Could not create tray icon. Minimizing to tray has been disabled.")
             self.trayButton.setEnabled(False)
 
     def connectButtons(self):
@@ -400,11 +398,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
     def aboutBoxHidden(self, title="", msg=""):
         """Creates a window that has been minimzied to the tray"""
-        QMessageBox.about(self, title, msg)
-        #Work around...
-        if not self.isVisable():
-            self.show()
-            self.hide()
+        if self.isVisable:
+            aboutBox(self, title, msg)
+        else:
+            self.trayIcon.showMessage(title, msg)
 
     def schedulerMain(self):
         #TODO: Make schedule work with holidays somehow

@@ -79,14 +79,18 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
 
     def schedulerEditButtonHandler(self):
         edits = NodeSchedulerDialog.create(self.defaults)
-        if edits and self.defaults:
+        if edits == None:
+            return
+
+        #An empty list will return boolean False
+        if edits:
             editsFormat = ",".join(edits)
             if editsFormat != self.defaults["weekSchedule"]:
                 self.defaults["weekSchedule"] = editsFormat
                 with transaction() as t:
                     cmd = "UPDATE hydra_rendernode SET weekSchedule = %s WHERE host = %s"
                     t.cur.execute(cmd, (editsFormat, self.defaults["host"]))
-        elif not edits:
+        else:
             with transaction() as t:
                 cmd = "UPDATE hydra_rendernode SET weekSchedule = %s, scheduleEnabled = 0 WHERE host = %s"
                 t.cur.execute(cmd, (None, self.defaults["host"]))

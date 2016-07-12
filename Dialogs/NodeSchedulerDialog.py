@@ -97,11 +97,6 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
 
     def okButtonHandler(self):
         self.save = True
-        values = self.getValues()
-        readable = makeScheduleReadable(values)
-        for item in readable:
-            print item
-        print "\n"
         self.close()
 
     def getCurrentTableSelection(self):
@@ -147,8 +142,6 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
                     valueList.append("{0}:{1}:{2}".format(i, j, item))
 
         scheduleData = simplifyScheduleData(valueList)
-        if len(scheduleData) < 2:
-            scheduleData = None
         return scheduleData
 
     @classmethod

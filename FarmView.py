@@ -8,7 +8,6 @@ import fnmatch
 import datetime
 import functools
 import webbrowser
-import Constants
 from socket import error as socketerror
 
 #Third Party
@@ -22,9 +21,10 @@ from CompiledUI.UI_FarmView import Ui_FarmView
 from Dialogs.TaskSearchDialog import TaskSearchDialog
 from Dialogs.NodeEditorDialog import NodeEditorDialog
 from Dialogs.DetailedDialog import DetailedDialog
-from Dialogs.MessageBoxes import aboutBox, yesNoBox, intBox, strBox
+from Dialogs.MessageBoxes import *
 
 #Hydra
+import Constants
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
 from Setups.Threads import workerSignalThread
@@ -42,20 +42,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
-        #Partial applications for convenience
-        self.sqlErrorBox = (functools.partial(aboutBox, self, "SQL Error",
-                                Constants.SQLERR_STRING))
-
-        self.nodeDoesNotExistBox = (functools.partial(aboutBox, parent = self,
-                                    title = "Notice",
-                                    msg = Constants.DOESNOTEXISTERR_STRING))
-
         self.thisNodeName = Utils.myHostName()
         logger.info("This host is {0}".format(self.thisNodeName))
 
         #My UI Setup Functions
         self.setupTables()
         self.connectButtons()
+        self.setupHotkeys()
         self.setWindowIcon(QIcon(Utils.findResource("Images/FarmView.png")))
 
         #Enable this node buttons
@@ -162,35 +155,63 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.setContextMenuPolicy(Qt.CustomContextMenu)
         self.renderNodeTable.customContextMenuRequested.connect(self.nodeContextHandler)
 
+    def setupHotkeys(self):
+        #This Node
+        QShortcut(QKeySequence("Ctrl+O"), self, self.onlineThisNodeHandler)
+        QShortcut(QKeySequence("Ctrl+Shift+O"), self, self.offlineThisNodeHandler)
+        QShortcut(QKeySequence("Ctrl+G"), self, self.getOffThisNodeHandler)
+        QShortcut(QKeySequence("Ctrl+U"), self, self.doFetch)
+
+        #Node Table
+        QShortcut(QKeySequence("Ctrl+Alt+O"), self, self.onlineRenderNodesHandler)
+        QShortcut(QKeySequence("Ctrl+Alt+Shift+O"), self, self.offlineRenderNodesHandler)
+        QShortcut(QKeySequence("Ctrl+Alt+G"), self, self.getOffRenderNodesHandler)
+
+        #Job Tree
+        jobStartFunc = functools.partial(self.jobActionHandler, "start")
+        jobPauseFunc = functools.partial(self.jobActionHandler, "pause")
+        jobKillFunc = functools.partial(self.jobActionHandler, "kill")
+        jobResetFunc = functools.partial(self.jobActionHandler, "reset")
+        jobArchiveFunc = functools.partial(self.jobActionHandler, "archive")
+        QShortcut(QKeySequence("Ctrl+S"), self, jobStartFunc)
+        QShortcut(QKeySequence("Ctrl+P"), self, jobPauseFunc)
+        QShortcut(QKeySequence("Ctrl+K"), self, jobKillFunc)
+        QShortcut(QKeySequence("Ctrl+R"), self, jobResetFunc)
+        QShortcut(QKeySequence("Del"), self, jobArchiveFunc)
+
+        #Task Table
+        taskStartFunc = functools.partial(self.taskActionHandler, "start")
+        taskPauseFunc = functools.partial(self.taskActionHandler, "pause")
+        taskKillFunc = functools.partial(self.taskActionHandler, "kill")
+        taskResetFunc = functools.partial(self.taskActionHandler, "reset")
+        taskLogFunc = functools.partial(self.taskActionHandler, "log")
+        QShortcut(QKeySequence("Ctrl+Shift+S"), self, taskStartFunc)
+        QShortcut(QKeySequence("Ctrl+Shift+P"), self, taskPauseFunc)
+        QShortcut(QKeySequence("Ctrl+Shift+K"), self, taskKillFunc)
+        QShortcut(QKeySequence("Ctrl+Shift+R"), self, taskResetFunc)
+        QShortcut(QKeySequence("Ctrl+Shift+L"), self, taskLogFunc)
+
+
     def centralContextHandler(self):
         self.centralMenu = QMenu(self)
 
         QObject.connect(self.centralMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        self.addItem(self.centralMenu, "Soft Update", self.doUpdate,
-                "Update with the most important information from the Database")
-        self.addItem(self.centralMenu, "Full Update", self.doFetch,
-                "Update all of the latest information from the Database")
-        self.centralMenu.addSeparator()
-        onAct = self.addItem(self.centralMenu, "Online This Node",
-                            self.onlineThisNodeHandler, "Online This Node")
-        offAct = self.addItem(self.centralMenu, "Offline This Node",
-                        self.offlineThisNodeHandler,
-                        "Wait for the current job to finish then offline this node")
-        getAct = self.addItem(self.centralMenu,
-                        "Get Off This Node!", self.getOffThisNodeHandler,
-                        "Kill the current task and offline this node immediately")
-
-        if not self.thisNodeButtonsEnabled:
-            onAct.setEnabled(False)
-            offAct.setEnabled(False)
-            getAct.setEnabled(False)
+        self.addItem(self.centralMenu, "Update", self.doFetch,
+                "Update with the latest information from the Database (Ctrl+U)")
+        if self.thisNodeButtonsEnabled:
+            self.addItem(self.centralMenu, "Online This Node", self.onlineThisNodeHandler,
+                                    "Online This Node (Ctrl+O)")
+            self.addItem(self.centralMenu, "Offline This Node", self.offlineThisNodeHandler,
+                                    "Wait for the current job to finish then offline this node (Ctrl+Shift+O)")
+            self.addItem(self.centralMenu, "Get Off This Node!", self.getOffThisNodeHandler,
+                                    "Kill the current task and offline this node immediately (Ctrl+G)")
 
         self.centralMenu.popup(QCursor.pos())
 
     def revealDetailedHandler(self, data_ids, sqlTable, sqlWhere):
-        dataList = [sqlTable.fetch(sqlWhere, (d_id,))[0] for d_id in data_ids]
+        dataList = [sqlTable.fetch(sqlWhere, (d_id,)) for d_id in data_ids]
         DetailedDialog.create(dataList)
 
     #---------------------------------------------------------------------#
@@ -205,20 +226,20 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetStatusBar)
 
         self.addItem(self.jobMenu, "Start Jobs", self.jobActionHandler,
-                "Start all jobs selected in Job List", "start")
+                "Start jobs selected in Job Tree (Ctrl+S)", "start")
         self.addItem(self.jobMenu, "Pause Jobs", self.jobActionHandler,
-                "Pause all jobs selected in Job List", "pause")
+                "Pause jobs selected in Job Tree (Ctrl+P)", "pause")
         self.addItem(self.jobMenu, "Kill Jobs", self.jobActionHandler,
-                "Kill all jobs selected in Job List", "kill")
+                "Kill jobs selected in Job Tree (Ctrl+K)", "kill")
         self.addItem(self.jobMenu, "Reset Jobs", self.jobActionHandler,
-                "Reset all jobs selected in Job List", "reset")
+                "Reset jobs selected in Job Tree (Ctrl+R)", "reset")
         self.addItem(self.jobMenu, "Start Test Frames...", self.callTestFrameBox,
-                "Open a dialog to start the first X frames in each job "
+                "Open a dialog to start the first X frames in each job selected in Job Tree "
                 "selected in the Job List")
         self.jobMenu.addSeparator()
 
         self.addItem(self.jobMenu, "Archive/Unarchive Jobs", self.jobActionHandler,
-                "Toggle the Archived status on each job selected in he Job List", "archive")
+                "Toggle the Archived status on each job selected in he Job Tree (Del)", "archive")
         self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.jobActionHandler,
                 "Reset the number of tasks which are ready to match the limit "
                 "of the number of concurant tasks.", "manage")
@@ -245,7 +266,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return hydra_jobboard.fetch(command, commandTuple)
         except sqlerror as err:
             logger.error(str(err))
-            aboutBox(self, "SQL error", str(err))
+            warningBox(self, "SQL error", str(err))
             return
 
     def getJobData(self, job):
@@ -378,8 +399,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.resetStatusBar()
         mySel = self.jobTree.selectedItems()
         if len(mySel) < 1:
-            aboutBox(self, "Selection Error",
-                    "Please select something from the Job Table and try again.")
+            warningBox(self, "Selection Error",
+                        "Please select something from the Job Tree and try again.")
             return
 
         if mode == "IDs":
@@ -416,11 +437,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                     responses = [JobUtils.killJob(job_id, statusAfterDeath) for job_id in job_ids]
                 except sqlerror as err:
                     logger.error(str(err))
-                    aboutBox(self, "SQL Error", str(err))
+                    warningBox(self, "SQL Error", str(err))
                 finally:
                     if False in responses:
-                        aboutBox(self, "Error",
-                                "One or more nodes couldn't kill their tasks.")
+                        warningBox(self, "Error",
+                                    "One or more nodes couldn't kill their tasks.")
                     map(JobUtils.manageNodeLimit, job_ids)
                     self.populateJobTree()
 
@@ -432,11 +453,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                     responses = [JobUtils.resetJob(job_id, READY) for job_id in job_ids]
                 except sqlerror as err:
                     logger.error(str(err))
-                    aboutBox(self, "SQL Error", str(err))
+                    warningBox(self, "SQL Error", str(err))
                 finally:
                     if False in responses:
-                        aboutBox(self, "Error",
-                                "One or more nodes couldn't kill their tasks.")
+                        warningBox(self, "Error",
+                                    "One or more nodes couldn't kill their tasks.")
                     self.populateJobTree()
 
         #Reset Node Management on Job
@@ -469,7 +490,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
                 except sqlerror as err:
                     logger.error(str(err))
-                    aboutBox(self, "SQL Error", str(err))
+                    warningBox(self, "SQL Error", str(err))
                 finally:
                     self.populateJobTree()
 
@@ -504,18 +525,18 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetStatusBar)
 
         self.addItem(self.taskMenu, "Start Tasks", self.taskActionHandler,
-                "Start all tasks selected in the Task List", "start")
+                "Start all tasks selected in the Task Table (Ctrl+Shift+S)", "start")
         self.addItem(self.taskMenu, "Pause Tasks", self.taskActionHandler,
-                "Pause all tasks selected in the Task List", "pause")
+                "Pause all tasks selected in the Task Table (Ctrl+Shift+P)", "pause")
         self.addItem(self.taskMenu, "Kill Tasks", self.taskActionHandler,
-                "Kill all tasks selected in the Task List", "kill")
+                "Kill all tasks selected in the Task Table (Ctrl+Shift+K)", "kill")
         self.addItem(self.taskMenu, "Reset Tasks", self.taskActionHandler,
-                "Reset all tasks selected in the Task List", "reset")
+                "Reset all tasks selected in the Task Tree (Ctrl+Shift+R)", "reset")
         self.taskMenu.addSeparator()
         self.addItem(self.taskMenu, "Reveal Detailed Data...", self.taskActionHandler,
                 "Opens a dialog window the detailed data for the selected tasks.", "data")
         self.addItem(self.taskMenu, "Load LogFile", self.taskActionHandler,
-                "Load the log file for all tasks selected in the Task List", "log")
+                "Load the log file for all tasks selected in the Task Tree (Ctrl+Shfit+L)", "log")
         self.taskMenu.popup(QCursor.pos())
 
     def taskTableEditHandler(self, item):
@@ -536,7 +557,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             with transaction() as t:
                 t.cur.execute(query, (newValue, task_id))
         except sqlerror as err:
-            aboutBox(self, "SQL Error", str(err))
+            warningBox(self, "SQL Error", str(err))
             logger.error(str(err))
 
         self.updateTaskTable()
@@ -545,7 +566,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             job = hydra_jobboard.fetch("WHERE id = %s", (job_id,))
         except sqlerror as err:
-            aboutBox(self, "SQL Error", str(err))
+            warningBox(self, "SQL Error", str(err))
             logger.error(str(err))
             return
         self.currentJobSel = job.id
@@ -556,7 +577,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
         except sqlerror as err:
-            aboutBox(self, "SQL Error", str(err))
+            warningBox(self, "SQL Error", str(err))
             logger.error(str(err))
             return
 
@@ -621,8 +642,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.resetStatusBar()
         rows = self.taskTable.selectionModel().selectedRows()
         if len(rows) < 1:
-            msg = "Please select something from the Job Table and try again."
-            aboutBox(self, "Selection Error", msg)
+            msg = "Please select something from the Task Table and try again."
+            warningBox(self, "Selection Error", msg)
             return
 
         if mode == "IDs":
@@ -655,7 +676,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.updateTaskTable()
                 if False in responses:
                     msg = "Unable to reset task {0} because there was an error communicating with it's host.".format(task_id)
-                    aboutBox(self, "Reset Task Error", msg)
+                    warningBox(self, "Reset Task Error", msg)
 
         #Pause or Kill Task
         elif mode == "pause" or mode == "kill":
@@ -669,16 +690,16 @@ class FarmView(QMainWindow, Ui_FarmView):
                     try:
                         response = TaskUtils.killTask(task_id, statusAfterDeath)
                         if not response:
-                            aboutBox(self, "Error",
+                            warningBox(self, "Error",
                                     "Task with id {0} couldn't be killed for some reason.".format(task_id))
                     except socketerror as err:
                         logger.error(str(err))
-                        aboutBox(self, "Error", "Task couldn't be killed because "
+                        warningBox(self, "Error", "Task couldn't be killed because "
                         "there was a problem communicating with the host running "
                         "it.")
                     except sqlerror as err:
                         logger.error(str(err))
-                        aboutBox(self, "SQL Error", str(err))
+                        warningBox(self, "SQL Error", str(err))
                 job = hydra_taskboard.fetch("WHERE id = %s", (task_id,))
                 self.updateTaskTable()
                 self.populateJobTree()
@@ -739,7 +760,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             if shotItem != []:
                 self.jobTree.itemClicked(shotItem[0], 0)
             else:
-                self.aboutBox("Error!", "Could not find job for given task!")
+                self.warningBox("Error!", "Could not find job for given task!")
 
     #---------------------------------------------------------------------#
     #---------------------------NODE HANDLERS-----------------------------#
@@ -752,11 +773,11 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetStatusBar)
 
         self.addItem(self.nodeMenu, "Online Nodes", self.onlineRenderNodesHandler,
-                "Online all checked nodes")
+                "Online all selected nodes (Ctrl+Alt+O)")
         self.addItem(self.nodeMenu, "Offline Nodes", self.offlineRenderNodesHandler,
-                "Offline all checked nodes without killing their current task")
+                "Offline all selected nodes without killing their current task (Ctrl+Alt+Shift+O)")
         self.addItem(self.nodeMenu, "Get Off Nodes", self.getOffRenderNodesHandler,
-                "Kill task then offline all checked nodes")
+                "Kill task then offline all selected nodes (Ctrl+Alt+G)")
         self.nodeMenu.addSeparator()
         self.addItem(self.nodeMenu, "Select by Host Name...", self.selectByHostHandler,
                 "Open a dialog to check nodes based on their host name")
@@ -800,7 +821,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 nodeData = t.cur.fetchall()
         except sqlerror as err:
             logger.error(str(err))
-            self.sqlErrorBox()
+            SQLErrorBox(self)
 
         #h = host, s = status, t = task_id, p = pulse
         nodeDict = {h:[s,t,p,e] for h, s, t, p, e in nodeData}
@@ -817,7 +838,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.resetStatusBar()
         rows = self.renderNodeTable.selectionModel().selectedRows()
         if len(rows) < 1:
-            aboutBox(self, "Selection Error",
+            warningBox(self, "Selection Error",
                     "Please select something from the Render Node Table and try again.")
             return
         rows = [item.row() for item in rows]
@@ -839,7 +860,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     NodeUtils.onlineNode(thisNode)
                 except sqlerror as err:
                     logger.error(str(err))
-                    self.sqlErrorBox()
+                    SQLErrorBox(self)
                 finally:
                     self.updateRenderNodeTable()
         else:
@@ -859,7 +880,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     NodeUtils.offlineNode(thisNode)
                 except sqlerror as err:
                     logger.error(str(err))
-                    self.sqlErrorBox()
+                    SQLErrorBox(self)
                 finally:
                     self.updateRenderNodeTable()
         else:
@@ -880,13 +901,13 @@ class FarmView(QMainWindow, Ui_FarmView):
                         response = TaskUtils.killTask(thisNode.task_id, READY)
                         if not response:
                             logger.warning("Problem killing task durring GetOff on {0}".format(thisNode.host))
-                            aboutBox(self, "Error",
+                            warningBox(self, "Error",
                                     "There was a problem killing the task during GetOff on {0}".format(thisNode.host))
                         else:
                             aboutBox(self, "Success", "Job was reset, {0} offlined.".format(thisNode.host))
                     except socketerror:
                         logger.error(socketerror.message)
-                        aboutBox(self, "Error", Constants.SOCKETERR_STRING)
+                        warningBox(self, "Error", Constants.SOCKETERR_STRING)
                 else:
                     aboutBox(self, "Success", "No job was found on {0}, node offlined".format(thisNode.host))
 
@@ -974,7 +995,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.error(str(err))
-            self.sqlErrorBox()
+            SQLErrorBox(self)
             return
 
         if thisNode:
@@ -991,7 +1012,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.error(str(err))
-            self.sqlErrorBox()
+            SQLErrorBox(self)
             return
 
         if thisNode:
@@ -1008,7 +1029,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             thisNode = NodeUtils.getThisNodeData()
         except sqlerror as err:
             logger.error(str(err))
-            self.sqlErrorBox()
+            SQLErrorBox(self)
             return
 
         choice = yesNoBox(self, "Confirm", Constants.GETOFFLOCAL_STRING)
@@ -1020,17 +1041,17 @@ class FarmView(QMainWindow, Ui_FarmView):
                     response = TaskUtils.killTask(task_id, READY)
                     if not response:
                         logger.warning("Problem killing task durring GetOff")
-                        aboutBox(self, "Error",
+                        warningBox(self, "Error",
                                 "There was a problem killing the task during GetOff!")
                     else:
                         aboutBox(self, "Success", "Job was reset, node offlined.")
                 except socketerror:
                     logger.error(socketerror.message)
-                    aboutBox(self, "Error", Constants.SOCKETERR_STRING)
+                    warningBox(self, "Error", Constants.SOCKETERR_STRING)
             else:
                 aboutBox(self, "Success", "No job was found on node, node offlined")
             self.updateRenderNodeTable()
-            if thiseNode:
+            if thisNode:
                 self.updateStatusBar(thisNode)
         else:
             aboutBox(self, "Abort", "No action taken.")
@@ -1058,7 +1079,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.thisNodeExists = True
 
             if not self.thisNodeExists:
-                self.nodeDoesNotExistBox()
+                warningBox(self, title = "Notice",
+                                msg = Constants.DOESNOTEXISTERR_STRING)
                 self.setThisNodeButtonsEnabled(False)
 
             self.initRenderNodeTable(allNodes)
@@ -1068,7 +1090,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         except sqlerror as err:
             self.autoUpdateCheckbox.setCheckState(0)
             logger.error(str(err))
-            self.sqlErrorBox()
+            SQLErrorBox(self)
 
     def doUpdate(self):
         curTab = self.tabWidget.currentIndex()
@@ -1090,7 +1112,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         except sqlerror as err:
             self.autoUpdateCheckbox.setCheckState(0)
             logger.error(str(err))
-            self.sqlErrorBox()
+            SQLErrorBox(self)
 
     def updateThisNodeInfo(self, thisNode):
         """Updates widgets on the "This Node" tab with the most recent
@@ -1211,12 +1233,12 @@ def loadLog(parent, record):
             logger.info("Opening Log File @ {0}".format(str(logFile)))
             webbrowser.open(logFile)
         else:
-            aboutBox(parent, "Invalid Log File Path",
+            warningBox(parent, "Invalid Log File Path",
                     "Invalid log file path for task: {0}".format(record.id))
             logger.error("Invalid log file path for task: {0}".format(record.id))
             logger.error(logFile)
     else:
-        aboutBox(parent, "No Log on File", Constants.NOLOG_STRING.format(record.id))
+        warningBox(parent, "No Log on File", Constants.NOLOG_STRING.format(record.id))
         logger.warning("No log file on record for task: {0}".format(record.id))
 
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
