@@ -42,6 +42,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
+        with open(Utils.findResource("styleSheet.css"),"r") as myStyles:
+            self.setStyleSheet(myStyles.read())
+
         self.thisNodeName = Utils.myHostName()
         logger.info("This host is {0}".format(self.thisNodeName))
 
@@ -79,13 +82,15 @@ class FarmView(QMainWindow, Ui_FarmView):
         event.accept()
         sys.exit(0)
 
-    def addItem(self, menu, name, handler, statusTip, arg = None):
+    def addItem(self, menu, name, handler, statusTip, arg = None, hotkey = None):
         action = QAction(name, self)
         action.setStatusTip(statusTip)
         if arg:
             action.triggered.connect(functools.partial(handler, arg))
         else:
             action.triggered.connect(handler)
+        if hotkey:
+            action.setShortcut(QKeySequence(hotkey))
         menu.addAction(action)
         return action
 
@@ -114,11 +119,16 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskTable.setColumnWidth(8, 120)       #Duration
         self.taskTable.setColumnWidth(9, 120)       #Code
         self.taskTable.setColumnWidth(10, 120)      #Attempts
+        self.taskTable.setColumnWidth(11, 175)      #Reqs
 
         #Set Job List splitter size
         #These numbers are really high so that they work proportionally
         #The 10000 makes it so that the 8500 is 85%
         self.splitter_jobList.setSizes([8500, 10000])
+
+        #Get rid of the spaces between gird layouts
+        self.gridLayout_taskList.setContentsMargins(0,0,0,0)
+        self.gridLayout_jobListJobs.setContentsMargins(0,0,0,0)
 
         #Get the global column count for later
         self.taskTableCols = self.taskTable.columnCount()
@@ -199,14 +209,17 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetStatusBar)
 
         self.addItem(self.centralMenu, "Update", self.doFetch,
-                "Update with the latest information from the Database (Ctrl+U)")
+                "Update with the latest information from the Database",
+                hotkey = "Ctrl+U")
         if self.thisNodeButtonsEnabled:
             self.addItem(self.centralMenu, "Online This Node", self.onlineThisNodeHandler,
-                                    "Online This Node (Ctrl+O)")
+                                    "Online This Node", hotkey = "Ctrl+O")
             self.addItem(self.centralMenu, "Offline This Node", self.offlineThisNodeHandler,
-                                    "Wait for the current job to finish then offline this node (Ctrl+Shift+O)")
+                                    "Wait for the current job to finish then offline this node",
+                                    hotkey = "Ctrl+Shift+O")
             self.addItem(self.centralMenu, "Get Off This Node!", self.getOffThisNodeHandler,
-                                    "Kill the current task and offline this node immediately (Ctrl+G)")
+                                    "Kill the current task and offline this node immediately",
+                                    hotkey = "Ctrl+G")
 
         self.centralMenu.popup(QCursor.pos())
 
@@ -226,20 +239,21 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetStatusBar)
 
         self.addItem(self.jobMenu, "Start Jobs", self.jobActionHandler,
-                "Start jobs selected in Job Tree (Ctrl+S)", "start")
+                "Start jobs selected in Job Tree", "start", "Ctrl+S")
         self.addItem(self.jobMenu, "Pause Jobs", self.jobActionHandler,
-                "Pause jobs selected in Job Tree (Ctrl+P)", "pause")
+                "Pause jobs selected in Job Tree", "pause", "Ctrl+P")
         self.addItem(self.jobMenu, "Kill Jobs", self.jobActionHandler,
-                "Kill jobs selected in Job Tree (Ctrl+K)", "kill")
+                "Kill jobs selected in Job Tree", "kill", "Ctrl+K")
         self.addItem(self.jobMenu, "Reset Jobs", self.jobActionHandler,
-                "Reset jobs selected in Job Tree (Ctrl+R)", "reset")
+                "Reset jobs selected in Job Tree", "reset", "Ctrl+R")
         self.addItem(self.jobMenu, "Start Test Frames...", self.callTestFrameBox,
                 "Open a dialog to start the first X frames in each job selected in Job Tree "
                 "selected in the Job List")
         self.jobMenu.addSeparator()
 
         self.addItem(self.jobMenu, "Archive/Unarchive Jobs", self.jobActionHandler,
-                "Toggle the Archived status on each job selected in he Job Tree (Del)", "archive")
+                "Toggle the Archived status on each job selected in he Job Tree",
+                "archive", "Del")
         self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.jobActionHandler,
                 "Reset the number of tasks which are ready to match the limit "
                 "of the number of concurant tasks.", "manage")
@@ -525,18 +539,21 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetStatusBar)
 
         self.addItem(self.taskMenu, "Start Tasks", self.taskActionHandler,
-                "Start all tasks selected in the Task Table (Ctrl+Shift+S)", "start")
+                "Start all tasks selected in the Task Table",
+                "start", "Ctrl+Shift+S")
         self.addItem(self.taskMenu, "Pause Tasks", self.taskActionHandler,
-                "Pause all tasks selected in the Task Table (Ctrl+Shift+P)", "pause")
+                "Pause all tasks selected in the Task Table",
+                "pause", "Ctrl+Shift+P")
         self.addItem(self.taskMenu, "Kill Tasks", self.taskActionHandler,
-                "Kill all tasks selected in the Task Table (Ctrl+Shift+K)", "kill")
+                "Kill all tasks selected in the Task Table", "kill", "Ctrl+Shift+K")
         self.addItem(self.taskMenu, "Reset Tasks", self.taskActionHandler,
-                "Reset all tasks selected in the Task Tree (Ctrl+Shift+R)", "reset")
+                "Reset all tasks selected in the Task Tree", "reset", "Ctrl+Shift+R")
         self.taskMenu.addSeparator()
         self.addItem(self.taskMenu, "Reveal Detailed Data...", self.taskActionHandler,
                 "Opens a dialog window the detailed data for the selected tasks.", "data")
         self.addItem(self.taskMenu, "Load LogFile", self.taskActionHandler,
-                "Load the log file for all tasks selected in the Task Tree (Ctrl+Shfit+L)", "log")
+                "Load the log file for all tasks selected in the Task Tree",
+                "log", "Ctrl+Shift+L")
         self.taskMenu.popup(QCursor.pos())
 
     def taskTableEditHandler(self, item):
@@ -773,11 +790,12 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetStatusBar)
 
         self.addItem(self.nodeMenu, "Online Nodes", self.onlineRenderNodesHandler,
-                "Online all selected nodes (Ctrl+Alt+O)")
+                "Online all selected nodes", hotkey = "Ctrl+Alt+O")
         self.addItem(self.nodeMenu, "Offline Nodes", self.offlineRenderNodesHandler,
-                "Offline all selected nodes without killing their current task (Ctrl+Alt+Shift+O)")
+                "Offline all selected nodes without killing their current task",
+                hotkey = "Ctrl+Alt+Shift+O")
         self.addItem(self.nodeMenu, "Get Off Nodes", self.getOffRenderNodesHandler,
-                "Kill task then offline all selected nodes (Ctrl+Alt+G)")
+                "Kill task then offline all selected nodes", hotkey = "Ctrl+Alt+G")
         self.nodeMenu.addSeparator()
         self.addItem(self.nodeMenu, "Select by Host Name...", self.selectByHostHandler,
                 "Open a dialog to check nodes based on their host name")
@@ -1250,7 +1268,7 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              ERROR: QColor(220,90,90),          #Red
              MANAGED: QColor(240,230,200),      #Light Orange
              IDLE: QColor(255,255,255),         #White
-             OFFLINE: QColor(220,220,220),      #Gray
+             OFFLINE: QColor(240,240,240),      #Gray
              PENDING: QColor(240,230,200),      #Orange
              TIMEOUT: QColor(220,90,90),        #Dark Red
              }

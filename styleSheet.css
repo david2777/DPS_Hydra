@@ -1,7 +1,51 @@
 /*Node Scheduler Dialog*/
-QTableWidget#scheduleTable{
-  selection-background-color: rgb(100, 100, 100);
-  gridline-color: rgb(150, 150, 150);
+#scheduleTable{
+  selection-background-color:#6e6e6e;
+  gridline-color: #969696;
   color: rgba(0,0,0,0);
   selection-color: rgba(0,0,0,0);
+}
+#scheduleTable QHeaderView::section::horizontal{
+  border-style: solid;
+  border-right-color: #969696;
+  border-right-width: 1px;
+  border-bottom-color: #969696;
+  border-bottom-width: 1px;
+}
+#scheduleTable QHeaderView::section::vertical{
+  border-style: solid;
+  border-bottom-color: #969696;
+  border-bottom-width: 1px;
+  border-right-color: #969696;
+  border-right-width: 1px;
+  padding-left: 5px;
+}
+#scheduleTable QTableCornerButton::section{
+  background-color: #f0f0f0;
+  border-style: solid;
+  border-right-color: #969696;
+  border-right-width: 1px;
+  border-bottom-color: #969696;
+  border-bottom-width: 1px;
+}
+
+/*FarmView*/
+QSplitter::handle{
+  background-color: white;
+}
+
+/*RenderNodeMain*/
+#outputTextEdit{
+  background-color: #f0f0f0;
+}
+#outputTab{
+  background-color: #f0f0f0;
+}
+#outputTabWidget QTabBar::tab{
+    background-color: #f0f0f0;
+    border-style: solid;
+    border-width: 1px;
+    border-color: #6e6e6e;
+    border-bottom-color: #f0f0f0;
+    padding: 3px 12px 3px 12px;
 }

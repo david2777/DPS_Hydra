@@ -39,6 +39,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
+        with open(Utils.findResource("styleSheet.css"),"r") as myStyles:
+            self.setStyleSheet(myStyles.read())
+
         inst = RenderNode.checkRenderNodeInstances()
         if not inst:
             aboutBox(self, "Error!", "More than one RenderNode found!\n"
