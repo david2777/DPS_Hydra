@@ -62,24 +62,20 @@ def updateJobTaskCount(job_id, tasks = None, commit = True):
             ready = True
         elif task.status == KILLED:
             killed = True
-    #If there is an error on any, mark job as error
-    #Else, If total done == total tasks, mark job as done
-    #Else, If there are any killed tasks, mark job as killed
-    #Else, If there are any tasks started, mark job as started
-    #Else, If there are any tasks marked as ready, mark job as ready
-    #Else, mark as paused (I think that covers all of our bases)
+
     if error:
         jobStatus = ERROR
     elif tasksComplete == taskCount:
         jobStatus = FINISHED
-    elif killed:
-        jobStatus = KILLED
     elif started:
         jobStatus = STARTED
     elif ready:
         jobStatus = READY
+    elif killed:
+        jobStatus = KILLED
     else:
         jobStatus = PAUSED
+
 
     if commit:
         command = "UPDATE hydra_jobboard SET tasksComplete = %s, tasksTotal = %s, job_status = %s WHERE id = %s"

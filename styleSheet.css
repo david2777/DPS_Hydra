@@ -33,19 +33,3 @@
 QSplitter::handle{
   background-color: white;
 }
-
-/*RenderNodeMain*/
-#outputTextEdit{
-  background-color: #f0f0f0;
-}
-#outputTab{
-  background-color: #f0f0f0;
-}
-#outputTabWidget QTabBar::tab{
-    background-color: #f0f0f0;
-    border-style: solid;
-    border-width: 1px;
-    border-color: #6e6e6e;
-    border-bottom-color: #f0f0f0;
-    padding: 3px 12px 3px 12px;
-}

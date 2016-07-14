@@ -472,6 +472,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     if False in responses:
                         warningBox(self, "Error",
                                     "One or more nodes couldn't kill their tasks.")
+                    map(JobUtils.setupNodeLimit, job_ids)
                     self.populateJobTree()
 
         #Reset Node Management on Job
@@ -737,6 +738,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             logger.error("Bad task handler arg")
 
+        JobUtils.manageNodeLimit(self.currentJobSel)
         JobUtils.updateJobTaskCount(self.currentJobSel)
         self.doUpdate()
 

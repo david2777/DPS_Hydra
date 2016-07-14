@@ -304,7 +304,7 @@ def checkRenderNodeInstances():
                         subprocessOutput.split('\n')))
     logger.debug("{0} RenderNode instances running.".format(nInstances))
 
-    if nInstances > 1:
+    if nInstances > 2:
         logger.critical("Blocked RenderNodeMain from running because another"
                     " instance already exists.")
         return False
