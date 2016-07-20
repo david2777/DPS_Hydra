@@ -54,11 +54,14 @@ class RenderTCPServer(TCPServer):
         self.thisNodeName = Utils.myHostName()
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
-        thisNode = hydra_rendernode.fetch("WHERE host = %s", (self.thisNodeName,))
+        thisNode = hydra_rendernode.fetch("WHERE host = %s", (self.thisNodeName,),
+                                            cols = ["host", "status", "task_id",
+                                                    "software_version"])
         query = "UPDATE hydra_rendernode SET status = %s WHERE host = %s"
         if thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
-            task = hydra_taskboard.fetch("WHERE id = %s", (thisNode.task_id,))
+            task = hydra_taskboard.fetch("WHERE id = %s", (thisNode.task_id,),
+                                            cols = ["job_id"])
             newStatus = OFFLINE if thisNode.status in [OFFLINE, PENDING] else IDLE
             TaskUtils.unstickTask(taskID = thisNode.task_id, newTaskStatus = READY,
                               host = thisNode.host, newHostStatus = newStatus)
@@ -82,7 +85,9 @@ class RenderTCPServer(TCPServer):
     def processRenderTasks(self):
         """The loop that looks for jobs on the DB and runs them if the node meets
         the job's requirements"""
-        thisNode = hydra_rendernode.fetch("WHERE host = %s",(self.thisNodeName,))
+        thisNode = hydra_rendernode.fetch("WHERE host = %s",(self.thisNodeName,),
+                                            cols = ["host", "status", "capabilities",
+                                                    "minPriority", "task_id"])
         debugStr = "Host: {0} Status: {1} Capabilities: {2}"
         logger.debug(debugStr.format(thisNode.host, niceNames[thisNode.status],
                                     thisNode.capabilities))
@@ -101,10 +106,16 @@ class RenderTCPServer(TCPServer):
 
         with transaction() as t:
             render_task = hydra_taskboard.fetch(whereClause = whereClause,
-                                                        whereTuple = whereTuple,
-                                                        orderTuples = orderTuples,
-                                                        limit = 1,
-                                                        explicitTransaction = t)
+                                                whereTuple = whereTuple,
+                                                orderTuples = orderTuples,
+                                                limit = 1,
+                                                explicitTransaction = t,
+                                                cols = ["job_id", "startFrame",
+                                                        "endFrame", "id",
+                                                        "logFile", "host",
+                                                        "startTime", "endTime",
+                                                        "exitCode", "attempts",
+                                                        "maxAttempts", "status"])
             #If not task is found, stop and wait to search again
             if not render_task:
                 return
@@ -112,7 +123,9 @@ class RenderTCPServer(TCPServer):
             #Otherwise, render the task
             render_job = hydra_jobboard.fetch("WHERE id = %s",
                                                 (render_task.job_id,),
-                                                explicitTransaction = t)
+                                                explicitTransaction = t,
+                                                cols = ["taskFile", "execName",
+                                                        "baseCMD", "timeout"])
 
             self.taskFile = '"{0}"'.format(render_job.taskFile)
             self.renderCMD = " ".join([self.execsDict[render_job.execName],
@@ -199,7 +212,8 @@ class RenderTCPServer(TCPServer):
                     render_task.attempts += 1
                     allTasks = hydra_taskboard.fetch("WHERE job_id = %s",
                                                         (render_task.job_id,),
-                                                        explicitTransaction = t)
+                                                        explicitTransaction = t,
+                                                        cols = "failures")
                     for task in allTasks:
                         task.failures += "{0} ".format(thisNode.host)
                         task.update(t)

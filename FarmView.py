@@ -277,7 +277,13 @@ class FarmView(QMainWindow, Ui_FarmView):
     def fetchJobs(self):
         command, commandTuple = self.jobCommandBuilder()
         try:
-            return hydra_jobboard.fetch(command, commandTuple)
+            return hydra_jobboard.fetch(command,
+                                        commandTuple,
+                                        cols = ["id", "niceName", "job_status",
+                                                "owner", "priority","startFrame",
+                                                "endFrame", "maxNodes",
+                                                "tasksComplete", "tasksTotal",
+                                                "projectName", "archived"])
         except sqlerror as err:
             logger.error(str(err))
             warningBox(self, "SQL error", str(err))
@@ -323,7 +329,13 @@ class FarmView(QMainWindow, Ui_FarmView):
             shotItem.setFont(4, QFont('Segoe UI', 8, QFont.DemiBold))
 
     def updateJobTreeRow(self, job_id, shotItem):
-        job = hydra_jobboard.fetch("WHERE id = %s", (job_id,))
+        job = hydra_jobboard.fetch("WHERE id = %s",
+                                    (job_id,),
+                                    cols = ["id", "niceName", "job_status",
+                                            "owner", "priority","startFrame",
+                                            "endFrame", "maxNodes",
+                                            "tasksComplete", "tasksTotal",
+                                            "projectName", "archived"])
         data = self.getJobData(job)
 
         for i in range(0, 9):
@@ -490,7 +502,9 @@ class FarmView(QMainWindow, Ui_FarmView):
                 try:
                     commandList = []
                     for job_id in job_ids:
-                        job = hydra_jobboard.fetch("WHERE id = %s",(job_id,))
+                        job = hydra_jobboard.fetch("WHERE id = %s",
+                                                    (job_id,),
+                                                    cols = ["archived"])
                         new = 0
                         if job.archived == 0:
                             new = 1
@@ -582,7 +596,9 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def initTaskTable(self, job_id, shotItem):
         try:
-            job = hydra_jobboard.fetch("WHERE id = %s", (job_id,))
+            job = hydra_jobboard.fetch("WHERE id = %s",
+                                        (job_id,),
+                                        cols = ["id", "maxNodes"])
         except sqlerror as err:
             warningBox(self, "SQL Error", str(err))
             logger.error(str(err))
@@ -593,7 +609,14 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskTableLabel.setText(sString)
 
         try:
-            tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
+            tasks = hydra_taskboard.fetch("WHERE job_id = %s",
+                                            (job_id,),
+                                            cols = ["id", "startTime", "endTime",
+                                                    "startFrame", "endFrame",
+                                                    "host", "status", "priority",
+                                                    "exitCode", "failures",
+                                                    "requirements"],
+                                            multiReturn = True)
         except sqlerror as err:
             warningBox(self, "SQL Error", str(err))
             logger.error(str(err))
@@ -718,7 +741,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                     except sqlerror as err:
                         logger.error(str(err))
                         warningBox(self, "SQL Error", str(err))
-                job = hydra_taskboard.fetch("WHERE id = %s", (task_id,))
                 self.updateTaskTable()
                 self.populateJobTree()
 
@@ -729,10 +751,14 @@ class FarmView(QMainWindow, Ui_FarmView):
                                 " editor for EACH task selected. Continue?")
                 if choice == QMessageBox.Yes:
                     for task_id in task_ids:
-                        task = hydra_taskboard.fetch("WHERE id = %s", (task_id,))
+                        task = hydra_taskboard.fetch("WHERE id = %s",
+                                                    (task_id,),
+                                                    cols = ["logFile", "host", "id"])
                         loadLog(self, task)
             else:
-                task = hydra_taskboard.fetch("WHERE id = %s", (task_ids[0],))
+                task = hydra_taskboard.fetch("WHERE id = %s",
+                                            (task_ids[0],),
+                                            cols = ["logFile", "host", "id"])
                 loadLog(self, task)
 
         else:
@@ -750,8 +776,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
         if reply[1]:
             logger.info("Starting {0} test frames on job_id {1}".format(reply[0], job_id))
-            tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,), multiReturn = True)
-
+            tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
+                                            cols = ["id"], multiReturn = True)
+            tasks = [int(task.id) for task in tasks]
             map(TaskUtils.startTask, tasks[0:reply[0]])
             logger.info("Test Tasks Started!")
             JobUtils.updateJobTaskCount(job_id, tasks = tasks, commit = True)
@@ -876,7 +903,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
                 try:
-                    thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,))
+                    thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
+                                                        cols = ["status", "task_id"])
                     NodeUtils.onlineNode(thisNode)
                 except sqlerror as err:
                     logger.error(str(err))
@@ -896,7 +924,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
                 try:
-                    thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,))
+                    thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
+                                                        cols = ["status", "task_id"])
                     NodeUtils.offlineNode(thisNode)
                 except sqlerror as err:
                     logger.error(str(err))
@@ -914,7 +943,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         choice = yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
-                thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,))
+                thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
+                                                    cols = ["host", "status", "task_id"])
                 NodeUtils.offlineNode(thisNode)
                 if thisNode.task_id:
                     try:
@@ -954,7 +984,11 @@ class FarmView(QMainWindow, Ui_FarmView):
     def nodeEditor(self, nodeName):
         nodeExists = True
         if nodeExists:
-            thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,))
+            thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
+                                                cols = ["host", "minPriority",
+                                                        "capabilities",
+                                                        "scheduleEnabled",
+                                                        "weekSchedule"])
             comps = thisNode.capabilities.split(" ")
             defaults = {"host" : thisNode.host,
                         "priority" : thisNode.minPriority,
@@ -1089,7 +1123,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         try:
             #Node setup and updaters
             self.thisNodeExists = False
-            allNodes = hydra_rendernode.fetch(orderTuples = (("host", "ASC"),), multiReturn = True)
+            allNodes = hydra_rendernode.fetch(orderTuples = (("host", "ASC"),),
+                                                multiReturn = True,
+                                                cols = ["host", "status",
+                                                        "task_id", "pulse",
+                                                        "software_version",
+                                                        "capabilities",
+                                                        "scheduleEnabled"])
             thisNode = None
             for node in allNodes:
                 if node.host == self.thisNodeName:
@@ -1115,7 +1155,9 @@ class FarmView(QMainWindow, Ui_FarmView):
     def doUpdate(self):
         curTab = self.tabWidget.currentIndex()
         try:
-            thisNode = hydra_rendernode.fetch("WHERE host = %s", (self.thisNodeName,))
+            thisNode = hydra_rendernode.fetch("WHERE host = %s",
+                                                (self.thisNodeName,),
+                                                cols = ["host", "status"])
             self.updateStatusBar(thisNode)
             if curTab == 0:
                 #Job List
@@ -1128,6 +1170,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             elif curTab == 2:
                 #This Node
                 if self.thisNodeExists:
+                    thisNode = hydra_rendernode.fetch("WHERE host = %s",
+                                                        (self.thisNodeName,))
                     self.updateThisNodeInfo(thisNode)
         except sqlerror as err:
             self.autoUpdateCheckbox.setCheckState(0)
@@ -1152,7 +1196,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def updateRenderJobGrid(self):
         command = "WHERE archived = '0' ORDER BY id DESC LIMIT %s"
-        records = hydra_jobboard.fetch(command, (self.limitSpinBox.value(),), multiReturn = True)
+        records = hydra_jobboard.fetch(command, (self.limitSpinBox.value(),),
+                                        multiReturn = True)
         try:
             columns = records[0].__dict__.keys()
         except IndexError:

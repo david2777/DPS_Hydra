@@ -36,7 +36,7 @@ def changeStatusViaTaskID(task_id, new_status, old_status_list = []):
 
 def startTask(task_id):
     """Start task if it is paused, ressurect task if it is killed/errored."""
-    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,))
+    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,), cols = ["status"])
     if task.status == READY or task.status == STARTED or task.status == FINISHED:
         logger.info("Passing Task {0} because it is either already started or ready".format(task_id))
     elif task.status == PAUSED or task.status == MANAGED:
@@ -53,7 +53,10 @@ def resetTask(task_id, newStatus = READY):
     Keyword Arguments:
         newStatus -- The status the task should assume after it's been reset. (default READY)
     """
-    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,))
+    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,),
+                                    cols = ["status", "host", "startTime",
+                                            "endTime", "logFile", "exitCode",
+                                            "failures", "attempts", "id"])
     logger.info("Reseting Task {0}".format(task_id))
     if task.status == STARTED:
         if not killTask(task.id):
@@ -76,14 +79,17 @@ def unstickTask(taskID = None, newTaskStatus = READY, host = None, newHostStatus
     """Unstick and rests a task. Useful for when a node crashes."""
     #Not sure why this function has so many optional arguments
     if taskID:
-        task = hydra_taskboard.fetch("WHERE id = %s", (taskID,))
+        task = hydra_taskboard.fetch("WHERE id = %s", (taskID,),
+                                        cols = ["host", "status", "startTime",
+                                                "endTime"])
         if newTaskStatus == READY:
             task.host = None
         task.status = newTaskStatus
         task.startTime = None
         task.endTime = None
         if host:
-            host = hydra_rendernode.fetch("WHERE host = %s", (host,))
+            host = hydra_rendernode.fetch("WHERE host = %s", (host,),
+                                            cols = ["task_id", "status"])
             host.task_id = None
             host.status = newHostStatus
         with transaction() as t:
@@ -111,7 +117,9 @@ def sendKillQuestion(renderhost, newStatus=KILLED):
 
 def killTask(task_id, newStatus = KILLED):
     """Kill a task given it's task id. Return True if successful, else False."""
-    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,))
+    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,),
+                                    cols = ["status", "startTime", "endTime",
+                                            "exitCode", "host"])
     if task.status == READY or task.status == PAUSED or task.status == MANAGED:
         task.status = newStatus
         task.startTime = None
