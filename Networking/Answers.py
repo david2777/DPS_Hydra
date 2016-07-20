@@ -4,6 +4,10 @@ class Answer:
     """Interface for Answer objects"""
     pass
 
+class IsAliveAnswer(Answer):
+    def __int__(self, response):
+        self.response = response
+
 class CMDAnswer(Answer):
     def __init__(self, output):
         self.output = output

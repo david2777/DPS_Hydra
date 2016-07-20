@@ -59,8 +59,8 @@ class RenderTCPServer(TCPServer):
         if thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
             task = hydra_taskboard.fetch("WHERE id = %s", (thisNode.task_id,))
-            newStatus = OFFLINE if thisNode.status in [OFFLINE, PENDING] else ONLINE
-            TaskUtils.unstickTask(taskID = thisNode.task_id, newTaskStatus = CRASHED,
+            newStatus = OFFLINE if thisNode.status in [OFFLINE, PENDING] else IDLE
+            TaskUtils.unstickTask(taskID = thisNode.task_id, newTaskStatus = READY,
                               host = thisNode.host, newHostStatus = newStatus)
             JobUtils.manageNodeLimit(task.job_id)
         elif thisNode.status in [STARTED, PENDING] and not thisNode.task_id:
@@ -197,10 +197,12 @@ class RenderTCPServer(TCPServer):
 
                 if error:
                     render_task.attempts += 1
-                    if render_task.failures == None:
-                        render_task.failures = thisNode.host
-                    else:
-                        render_task.failures += " {0}".format(thisNode.host)
+                    allTasks = hydra_taskboard.fetch("WHERE job_id = %s",
+                                                        (render_task.job_id,),
+                                                        explicitTransaction = t)
+                    for task in allTasks:
+                        task.failures += "{0} ".format(thisNode.host)
+                        task.update(t)
 
                     if render_task.attempts >= render_task.maxAttempts:
                         render_task.status = ERROR
@@ -233,12 +235,13 @@ class RenderTCPServer(TCPServer):
         self.childKilled = True
         self.statusAfterDeath = statusAfterDeath
         #Gather subprocesses just in case
+        children_procs = []
         if psutil.pid_exists(self.childProcess.pid):
             psutil_proc = psutil.Process(self.childProcess.pid)
             children_procs = psutil_proc.children(recursive=True)
         else:
-            logger.error("PSUtil was unable to find process with PID {0}".format(self.childProcess.pid))
-            children_procs = []
+            logger.info("PID {0} could not be found! Task is probably already dead.".format(self.childProcess.pid))
+            return
 
         #Try to kill the main process
         try:

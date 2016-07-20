@@ -36,24 +36,28 @@ class TCPConnection(Connection):
             logger.info('Connect to {0} {1}'.format(self.hostname, self.port))
             if self.hostname == None:
                 return None
-            sock.connect((self.hostname, self.port))
-            #Convert the question to ASCII
-            questionBytes = pickle.dumps(question)
-            #Send the question
-            sock.sendall(questionBytes)
-            #Close the sending half of the connection so the other side
-            #Knows we're done sending
-            sock.shutdown(socket.SHUT_WR)
-            #Read the response, an ASCII encoded object
-            answerBytes = sock.recv(Constants.MANYBYTES)
-            #Convert the response to an object
             try:
-                answer = pickle.loads(answerBytes)
-            except EOFError as err:
-                logger.error("EOF Error on Connections.TCPConnection.getAnswer()")
-                logger.error("answerBytes = {0}".format(str(answerBytes)))
+                sock.connect((self.hostname, self.port))
+                #Convert the question to ASCII
+                questionBytes = pickle.dumps(question)
+                #Send the question
+                sock.sendall(questionBytes)
+                #Close the sending half of the connection so the other side
+                #Knows we're done sending
+                sock.shutdown(socket.SHUT_WR)
+                #Read the response, an ASCII encoded object
+                answerBytes = sock.recv(Constants.MANYBYTES)
+                #Convert the response to an object
+                try:
+                    answer = pickle.loads(answerBytes)
+                except EOFError as err:
+                    logger.error("EOF Error on Connections.TCPConnection.getAnswer()")
+                    logger.error("answerBytes = {0}".format(str(answerBytes)))
+                    logger.error(err)
+                    answer = None
+            except socket.error as err:
                 logger.error(err)
-                answer = False
+                answer = None
 
         finally:
             sock.close()

@@ -97,13 +97,17 @@ def sendKillQuestion(renderhost, newStatus=KILLED):
     logger.info('Kill task on {0}'.format(renderhost))
     connection = TCPConnection(hostname=renderhost)
     answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
-    if answer == None:
-        return False
-    logger.info("Child killed: {0}".format(answer.childKilled))
-    if not answer.childKilled:
-        logger.warning("{0} tried to kill its job but failed for some reason.".format(renderhost))
-    #answer.childKilled should be True when successfully killed and False otherwise
-    return answer.childKilled
+    returnVal = False
+    if answer is None:
+        logger.info("{0} appears to be offline or unresponsive. Treating as dead.".format(renderhost))
+        returnVal = None
+    else:
+        logger.info("Child killed: {0}".format(answer.childKilled))
+        returnVal = answer.childKilled
+        if answer and not answer.childKilled:
+            logger.warning("{0} tried to kill its job but failed for some reason.".format(renderhost))
+
+    return returnVal
 
 def killTask(task_id, newStatus = KILLED):
     """Kill a task given it's task id. Return True if successful, else False."""
@@ -119,7 +123,16 @@ def killTask(task_id, newStatus = KILLED):
     elif task.status == STARTED:
         #Kill if task is in progress
         killed = sendKillQuestion(task.host, newStatus)
-        return killed
+        if killed is None:
+            task.status = newStatus
+            task.startTime = None
+            task.endTime = None
+            task.exitCode = None
+            with transaction() as t:
+                task.update(t)
+            return True
+        else:
+            return killed
     else:
         logger.info("Task Kill is skipping task {0} because of status {1}".format(task.id, task.status))
         return True

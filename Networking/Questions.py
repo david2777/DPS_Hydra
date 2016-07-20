@@ -5,7 +5,7 @@ import subprocess
 import exceptions
 
 #Hydra
-from Networking.Answers import CMDAnswer, KillCurrentJobAnswer
+from Networking.Answers import CMDAnswer, KillCurrentJobAnswer, IsAliveAnswer
 
 class Question:
     """Interface for Question objects."""
@@ -13,6 +13,11 @@ class Question:
         """ Override this method when creating a Question subclass code in this
         method will be run by the server"""
         raise exceptions.NotImplementedError
+
+class IsAliveQuestion(Question):
+    """A simple Question for checking if a server is alive"""
+    def computeAnswer(self, server):
+        return IsAliveAnswer(True)
 
 class CMDQuestion(Question):
     """A Question for running arbitrary commands on a server."""
