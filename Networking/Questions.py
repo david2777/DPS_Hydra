@@ -17,7 +17,7 @@ class Question:
 class IsAliveQuestion(Question):
     """A simple Question for checking if a server is alive"""
     def computeAnswer(self, server):
-        return IsAliveAnswer(True)
+        return IsAliveAnswer()
 
 class CMDQuestion(Question):
     """A Question for running arbitrary commands on a server."""

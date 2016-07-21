@@ -33,7 +33,7 @@ class TCPConnection(Connection):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             #Connect to the server
-            logger.info('Connect to {0} {1}'.format(self.hostname, self.port))
+            logger.debug('Connect to {0} {1}'.format(self.hostname, self.port))
             if self.hostname == None:
                 return None
             try:
