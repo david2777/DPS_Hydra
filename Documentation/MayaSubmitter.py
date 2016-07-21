@@ -55,10 +55,6 @@ extraCmdList.append("-r {0}".format(currentEngine))
 
 extraCmdList.append("-cam {0}".format(renderCam))
 
-renderDir = mel.eval("source GetRenderPath;string $renderDirectory = GetRenderPath();")
-if renderDir:
-    extraCmdList.append("-rd {0}".format(renderDir))
-
 if extraCmdList != []:
     command += " -m \"{0}\"".format(" ".join(extraCmdList))
 
@@ -71,6 +67,11 @@ else:
 
 command += " -q \"{0}\"".format(projectName)
 
+try:
+    renderDir = mel.eval("source GetRenderPath;string $renderDirectory = GetRenderPath();")
+    command += " -d \"{0}\"".format(renderDir)
+except RuntimeError:
+    pass
 
 if reqsReturn != "":
     command += " -c \"{0}\"".format(reqsReturn)

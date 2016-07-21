@@ -146,14 +146,15 @@
     -Maybe need to add more submitter args to be able to add quotes to them
 
 -[In Progress]Fix Bugs
-    -killTask on RenderNode needs to handle not having a task
-    -Optimize SQL Queries
+    -[Doneish]Optimize SQL Queries
 
 -[Done]Do Password Storage
 
 -[In Progress]Render consecutive frames
     -Needs to update the task board with the number of frames it actually
     finished on termination.
+
+-[In Progress]Render Manager?
 
 -[Todo]Make better icons
 

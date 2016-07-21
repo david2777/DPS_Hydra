@@ -249,6 +249,9 @@ class RenderTCPServer(TCPServer):
         self.childKilled = True
         self.statusAfterDeath = statusAfterDeath
         #Gather subprocesses just in case
+        if not self.childProcess.pid:
+            logger.info("No task is running!")
+            return True
         children_procs = []
         if psutil.pid_exists(self.childProcess.pid):
             psutil_proc = psutil.Process(self.childProcess.pid)

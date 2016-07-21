@@ -53,7 +53,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         #Get the -flag args
         try:
-            opts = getopt.getopt(sys.argv[2:],"s:e:n:p:r:x:m:c:q:")[0]
+            opts = getopt.getopt(sys.argv[2:],"s:e:n:p:r:x:m:c:q:d:")[0]
         except getopt.GetoptError:
             logger.error("Bad Opt!")
             aboutBox(self, title = "Bad Opt!", msg = "One of the command line options you entered was invalid.\n"+
@@ -69,6 +69,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                             "-r":"",        #Render Layers (Str,Sep,By,Comma)
                             "-x":"",        #Executabe (Str)
                             "-m":"",        #CMD (Str)
+                            "-d":"",        #RenderDirectory (Str)
                             "-c":"",        #Compatabilities (Str,Sep,By,Comma)
                             "-q":"",        #Project Name (Str)
                             }
@@ -82,10 +83,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         #Fix paths
         self.settingsDict["-p"] = self.settingsDict["-p"].replace('\\', '/')
+        self.settingsDict["-d"] = self.settingsDict["-d"].replace('\\', '/')
         #Fix Compatabilities
         self.settingsDict["-c"] = self.settingsDict["-c"].split(",")
         #Add underscores to niceName
         self.settingsDict["-n"] = self.settingsDict["-n"].replace(" ", "_")
+        #Move RenderDir to Base CMD
+        self.settingsDict["-m"] += " -rd \"{0}\"".format(self.settingsDict["-d"])
 
     def hookupButtons(self):
             QObject.connect(self.submitButton, SIGNAL("clicked()"),
