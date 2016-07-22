@@ -22,7 +22,7 @@ def updateJobTaskCount(job_id, tasks = None, commit = True):
     """
     if not tasks:
         tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
-                                        multiReturn = True, cols = ["status", "id"])
+                                        multiReturn = True, cols = ["id", "status"])
     taskCount = len(tasks)
     statusList = [task.status for task in tasks]
     errorList = [ERROR, CRASHED, TIMEOUT]
@@ -65,7 +65,7 @@ def killJob(job_id, newStatus = KILLED):
         newStatus -- The status each task should assume after it's death. (default KILLED)
     """
     tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
-                                    multiReturn = True, cols = ["id"])
+                                    multiReturn = True, cols = ["id", "status"])
     if tasks:
         responses = [TaskUtils.killTask(task.id, newStatus) for task in tasks]
         updateJobTaskCount(job_id, tasks)
@@ -80,7 +80,7 @@ def resetJob(job_id, newStatus = READY):
         newStatus -- The status each task should assume after it's been reset. (default READY)
     """
     tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
-                                    multiReturn = True, cols = ["id"])
+                                    multiReturn = True, cols = ["id", "job_id"])
     responses = [TaskUtils.resetTask(task.id, newStatus) for task in tasks]
     updateJobTaskCount(job_id, tasks)
     return False if False in responses else True

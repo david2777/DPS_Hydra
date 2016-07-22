@@ -57,6 +57,7 @@ class RenderTCPServer(TCPServer):
         #Load executeables from DB
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}
+        logger.info(self.execsDict)
 
         #Setup Class Variables
         self.childProcess = None
@@ -86,22 +87,8 @@ class RenderTCPServer(TCPServer):
     def shutdownCMD(self):
         self.renderServ.shutdown()
 
-    def processRenderTask(self, renderJob, renderTask):
+    def startRenderTask(self, renderJob, renderTask):
         logger.info("Starting task with id {0} on job with id {1}".format(renderTask.id, renderJob.id))
-        #Update Information in DB
-        #TODO: Check for render_* vars
-        self.thisNode.status = STARTED
-        self.thisNode.task_id = renderTask.id
-        renderTask.status = STARTED
-        renderTask.host = self.thisNode.host
-        renderTask.startTime = datetime.datetime.now()
-        renderTask.logFile = os.path.join(Constants.RENDERLOGDIR,
-                                        '{:0>10}.log.txt'.format(renderTask.id))
-        with transaction() as t:
-            self.thisNode.update(t)
-            renderTask.update(t)
-        JobUtils.updateJobTaskCount(renderTask.job_id)
-
         taskFile = "\"{0}\"".format(renderJob.taskFile)
         renderList = [self.execsDict[renderJob.execName], renderJob.baseCMD,
                         "-s", str(renderTask.startFrame), "-e",
@@ -147,7 +134,7 @@ class RenderTCPServer(TCPServer):
                 if self.childKilled:
                     renderTask.status = self.statusAfterDeath
                     self.childKilled = False
-                #Else ExitCode 0 is regular, any other is irregular
+                #ExitCode 0 is regular, any other is irregular
                 else:
                     if renderTask.exitCode == 0:
                         renderTask.status = FINISHED
@@ -186,7 +173,7 @@ class RenderTCPServer(TCPServer):
         self.childKilled = True
         self.statusAfterDeath = statusAfterDeath
         #Gather subprocesses just in case
-        if not self.childProcess.pid:
+        if not self.childProcess:
             logger.info("No task is running!")
             return
         children_procs = []

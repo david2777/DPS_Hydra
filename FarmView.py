@@ -455,12 +455,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         elif mode == "kill" or mode == "pause":
             choice = yesNoBox(self, "Confirm", "Really {0} the selected jobs?".format(mode))
             if choice == QMessageBox.Yes:
+                responses = []
                 if mode == "kill":
                     statusAfterDeath =  KILLED
                 else:
                     statusAfterDeath = PAUSED
                 try:
-                    responses = [JobUtils.killJob(job_id, statusAfterDeath) for job_id in job_ids]
+                    responses += [JobUtils.killJob(job_id, statusAfterDeath) for job_id in job_ids]
                 except sqlerror as err:
                     logger.error(str(err))
                     warningBox(self, "SQL Error", str(err))
@@ -475,8 +476,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         elif mode == "reset":
             choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
             if choice == QMessageBox.Yes:
+                responses = []
                 try:
-                    responses = [JobUtils.resetJob(job_id, READY) for job_id in job_ids]
+                    responses += [JobUtils.resetJob(job_id, READY) for job_id in job_ids]
                 except sqlerror as err:
                     logger.error(str(err))
                     warningBox(self, "SQL Error", str(err))
@@ -904,7 +906,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             for renderHost in hosts:
                 try:
                     thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
-                                                        cols = ["status", "task_id"])
+                                                        cols = ["status", "task_id", "host"])
                     NodeUtils.onlineNode(thisNode)
                 except sqlerror as err:
                     logger.error(str(err))
@@ -925,7 +927,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             for renderHost in hosts:
                 try:
                     thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
-                                                        cols = ["status", "task_id"])
+                                                        cols = ["status", "task_id", "host"])
                     NodeUtils.offlineNode(thisNode)
                 except sqlerror as err:
                     logger.error(str(err))

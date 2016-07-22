@@ -147,6 +147,7 @@
 
 -[In Progress]Fix Bugs
     -[Doneish]Optimize SQL Queries
+    -Archive job needs to hard reload JobTree
 
 -[Done]Do Password Storage
 
@@ -154,7 +155,8 @@
     -Needs to update the task board with the number of frames it actually
     finished on termination.
 
--[In Progress]Render Manager?
+-[In Progress]Render Manager
+    -Move Requirements, Failures to JobBoard
 
 -[Todo]Make better icons
 

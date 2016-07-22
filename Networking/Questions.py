@@ -21,7 +21,7 @@ class StartRenderQuestion(Question):
         self.job = job
         self.task = task
     def computeAnswer(self, server):
-        response = server.processRenderTask(self.job, self.task)
+        response = server.startRenderTask(self.job, self.task)
         return response
 
 class CMDQuestion(Question):
