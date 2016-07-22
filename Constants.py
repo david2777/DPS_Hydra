@@ -16,7 +16,7 @@ RENDERLOGDIR = os.path.join(BASELOGDIR, "render")
 SETTINGS = os.path.join(BASEDIR, "HydraSettings.cfg")
 
 #Connections
-MANYBYTES = 1 << 20
+MANYBYTES = 4096
 
 #Value Dictionaries
 TIMEDICT = {

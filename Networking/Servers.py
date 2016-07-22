@@ -37,17 +37,16 @@ class TCPServer(Server):
     def __init__(self, port = None):
         if not port:
             port = int(getInfoFromCFG("network", "port"))
-        MyTCPHandler.TCPserver = self
+        HydraTCPHandler.TCPserver = self
         logger.debug('Open TCPServer Socket @ Port {0}'.format(port))
         self.threadVar = True
-        self.serverObject = MySocketServer(("", port), MyTCPHandler)
+        self.serverObject = MySocketServer(("", port), HydraTCPHandler)
         self.serverThread = threading.Thread(target = runTheServer,
                                               name = "Server Thread",
                                               args = (self.serverObject,))
         self.serverThread.start()
         if not self.serverThread.isAlive():
             raise
-
         return self
 
     def shutdown(self):
@@ -59,16 +58,13 @@ def runTheServer(serverObject):
     logger.debug("Off to the races!")
     serverObject.serve_forever()
 
-class MyTCPHandler(SocketServer.StreamRequestHandler):
-    TCPserver = None #The Hydra server object, NOT the SocketServer.
+class HydraTCPHandler(SocketServer.StreamRequestHandler):
+    TCPserver = None
     def handle(self):
         try:
             questionBytes = self.rfile.read()
             question = pickle.loads(questionBytes)
-            #logger.debug(question)
-
             answer = question.computeAnswer(self.TCPserver)
-
             answerBytes = pickle.dumps(answer)
             self.wfile.write(answerBytes)
         except:

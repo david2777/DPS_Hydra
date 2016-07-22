@@ -469,9 +469,12 @@ def pulse():
         logger.error(traceback.format_exc(e))
 
 if __name__ == "__main__":
+    """
     app = QApplication(sys.argv)
     app.quitOnLastWindowClosed = False
     window = RenderNodeMainUI()
     window.show()
     retcode = app.exec_()
     sys.exit(retcode)
+    """
+    raw_input("Broken for now")

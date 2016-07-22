@@ -28,15 +28,20 @@ import Utilities.TaskUtils as TaskUtils
 
 class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):
+        #Check for other instances of RenderNode running
         inst = checkRenderNodeInstances()
         if not inst:
             sys.exit(1)
 
+        #Startup TCP Server
         self.renderServ = TCPServer.__init__(self, *arglist, **kwargs)
+
+        #Setup Subprocess STARTUPINFO
         if sys.platform == "win32":
             self.si = subprocess.STARTUPINFO()
             self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
+        #Detect RedShift GPUs
         self.rsGPUs = Utils.getRedshiftPreference("SelectedCudaDevices")
         self.rsGPUs = self.rsGPUs.split(",")[:-1]
         self.rsGPUids = [x.split(":")[0] for x in self.rsGPUs]
@@ -45,204 +50,136 @@ class RenderTCPServer(TCPServer):
             logger.info("{0} Redshift Enabled GPU(s) found on this node".format(len(self.rsGPUs)))
             logger.debug("GPUs available for rendering are {0}".format(self.rsGPUs))
 
+        #Create RenderLog Directory
+        if not os.path.isdir(Constants.RENDERLOGDIR):
+            os.makedirs(Constants.RENDERLOGDIR)
+
+        #Load executeables from DB
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}
 
+        #Setup Class Variables
         self.childProcess = None
         self.childKilled = False
         self.statusAfterDeath = None
-        self.thisNodeName = Utils.myHostName()
+        self.thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),))
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
-        thisNode = hydra_rendernode.fetch("WHERE host = %s", (self.thisNodeName,),
-                                            cols = ["host", "status", "task_id",
-                                                    "software_version"])
-        query = "UPDATE hydra_rendernode SET status = %s WHERE host = %s"
-        if thisNode.task_id:
+        if self.thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
-            task = hydra_taskboard.fetch("WHERE id = %s", (thisNode.task_id,),
-                                            cols = ["job_id"])
-            newStatus = OFFLINE if thisNode.status in [OFFLINE, PENDING] else IDLE
-            TaskUtils.unstickTask(taskID = thisNode.task_id, newTaskStatus = READY,
-                              host = thisNode.host, newHostStatus = newStatus)
+            newStatus = OFFLINE if self.thisNode.status in [OFFLINE, PENDING] else IDLE
+            TaskUtils.unstickTask(self.thisNode.task_id, READY, self.thisNode.host, newStatus)
+            task = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,), cols = ["job_id"])
             JobUtils.manageNodeLimit(task.job_id)
-        elif thisNode.status in [STARTED, PENDING] and not thisNode.task_id:
-            logger.warning("Reseting bad status, node set {0} but no task found!".format(thisNode.status))
-            newStatus = READY if thisNode.status == STARTED else OFFLINE
-            with transaction() as t:
-                t.cur.execute(query, (newStatus, self.thisNodeName,))
+        elif self.thisNode.status in [STARTED, PENDING]:
+            logger.warning("Reseting bad status, node set {0} but no task found!".format(self.thisNode.status))
+            self.thisNode.task_id = None
+            self.thisNode.status = READY if self.thisNode.status == STARTED else OFFLINE
 
-        #Update current software version on the DB if necessary
-        current_version = sys.argv[0]
-        if thisNode.software_version != current_version:
-            thisNode.software_version = current_version
-            with transaction() as t:
-                thisNode.update(t)
+        #Update self.thisNode software_version
+        self.thisNode.software_version = sys.argv[0]
+
+        #Commit any changes we just made to self.thisNode
+        with transaction() as t:
+            self.thisNode.update(t)
 
     def shutdownCMD(self):
         self.renderServ.shutdown()
 
-    def processRenderTasks(self):
-        """The loop that looks for jobs on the DB and runs them if the node meets
-        the job's requirements"""
-        thisNode = hydra_rendernode.fetch("WHERE host = %s",(self.thisNodeName,),
-                                            cols = ["host", "status", "capabilities",
-                                                    "minPriority", "task_id"])
-        debugStr = "Host: {0} Status: {1} Capabilities: {2}"
-        logger.debug(debugStr.format(thisNode.host, niceNames[thisNode.status],
-                                    thisNode.capabilities))
-
-        #If this node is not idle, don't try to find a new job
-        if thisNode.status != IDLE:
-            return
-
-        #Otherwise, get a job that's:
-        #-Ready to be run and
-        #-Has a high enough priority level for this particular node and
-        #-Is able to meet to jobs required capabilities
-        whereClause = "WHERE status = %s AND priority >= %s AND %s LIKE requirements AND archived = 0 AND failures NOT LIKE '%%{0}%%'".format(thisNode.host)
-        whereTuple = (READY, thisNode.minPriority, thisNode.capabilities)
-        orderTuples = (("priority", "DESC"), ("id", "ASC"))
-
+    def processRenderTask(self, renderJob, renderTask):
+        logger.info("Starting task with id {0} on job with id {1}".format(renderTask.id, renderJob.id))
+        #Update Information in DB
+        #TODO: Check for render_* vars
+        self.thisNode.status = STARTED
+        self.thisNode.task_id = renderTask.id
+        renderTask.status = STARTED
+        renderTask.host = self.thisNode.host
+        renderTask.startTime = datetime.datetime.now()
+        renderTask.logFile = os.path.join(Constants.RENDERLOGDIR,
+                                        '{:0>10}.log.txt'.format(renderTask.id))
         with transaction() as t:
-            render_task = hydra_taskboard.fetch(whereClause = whereClause,
-                                                whereTuple = whereTuple,
-                                                orderTuples = orderTuples,
-                                                limit = 1,
-                                                explicitTransaction = t,
-                                                cols = ["job_id", "startFrame",
-                                                        "endFrame", "id",
-                                                        "logFile", "host",
-                                                        "startTime", "endTime",
-                                                        "exitCode", "attempts",
-                                                        "maxAttempts", "status"])
-            #If not task is found, stop and wait to search again
-            if not render_task:
-                return
+            self.thisNode.update(t)
+            renderTask.update(t)
+        JobUtils.updateJobTaskCount(renderTask.job_id)
 
-            #Otherwise, render the task
-            render_job = hydra_jobboard.fetch("WHERE id = %s",
-                                                (render_task.job_id,),
-                                                explicitTransaction = t,
-                                                cols = ["taskFile", "execName",
-                                                        "baseCMD", "timeout"])
+        taskFile = "\"{0}\"".format(renderJob.taskFile)
+        renderList = [self.execsDict[renderJob.execName], renderJob.baseCMD,
+                        "-s", str(renderTask.startFrame), "-e",
+                        str(renderTask.endFrame), taskFile]
+        renderCMD = " ".join(renderList)
 
-            self.taskFile = '"{0}"'.format(render_job.taskFile)
-            self.renderCMD = " ".join([self.execsDict[render_job.execName],
-                                    render_job.baseCMD,
-                                    '-s', str(render_task.startFrame),
-                                    '-e', str(render_task.endFrame),
-                                    self.taskFile])
-
-            #Create log for this task and update task entry in the DB
-            if not os.path.isdir(Constants.RENDERLOGDIR):
-                os.makedirs(Constants.RENDERLOGDIR)
-            render_task.logFile = os.path.join(Constants.RENDERLOGDIR,
-                                            '{:0>10}.log.txt'.format(render_task.id))
-            render_task.status = STARTED
-            render_task.host = thisNode.host
-            thisNode.status = STARTED
-            thisNode.task_id = render_task.id
-            render_task.startTime = datetime.datetime.now()
-            render_task.update(t)
-            thisNode.update(t)
-            JobUtils.updateJobTaskCount(render_task.job_id)
-
-        logger.info('Starting render task {0}'.format(render_task.id))
-        log = file(render_task.logFile, 'w')
+        logger.info('Starting render task {0}'.format(renderTask.id))
+        log = file(renderTask.logFile, 'w')
+        log.write('Hydra log file {0} on {1}\n'.format(renderTask.logFile, renderTask.host))
+        log.write('RenderNodeMain is {0}\n'.format(sys.argv))
+        log.write('Command: {0}\n\n'.format(renderCMD))
+        Utils.flushOut(log)
 
         try:
-            log.write('Hydra log file {0} on {1}\n'.format(render_task.logFile, render_task.host))
-            log.write('RenderNodeMain is {0}\n'.format(sys.argv))
-            log.write('Command: {0}\n\n'.format(self.renderCMD))
-            Utils.flushOut(log)
-
             #Run the job and keep track of the process
-            self.childProcess = subprocess.Popen(self.renderCMD, stdout = log,
-                                                **Utils.buildSubprocessArgs(False))
-
+            self.childProcess = subprocess.Popen(renderCMD, stdout = log,
+                                                    **Utils.buildSubprocessArgs(False))
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
-                                                                render_task.id))
-
-            #Start the timeout thread
-            tThread = False
-            if render_job.timeout > 0:
-                tThread = True
-                self.startTimeoutThread(render_job.timeout)
-
-            #Wait until the job is finished or terminated
+                                                                renderTask.id))
+            #Wait for task to finish
             self.childProcess.communicate()
-
-            #When finished, gather info on exit and record
-            if tThread:
-                self.timeoutThread.cancel()
-
-            render_task.exitCode = self.childProcess.returncode
+            #Record the results
+            renderTask.exitCode = self.childProcess.returncode
             logString = "\nProcess exited with code {0} at {1} on {2}\n"
             nowTime = datetime.datetime.now().replace(microsecond = 0)
-            log.write(logString.format(render_task.exitCode, nowTime,
-                                        self.thisNodeName))
+            log.write(logString.format(renderTask.exitCode, nowTime,
+                                        self.thisNode.host))
 
-        except Exception, e:
+        except Exception as e:
             traceback.print_exc(e, log)
-            raise
+            logger.error(e)
+            raise e
 
         #Finally, update the DB with the information from the task
         finally:
             #Get the latest info about this render node
             with transaction() as t:
-                thisNode = hydra_rendernode.fetch("WHERE host = %s",
-                                                    (self.thisNodeName,),
-                                                    explicitTransaction = t)
+                self.thisNode = hydra_rendernode.fetch("WHERE host = %s",
+                                                        (self.thisNode.host,),
+                                                        explicitTransaction = t)
 
-                error = False
+                #Check if render was killed
                 if self.childKilled:
-                    render_task.status = self.statusAfterDeath
+                    renderTask.status = self.statusAfterDeath
                     self.childKilled = False
-                    if self.statusAfterDeath == TIMEOUT:
-                        error = True
+                #Else ExitCode 0 is regular, any other is irregular
                 else:
-                    if render_task.exitCode == 0:
-                        render_task.status = FINISHED
-                        render_task.endTime = datetime.datetime.now()
+                    if renderTask.exitCode == 0:
+                        renderTask.status = FINISHED
+                        renderTask.endTime = datetime.datetime.now()
+                    #TODO: Find a better way to mark jobs as failed on a node
                     else:
-                        error = True
+                        renderTask.attempts += 1
+                        if renderTask.attempts >= renderTask.maxAttempts:
+                            renderTask.status = ERROR
+                            renderTask.endTime = datetime.datetime.now()
+                        else:
+                            renderTask.status = READY
+                            renderTask.startTime = None
+                            renderTask.endTime = None
 
-                if error:
-                    render_task.attempts += 1
-                    allTasks = hydra_taskboard.fetch("WHERE job_id = %s",
-                                                        (render_task.job_id,),
-                                                        explicitTransaction = t,
-                                                        cols = "failures")
-                    for task in allTasks:
-                        task.failures += "{0} ".format(thisNode.host)
-                        task.update(t)
+                if self.thisNode.status == STARTED:
+                    self.thisNode.status = IDLE
+                elif self.thisNode.status == PENDING:
+                    self.thisNode.status = OFFLINE
+                logger.debug("New Node Status: {0}".format(self.thisNode.status))
+                self.thisNode.task_id = None
 
-                    if render_task.attempts >= render_task.maxAttempts:
-                        render_task.status = ERROR
-                        render_task.endTime = datetime.datetime.now()
-                    else:
-                        render_task.status = READY
-                        render_task.startTime = None
-                        render_task.endTime = None
-
-                if thisNode.status == STARTED:
-                    thisNode.status = IDLE
-                elif thisNode.status == PENDING:
-                    thisNode.status = OFFLINE
-                logger.debug("Node Status: {0}".format(thisNode.status))
-                thisNode.task_id = None
-
-                render_task.update(t)
-                thisNode.update(t)
+                renderTask.update(t)
+                self.thisNode.update(t)
 
             log.close()
             self.childProcess = None
             self.childKilled = False
             self.statusAfterDeath = None
-            JobUtils.updateJobTaskCount(render_task.job_id)
-            JobUtils.manageNodeLimit(render_task.job_id)
-            logger.info('Done with render task {0}'.format(render_task.id))
+            JobUtils.updateJobTaskCount(renderTask.job_id)
+            JobUtils.manageNodeLimit(renderTask.job_id)
+            logger.info("Done with render task {0}".format(renderTask.id))
 
     def killCurrentJob(self, statusAfterDeath):
         """Kills the render node's current job if it's running one."""
@@ -251,7 +188,7 @@ class RenderTCPServer(TCPServer):
         #Gather subprocesses just in case
         if not self.childProcess.pid:
             logger.info("No task is running!")
-            return True
+            return
         children_procs = []
         if psutil.pid_exists(self.childProcess.pid):
             psutil_proc = psutil.Process(self.childProcess.pid)
@@ -282,26 +219,6 @@ class RenderTCPServer(TCPServer):
             else:
                 logger.debug("Skipping PID {0} because it is probably already dead.".format(proc.pid))
 
-    def timeoutCurrentJob(self):
-        logger.warning("Current job is timed out, killing...")
-        self.timeoutThread.cancel()
-        self.killCurrentJob(TIMEOUT)
-        if self.childKilled:
-            logger.info("Task was timed out")
-
-    def startTimeoutThread(self, timeout):
-        self.timeoutThread = threading.Timer(timeout, self.timeoutCurrentJob)
-        try:
-            self.timeoutThread.start()
-            minutes = timeout / 60
-            seconds  = timeout % 60
-            infoStr = "Starting Timeout Thread for {0} minute(s) and {1} second(s)"
-            logger.info(infoStr.format(minutes, seconds))
-        except Exception as err:
-            self.timeoutThread.cancel()
-            logger.error("Could not start timeout thread!")
-            logger.error(str(err))
-
 def heartbeat(interval = 60):
     host = Utils.myHostName()
     while True:
@@ -309,7 +226,7 @@ def heartbeat(interval = 60):
             with transaction() as t:
                 t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = %s",
                             (host,))
-        except Exception, e:
+        except Exception as e:
             logger.error(traceback.format_exc(e))
         time.sleep(interval)
 
@@ -338,7 +255,6 @@ def main():
     logger.debug('Starting in {0}'.format(os.getcwd()))
     logger.debug('arglist {0}'.format(sys.argv))
     socketServer = RenderTCPServer()
-    socketServer.createIdleLoop(5, socketServer.processRenderTasks)
     pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
     pulseThread.start()
 

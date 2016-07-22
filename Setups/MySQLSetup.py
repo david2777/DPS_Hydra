@@ -82,7 +82,7 @@ class tupleObject:
         self.__dict__[k] = v
         if Utils.nonFlanged(k):
             self.__dirty__.add(k)
-            logger.debug(('dirty', k, v))
+            #logger.debug(('dirty', k, v))
 
     @classmethod
     def fetch(cls, whereClause = "", whereTuple = None, cols = None,

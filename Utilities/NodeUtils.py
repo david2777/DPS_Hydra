@@ -155,7 +155,7 @@ def calcuateSleepTime(now, dbData):
 def calcuateSleepTimeFromNode(nodeName):
     """A convience function that does calcuateSleepTime given a host name"""
     thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
-                                        cols = ["weekSchedule"])
+                                        cols = ["weekSchedule", "host"])
     return calcuateSleepTime(datetime.datetime.now().replace(microsecond = 0), thisNode.weekSchedule)
 
 def getThisNodeData():

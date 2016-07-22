@@ -5,8 +5,9 @@ import sys
 #Hydra
 from Setups.LoggingSetup import logger
 from Networking.Servers import TCPServer
-from Networking.Questions import IsAliveQuestion
+from Networking.Questions import IsAliveQuestion, StartRenderQuestion
 from Networking.Connections import TCPConnection
+from Utilities.Utils import getInfoFromCFG
 from Setups.MySQLSetup import *
 
 class RenderManagementServer(TCPServer):
@@ -22,13 +23,14 @@ class RenderManagementServer(TCPServer):
 
     def processRenderTasks(self):
         logger.info("Processing Render Tasks")
-        self.allJobs = hydra_jobboard.fetch("WHERE archived = 0")
+        self.allJobs = hydra_jobboard.fetch("WHERE archived = 0", multiReturn = True)
 
-        taskList = hydra_taskboard.fetch("WHERE archived = 0 AND status = 'R'")
+        taskList = hydra_taskboard.fetch("WHERE archived = 0 AND status = 'R'",
+                                            multiReturn = True)
         self.allTasks = {int(x.id) : x for x in taskList}
         self.createRenderTasks()
 
-        nodeList = hydra_rendernode.fetch()
+        nodeList = hydra_rendernode.fetch(multiReturn = True)
         self.allNodes = {str(x.host) : x for x in nodeList}
         self.idleNodes = [k for k,v in self.allNodes.iteritems() if v.status == IDLE]
         self.checkNodeStatus()
@@ -61,9 +63,9 @@ class RenderManagementServer(TCPServer):
                 jobOBJ = self.allJobs[taskOBJ.job_id]
                 #TODO:Check to make sure all reqs and stuff are met
                 if True:
-                    result = self.assignTask(nodeOBJ, taskOBJ)
+                    result = self.assignTask(nodeOBJ, taskOBJ, jobOBJ)
                     resultList.append(result)
-                    localTasks.remove(task)
+                    self.renderTasks.remove(task)
                     break
             i += 1
         return all(resultList)
@@ -71,9 +73,14 @@ class RenderManagementServer(TCPServer):
     def shutdownCMD(self):
         self.managmentServer.shutdown()
 
-    def assignTask(self, node, task):
+    def assignTask(self, node, task, job):
         logger.info("Assigning task with id {0} to node {1}".format(task.id, node.host))
-        return True
+        connection = TCPConnection(hostname = node.host)
+        response = connection.sendQuestion(StartRenderQuestion(job, task))
+        if response:
+            logger.info("Task {0} was accepted on {1}".format(task.id, node.host))
+        else:
+            logger.error("Task {0} was declined on {1}".format(task.id, node.host))
 
     def killTask(self, node, statusAfterDeath = KILLED):
         logger.info("Killing task on node: {0}".format(node.host))
@@ -93,7 +100,8 @@ class RenderManagementServer(TCPServer):
 def main():
     logger.debug('Starting in {0}'.format(os.getcwd()))
     logger.debug('arglist {0}'.format(sys.argv))
-    socketServer = RenderManagementServer()
+    port = int(getInfoFromCFG("manager", "port"))
+    socketServer = RenderManagementServer(port = port)
     socketServer.createIdleLoop(15, socketServer.processRenderTasks)
 
 if __name__ == "__main__":

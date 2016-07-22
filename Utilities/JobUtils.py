@@ -22,7 +22,7 @@ def updateJobTaskCount(job_id, tasks = None, commit = True):
     """
     if not tasks:
         tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
-                                        multiReturn = True, cols = ["status"])
+                                        multiReturn = True, cols = ["status", "id"])
     taskCount = len(tasks)
     statusList = [task.status for task in tasks]
     errorList = [ERROR, CRASHED, TIMEOUT]
@@ -97,7 +97,7 @@ def setupNodeLimit(job_id, hold_status = MANAGED):
     Keyword Arguments:
         hold_status -- The status of the remainder (paused) tasks. (default MANAGED)
     """
-    job = hydra_jobboard.fetch("WHERE id = %s", (job_id,), cols = ["maxNodes"])
+    job = hydra_jobboard.fetch("WHERE id = %s", (job_id,), cols = ["maxNodes", "id"])
     taskLimit = job.maxNodes
     if taskLimit < 1:
         return
@@ -120,7 +120,7 @@ def manageNodeLimit(job_id, hold_status = MANAGED):
     Keyword Arguments:
         hold_status -- The status of the remainder (paused) tasks. (default MANAGED)
     """
-    job = hydra_jobboard.fetch("WHERE id = %s", (job_id,), cols = ["maxNodes"])
+    job = hydra_jobboard.fetch("WHERE id = %s", (job_id,), cols = ["maxNodes", "id"])
     taskLimit = job.maxNodes
     if taskLimit < 1:
         return

@@ -36,7 +36,7 @@ def changeStatusViaTaskID(task_id, new_status, old_status_list = []):
 
 def startTask(task_id):
     """Start task if it is paused, ressurect task if it is killed/errored."""
-    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,), cols = ["status"])
+    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,), cols = ["status", "id"])
     if task.status == READY or task.status == STARTED or task.status == FINISHED:
         logger.info("Passing Task {0} because it is either already started or ready".format(task_id))
     elif task.status == PAUSED or task.status == MANAGED:
@@ -81,7 +81,7 @@ def unstickTask(taskID = None, newTaskStatus = READY, host = None, newHostStatus
     if taskID:
         task = hydra_taskboard.fetch("WHERE id = %s", (taskID,),
                                         cols = ["host", "status", "startTime",
-                                                "endTime"])
+                                                "endTime", "id"])
         if newTaskStatus == READY:
             task.host = None
         task.status = newTaskStatus
@@ -89,7 +89,7 @@ def unstickTask(taskID = None, newTaskStatus = READY, host = None, newHostStatus
         task.endTime = None
         if host:
             host = hydra_rendernode.fetch("WHERE host = %s", (host,),
-                                            cols = ["task_id", "status"])
+                                            cols = ["task_id", "status", "host"])
             host.task_id = None
             host.status = newHostStatus
         with transaction() as t:
@@ -119,7 +119,7 @@ def killTask(task_id, newStatus = KILLED):
     """Kill a task given it's task id. Return True if successful, else False."""
     task = hydra_taskboard.fetch("WHERE id = %s", (task_id,),
                                     cols = ["status", "startTime", "endTime",
-                                            "exitCode", "host"])
+                                            "exitCode", "host", "id"])
     if task.status == READY or task.status == PAUSED or task.status == MANAGED:
         task.status = newStatus
         task.startTime = None

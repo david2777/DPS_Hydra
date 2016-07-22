@@ -33,7 +33,7 @@ class TCPConnection(Connection):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             #Connect to the server
-            logger.debug('Connect to {0} {1}'.format(self.hostname, self.port))
+            logger.debug('TCP Connect to {0} {1}'.format(self.hostname, self.port))
             if self.hostname == None:
                 return None
             try:
@@ -50,16 +50,34 @@ class TCPConnection(Connection):
                 #Convert the response to an object
                 try:
                     answer = pickle.loads(answerBytes)
-                except EOFError as err:
+                except EOFError:
                     logger.error("EOF Error on Connections.TCPConnection.getAnswer()")
                     logger.error("answerBytes = {0}".format(str(answerBytes)))
-                    logger.error(err)
                     answer = None
             except socket.error as err:
-                logger.error(err)
+                logger.debug(err)
                 answer = None
-
         finally:
             sock.close()
-
+            logger.debug("TCP Connection to {0} {1} was closed.".format(self.hostname, self.port))
         return answer
+
+    def sendQuestion(self, question):
+        """Send question without waiting for a response"""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        returnVal = False
+        try:
+            #Connect to the server
+            logger.debug('TCP Connect to {0} {1}'.format(self.hostname, self.port))
+            if self.hostname == None:
+                return None
+            sock.connect((self.hostname, self.port))
+            questionBytes = pickle.dumps(question)
+            sock.sendall(questionBytes)
+            sock.shutdown(socket.SHUT_WR)
+            sock.close()
+            returnVal = True
+        except socket.error as err:
+            logger.error(err)
+        logger.debug("TCP Connection to {0} {1} was closed.".format(self.hostname, self.port))
+        return returnVal
