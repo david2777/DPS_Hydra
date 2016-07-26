@@ -1,9 +1,3 @@
-"""The functions that accept, process, and render tasks. It checks the Database
-every x seconds for a new task using the query to determine if the task is
-something it wants to run. If it gets a task it updates the DB and renders the
-task. When it finishes it updates the task again on the DB and start looking for
-a new task. This can be run as a standalone software or a win32service using
-RenderNodeService."""
 #Standard
 import os
 import sys
