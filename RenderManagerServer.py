@@ -34,8 +34,15 @@ class RenderManagementServer(TCPServer):
         self.allJobs = {x.id : x for x in jobList}
 
         #Fetch all Tasks and sort them
-        taskList = hydra_taskboard.fetch("WHERE archived = 0 AND status = 'R'",
-                                            multiReturn = True)
+        idStr = ",".join(str(x) for x in self.allJobs.keys())
+        query = "WHERE status = 'R'"
+        if idStr != "":
+            query += " AND job_id IN ({0})".format(idStr)
+        else:
+            logger.info("There appears to be no active jobs in the jobboard!")
+            #Giving it an impossible query, job_ids start at 1
+            query += " AND job_id = '0'"
+        taskList = hydra_taskboard.fetch(query, multiReturn = True)
         self.allTasks = {x.id : x for x in taskList}
         self.renderTasks = self.createRenderTasks()
 

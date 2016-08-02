@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 5.7.9, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: hydra
+-- Host: PURPLE    Database: hydra
 -- ------------------------------------------------------
 -- Server version	5.7.9-log
 
@@ -63,12 +63,12 @@ DROP TABLE IF EXISTS `hydra_jobboard`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hydra_jobboard` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID for the job, Auto Increment by DB on  insertion of job, ',
-  `execName` varchar(20) DEFAULT NULL COMMENT 'Executeable the job needs',
-  `baseCMD` varchar(255) DEFAULT NULL COMMENT 'The base CMD, ie. -x 1280 -y 720 -cam "TestCam" etc.',
+  `execName` varchar(20) NOT NULL COMMENT 'Executeable the job needs',
+  `baseCMD` varchar(255) NOT NULL COMMENT 'The base CMD, ie. -x 1280 -y 720 -cam "TestCam" etc.',
   `startFrame` int(6) DEFAULT '1' COMMENT 'The start frame of the job',
   `endFrame` int(6) DEFAULT '1' COMMENT 'The end frame of the job',
   `byFrame` int(4) DEFAULT '1' COMMENT 'Render each x frame. Caluclated by SubmitterMain for now so we can append the last frame to the frames. Should be editable in FarmView eventually. ',
-  `taskFile` varchar(255) DEFAULT NULL COMMENT 'The task file to be rendered ie. the Maya file or PS file or something',
+  `taskFile` varchar(255) NOT NULL COMMENT 'The task file to be rendered ie. the Maya file or PS file or something',
   `priority` int(4) DEFAULT '50' COMMENT 'Priority of the job, higher priority jobs will be executed first',
   `phase` int(4) DEFAULT '0' COMMENT 'Job phase',
   `job_status` char(1) DEFAULT 'U' COMMENT 'Status of the job, for more info on this see MySQLSetup.py',
@@ -81,7 +81,10 @@ CREATE TABLE `hydra_jobboard` (
   `maxNodes` int(4) DEFAULT '0' COMMENT 'Max nodes a job should run on',
   `archived` int(4) DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
   `timeout` smallint(6) DEFAULT '0' COMMENT 'Timeout measured in seconds',
-  `projectName` varchar(60) DEFAULT 'UnknownProject',
+  `projectName` varchar(60) DEFAULT 'UnknownProject' COMMENT 'Nice name for the project. Helps keep the FarmView JobTree organized. ',
+  `failures` varchar(150) DEFAULT '' COMMENT 'A list of nodes that the job has failed on, each node delimited by a single space. ',
+  `attempts` int(4) DEFAULT '0' COMMENT 'Number of times a job has been attempted and failed.',
+  `maxAttempts` int(4) DEFAULT '10' COMMENT 'Maximum attempts before a job is stopped as Error.',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -103,7 +106,10 @@ CREATE TABLE `hydra_rendernode` (
   `pulse` datetime DEFAULT NULL COMMENT 'The last time RenderNodeMain.exe was known to be running, if ever',
   `scheduleEnabled` int(1) DEFAULT '0',
   `weekSchedule` varchar(255) DEFAULT '',
-  PRIMARY KEY (`host`)
+  PRIMARY KEY (`host`),
+  UNIQUE KEY `host_UNIQUE` (`host`),
+  KEY `rendertask_key_idx` (`task_id`),
+  CONSTRAINT `rendertask_key` FOREIGN KEY (`task_id`) REFERENCES `hydra_taskboard` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Describes all of the RenderNodes. Made in MySQL Workbench. ';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -123,15 +129,15 @@ CREATE TABLE `hydra_taskboard` (
   `host` varchar(80) DEFAULT NULL COMMENT 'Host the task is running on',
   `exitCode` int(11) DEFAULT NULL COMMENT 'Exit code from the subprocess',
   `logFile` varchar(100) DEFAULT NULL COMMENT 'Log file directory (Local)',
-  `requirements` varchar(255) DEFAULT NULL COMMENT 'Requirements to run this task',
-  `priority` int(4) DEFAULT NULL COMMENT 'Priority for the task',
+  `priority` int(4) DEFAULT '50' COMMENT 'Priority for the task',
   `startFrame` int(6) DEFAULT '1' COMMENT 'The frame for this task',
   `endFrame` int(6) DEFAULT '1',
-  `archived` int(4) DEFAULT '0' COMMENT 'A column for archiving tasks so they don''t get pickedup by RenderNodeMain',
-  `attempts` int(4) DEFAULT '0' COMMENT 'Number of times the task has been attempted',
-  `maxAttempts` int(4) DEFAULT '3' COMMENT 'Maximum number of attempts allowed',
-  `failures` varchar(80) DEFAULT '' COMMENT 'List of nodes where this task has already failed seperated by spaces',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id_UNIQUE` (`id`),
+  KEY `id_idx` (`job_id`),
+  KEY `node_key_idx` (`host`),
+  CONSTRAINT `job_id_key` FOREIGN KEY (`job_id`) REFERENCES `hydra_jobboard` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `renderhost_key` FOREIGN KEY (`host`) REFERENCES `hydra_rendernode` (`host`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -144,4 +150,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-06-23 12:59:53
+-- Dump completed on 2016-08-01 21:53:32

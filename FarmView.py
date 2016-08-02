@@ -46,42 +46,30 @@ class FarmView(QMainWindow, Ui_FarmView):
         with open(Utils.findResource("styleSheet.css"),"r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
-        self.thisNodeName = Utils.myHostName()
-        logger.info("This host is {0}".format(self.thisNodeName))
-
         #My UI Setup Functions
         self.setupTables()
         self.connectButtons()
         self.setupHotkeys()
         self.setWindowIcon(QIcon(Utils.findResource("Images/FarmView.png")))
 
-        #Enable this node buttons
-        self.thisNodeButtonsEnabled = True
-
-        #Get user
+        #Class Variables
+        self.thisNodeName = Utils.myHostName()
+        logger.info("This host is {0}".format(self.thisNodeName))
         self.username = Utils.getInfoFromCFG("database", "username")
-
-        #Globals
         self.userFilter = False
         self.showArchivedFilter = False
-
         self.statusMsg = "ERROR"
-
         self.currentJobSel = None
 
+        #Make sure this node exists
+        self.thisNodeButtonsEnabled = True
+        self.thisNodeExists = self.findThisNode()
+
+        #Start autoUpdater and then fetch data from DB
         self.autoUpdateThread = workerSignalThread("run", 10)
         QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
-
+        self.autoUpdateThread.start()
         self.doFetch()
-        if self.thisNodeExists:
-            self.autoUpdateThread.start()
-        else:
-            self.autoUpdateCheckbox.setCheckState(0)
-            self.autoUpdateCheckbox.setEnabled(False)
-
-    def closeEvent(self, event):
-        event.accept()
-        sys.exit(0)
 
     def addItem(self, menu, name, handler, statusTip, arg = None, hotkey = None):
         action = QAction(name, self)
@@ -105,7 +93,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.setColumnWidth(2, 70)      #Task ID
         self.renderNodeTable.setColumnWidth(3, 110)     #Version
         self.renderNodeTable.setColumnWidth(4, 100)     #Schedule Enabled
-        self.renderNodeTable.setColumnWidth(5, 125)     #Heartbeat
+        self.renderNodeTable.setColumnWidth(5, 175)     #Heartbeat
         self.renderNodeTable.setColumnWidth(6, 110)     #Capabilities
 
         # Column widths on the taskTable
@@ -198,7 +186,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         QShortcut(QKeySequence("Ctrl+Shift+R"), self, taskResetFunc)
         QShortcut(QKeySequence("Ctrl+Shift+L"), self, taskLogFunc)
 
-
     def centralContextHandler(self):
         self.centralMenu = QMenu(self)
 
@@ -270,6 +257,16 @@ class FarmView(QMainWindow, Ui_FarmView):
         shotItem = self.jobTree.currentItem()
         if shotItem.parent():
             self.initTaskTable(int(shotItem.text(1)), shotItem)
+
+    def jobCommandBuilder(self):
+        command = "WHERE"
+        command += " owner = %s" if self.userFilter else ""
+        command += " AND" if command != "WHERE" and not self.showArchivedFilter else ""
+        command += " archived = 0" if not self.showArchivedFilter else ""
+
+        commandTuple = (self.username,) if self.userFilter else tuple()
+
+        return [command, commandTuple] if command != "WHERE" else ["", tuple()]
 
     def fetchJobs(self):
         command, commandTuple = self.jobCommandBuilder()
@@ -388,16 +385,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTree.setColumnWidth(6, 60)          #Max Nodes
         self.populateJobTree()
 
-    def userFilterContextHandler(self):
-        self.userFilterCheckbox.setChecked(0) if self.userFilter else 2
-        self.populateJobTree()
-        self.resetStatusBar()
-
-    def archivedFilterContextHandler(self):
-        self.archivedCheckBox.setChecked(0) if self.showArchivedFilter else 2
-        self.populateJobTree()
-        self.resetStatusBar()
-
     def userFilterActionHandler(self):
         self.userFilterCheckbox.setChecked(0) if self.userFilter else 2
         self.userFilter = False if self.userFilter else True
@@ -407,16 +394,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.archivedCheckBox.setChecked(0) if self.showArchivedFilter else 2
         self.showArchivedFilter = False if self.showArchivedFilter else True
         self.populateJobTree(clear = True)
-
-    def jobCommandBuilder(self):
-        command = "WHERE"
-        command += " owner = %s" if self.userFilter else ""
-        command += " AND" if command != "WHERE" and not self.showArchivedFilter else ""
-        command += " archived = 0" if not self.showArchivedFilter else ""
-
-        commandTuple = (self.username,) if self.userFilter else tuple()
-
-        return [command, commandTuple] if command != "WHERE" else ["", tuple()]
 
     def jobTreeHandler(self, mode = "IDs"):
         self.resetStatusBar()
@@ -449,7 +426,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.revealDetailedHandler(job_ids, hydra_jobboard, "WHERE id = %s")
 
         #Kill or Pause Job
-        elif mode == "kill" or mode == "pause":
+        elif mode in ["kill", "pause"]:
             choice = yesNoBox(self, "Confirm", "Really {0} the selected jobs?".format(mode))
             if choice == QMessageBox.Yes:
                 responses = []
@@ -538,7 +515,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 JobUtils.prioritizeJob(job_id, reply[0])
                 self.populateJobTree()
             else:
-                logger.info("prioritizeJob skipped on {0}".format(job_id))
+                logger.debug("PrioritizeJob skipped on {0}".format(job_id))
 
     #---------------------------------------------------------------------#
     #---------------------------TASK HANDLERS-----------------------------#
@@ -710,7 +687,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     warningBox(self, "Reset Task Error", msg)
 
         #Pause or Kill Task
-        elif mode == "pause" or mode == "kill":
+        elif mode in ["pause", "kill"]:
             choice = yesNoBox(self, "Confirm", "Really {0} selected tasks?".format(mode))
             if choice == QMessageBox.Yes:
                 if mode == "kill":
@@ -765,17 +742,17 @@ class FarmView(QMainWindow, Ui_FarmView):
         job_id = job_ids[0]
         reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
         if reply[1]:
-            logger.info("Starting {0} test frames on job_id {1}".format(reply[0], job_id))
+            logger.debug("Starting {0} test frames on job_id {1}".format(reply[0], job_id))
             tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
                                             cols = ["id"], multiReturn = True)
             tasks = [int(task.id) for task in tasks]
             map(TaskUtils.startTask, tasks[0:reply[0]])
-            logger.info("Test Tasks Started!")
+            logger.debug("Test Tasks Started!")
             JobUtils.updateJobTaskCount(job_id, tasks = tasks, commit = True)
             JobUtils.manageNodeLimit(job_id)
             self.populateJobTree()
         else:
-            logger.info("No test tasks started.")
+            logger.debug("No test tasks started.")
 
     def advancedSearchHandler(self):
         #results = TaskSearchDialog.create()
@@ -842,7 +819,12 @@ class FarmView(QMainWindow, Ui_FarmView):
 
             self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(node.scheduleEnabled)))
 
-            self.renderNodeTable.setItem(row, 5, TableWidgetItem_dt(node.pulse))
+            total_seconds = (datetime.datetime.now().replace(microsecond=0) - node.pulse).total_seconds()
+            hours = int(total_seconds / 60 / 60 )
+            minutes = int(total_seconds / 60 % 60)
+            seconds = int(total_seconds % 60)
+            timeString = "{0} Hours, {1} Mins, {2} Secs ago".format(hours, minutes, seconds)
+            self.renderNodeTable.setItem(row, 5, TableWidgetItem(timeString))
             self.renderNodeTable.setItem(row, 6, TableWidgetItem(str(node.capabilities)))
             if node.host == self.thisNodeName:
                 self.renderNodeTable.item(row, 0).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
@@ -865,11 +847,16 @@ class FarmView(QMainWindow, Ui_FarmView):
         for row in range(rows):
             nodeName = str(self.renderNodeTable.item(row, 0).text())
             status, task_id, pulse, scheduleEnabled = nodeDict[nodeName]
+            total_seconds = (datetime.datetime.now().replace(microsecond=0) - pulse).total_seconds()
+            hours = int(total_seconds / 60 / 60 )
+            minutes = int(total_seconds / 60 % 60)
+            seconds = int(total_seconds % 60)
+            timeString = "{0} Hours, {1} Mins, {2} Secs ago".format(hours, minutes, seconds)
             self.renderNodeTable.setItem(row, 1, TableWidgetItem(str(niceNames[status])))
             self.renderNodeTable.item(row, 1).setBackgroundColor(niceColors[status])
             self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(task_id)))
             self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(scheduleEnabled)))
-            self.renderNodeTable.setItem(row, 5, TableWidgetItem_dt(pulse))
+            self.renderNodeTable.setItem(row, 5, TableWidgetItem(str(timeString)))
 
     def renderNodeTableHandler(self):
         self.resetStatusBar()
@@ -1016,7 +1003,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 if fnmatch.fnmatch(item, searchString):
                     mySel = QTableWidgetSelectionRange(rowIndex, 0 , rowIndex, colCount)
                     self.renderNodeTable.setRangeSelected(mySel, True)
-                    logger.info("Selecting {0} matched with {1}".format(item, searchString))
+                    logger.debug("Selecting {0} matched with {1}".format(item, searchString))
 
     #---------------------------------------------------------------------#
     #----------------------THIS NODE BUTTON HANDLERS----------------------#
@@ -1107,34 +1094,31 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     #--------------------------UPDATE HANDLERS----------------------------#
     #---------------------------------------------------------------------#
+    def findThisNode(self):
+        allNodes = hydra_rendernode.fetch(multiReturn = True, cols = ["host"])
+        if self.thisNodeName in [x.host for x in allNodes]:
+            return True
+        else:
+            warningBox(self, title = "Notice",
+                            msg = Constants.DOESNOTEXISTERR_STRING)
+            self.setThisNodeButtonsEnabled(False)
+            return False
 
     def doFetch(self):
         """Aggregate method for updating all of the widgets."""
         try:
-            #Node setup and updaters
-            self.thisNodeExists = False
+            renderCols = ["host", "status", "task_id", "pulse", "software_version",
+                            "capabilities", "scheduleEnabled"]
             allNodes = hydra_rendernode.fetch(orderTuples = (("host", "ASC"),),
                                                 multiReturn = True,
-                                                cols = ["host", "status",
-                                                        "task_id", "pulse",
-                                                        "software_version",
-                                                        "capabilities",
-                                                        "scheduleEnabled"])
-            thisNode = None
-            for node in allNodes:
-                if node.host == self.thisNodeName:
-                    thisNode = node
-
-            if thisNode:
-                self.thisNodeExists = True
-
-            if not self.thisNodeExists:
-                warningBox(self, title = "Notice",
-                                msg = Constants.DOESNOTEXISTERR_STRING)
-                self.setThisNodeButtonsEnabled(False)
-
+                                                cols = renderCols)
             self.initRenderNodeTable(allNodes)
-            self.updateStatusBar(thisNode)
+            if self.thisNodeExists:
+                thisNode = [x for x in allNodes if x.host == self.thisNodeName]
+                if len(thisNode) == 1:
+                    self.updateStatusBar(thisNode[0])
+                else:
+                    logger.error("Could not find this node!")
 
             self.initJobTree()
         except sqlerror as err:
@@ -1160,8 +1144,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             elif curTab == 2:
                 #This Node
                 if self.thisNodeExists:
-                    thisNode = hydra_rendernode.fetch("WHERE host = %s",
-                                                        (self.thisNodeName,))
                     self.updateThisNodeInfo(thisNode)
         except sqlerror as err:
             self.autoUpdateCheckbox.setCheckState(0)
@@ -1198,17 +1180,16 @@ class FarmView(QMainWindow, Ui_FarmView):
         clearLayout(self.taskGrid)
         setupDataGrid(records, columns, self.taskGrid)
 
-    def updateStatusBar(self, thisNode):
+    def updateStatusBar(self, thisNode = None):
         with transaction() as t:
             t.cur.execute ("SELECT count(status), status FROM hydra_rendernode GROUP BY status")
             counts = t.cur.fetchall()
         #logger.debug("Counts = " + str(counts))
         countString = ", ".join (["{0} {1}".format(count, niceNames[status]) for (count, status) in counts])
-        if thisNode:
+        if self.thisNodeExists:
             countString += ", {0} {1}".format(thisNode.host, niceNames[thisNode.status])
         time = datetime.datetime.now().strftime("%H:%M")
-        msg = "{0} as of {1}".format(countString, time)
-        self.statusMsg = msg
+        self.statusMsg = "{0} as of {1}".format(countString, time)
         self.statusbar.showMessage(self.statusMsg)
 
     def resetStatusBar(self):
@@ -1285,7 +1266,7 @@ def loadLog(parent, record):
         logFile = "\\".join(lSplit)
         logFile = os.path.abspath(logFile)
         if os.path.exists(logFile):
-            logger.info("Opening Log File @ {0}".format(str(logFile)))
+            logger.debug("Opening Log File @ {0}".format(str(logFile)))
             webbrowser.open(logFile)
         else:
             warningBox(parent, "Invalid Log File Path",

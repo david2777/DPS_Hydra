@@ -12,40 +12,14 @@ from Networking.Questions import KillCurrentTaskQuestion
 from Networking.Connections import TCPConnection
 import Utilities.Utils as Utils
 
-def changeStatusViaTaskID(task_id, new_status, old_status_list = []):
-    """Change the status of a task given it's ID.
-
-    Keyword Arguments:
-        old_status_list -- A list of stauses subject to change, will change all
-            if left as the default. (default [])
-    """
-    if type(old_status_list) is not list:
-        logger.error("Bad Old Status List in TaskUtils!")
-        raise Exception("Please use a list for old statuses")
-    command = "UPDATE hydra_taskboard SET status = %s WHERE id = %s"
-    commandTuple = (new_status, task_id)
-    if len(old_status_list) > 0:
-        command += " AND status = %s"
-        commandTuple += (old_status_list[0],)
-        for status in old_status_list[1:]:
-            command += " OR status = %s"
-            commandTuple += (status,)
-
-    with transaction() as t:
-        t.cur.execute(command, commandTuple)
-
 def startTask(task_id):
     """Start task if it is paused, ressurect task if it is killed/errored."""
     task = hydra_taskboard.fetch("WHERE id = %s", (task_id,), cols = ["status", "id"])
-    if task.status == READY or task.status == STARTED or task.status == FINISHED:
-        logger.info("Passing Task {0} because it is either already started or ready".format(task_id))
-    elif task.status == PAUSED or task.status == MANAGED:
-        logger.info("Setting paused Task {0} to Ready".format(task_id))
+    if task.status in [PAUSED, MANAGED, KILLED]:
+        logger.debug("Starting Task {0}".format(task_id))
         task.status = READY
         with transaction() as t:
             task.update(t)
-    else:
-        logger.info("Skipping...")
 
 def resetTask(task_id, newStatus = READY):
     """Reset a task. Returns True if successful, else False.
@@ -56,7 +30,7 @@ def resetTask(task_id, newStatus = READY):
     task = hydra_taskboard.fetch("WHERE id = %s", (task_id,),
                                     cols = ["status", "host", "startTime",
                                             "endTime", "logFile", "exitCode", "id"])
-    logger.info("Reseting Task {0}".format(task_id))
+    logger.debug("Reseting Task {0}".format(task_id))
     if task.status == STARTED:
         if not killTask(task.id):
             logger.error("Could not kill task {0}, unable to reset!".format(task_id))
@@ -71,46 +45,19 @@ def resetTask(task_id, newStatus = READY):
         task.update(t)
     return True
 
-
-def unstickTask(taskID = None, newTaskStatus = READY, host = None, newHostStatus = IDLE):
-    """Unstick and rests a task. Useful for when a node crashes."""
-    #Not sure why this function has so many optional arguments
-    if taskID:
-        task = hydra_taskboard.fetch("WHERE id = %s", (taskID,),
-                                        cols = ["host", "status", "startTime",
-                                                "endTime", "id"])
-        if newTaskStatus == READY:
-            task.host = None
-        task.status = newTaskStatus
-        task.startTime = None
-        task.endTime = None
-        if host:
-            host = hydra_rendernode.fetch("WHERE host = %s", (host,),
-                                            cols = ["task_id", "status", "host"])
-            host.task_id = None
-            host.status = newHostStatus
-        with transaction() as t:
-            task.update(t)
-            if host:
-                host.update(t)
-
 def sendKillQuestion(renderhost, newStatus=KILLED):
     """Kill the current task running on the renderhost. Return True if successful,
     else False"""
-    logger.info('Kill task on {0}'.format(renderhost))
+    logger.debug('Kill task on {0}'.format(renderhost))
     connection = TCPConnection(hostname=renderhost)
     answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
-    returnVal = False
     if answer is None:
-        logger.info("{0} appears to be offline or unresponsive. Treating as dead.".format(renderhost))
-        returnVal = None
+        logger.debug("{0} appears to be offline or unresponsive. Treating as dead.".format(renderhost))
     else:
-        logger.info("Child killed: {0}".format(answer.childKilled))
-        returnVal = answer.childKilled
+        logger.debug("Child killed: {0}".format(answer.childKilled))
         if answer and not answer.childKilled:
             logger.warning("{0} tried to kill its job but failed for some reason.".format(renderhost))
-
-    return returnVal
+    return None if answer == None else answer.childKilled
 
 def killTask(task_id, newStatus = KILLED):
     """Kill a task given it's task id. Return True if successful, else False."""
@@ -139,5 +86,5 @@ def killTask(task_id, newStatus = KILLED):
         else:
             return killed
     else:
-        logger.info("Task Kill is skipping task {0} because of status {1}".format(task.id, task.status))
+        logger.debug("Task Kill is skipping task {0} because of status {1}".format(task.id, task.status))
         return True

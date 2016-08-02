@@ -54,8 +54,9 @@ def startJob(job_id):
     """Start every subtask of a job."""
     tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
                                     multiReturn = True,
-                                    cols = ["id"])
+                                    cols = ["id", "status"])
     map(TaskUtils.startTask, [task.id for task in tasks])
+    setupNodeLimit(job_id)
     updateJobTaskCount(job_id, tasks)
 
 def killJob(job_id, newStatus = KILLED):
@@ -80,7 +81,7 @@ def resetJob(job_id, newStatus = READY):
         newStatus -- The status each task should assume after it's been reset. (default READY)
     """
     tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
-                                    multiReturn = True, cols = ["id", "job_id"])
+                                    multiReturn = True, cols = ["id", "job_id", "status"])
     responses = [TaskUtils.resetTask(task.id, newStatus) for task in tasks]
     updateJobTaskCount(job_id, tasks)
     return False if False in responses else True
@@ -138,4 +139,4 @@ def manageNodeLimit(job_id, hold_status = MANAGED):
         for task_id in startList[0:taskLimit]:
             TaskUtils.startTask(task_id)
 
-    logger.info("Node Limit managed on Job: {0}".format(job_id))
+    logger.debug("Node Limit managed on Job: {0}".format(job_id))

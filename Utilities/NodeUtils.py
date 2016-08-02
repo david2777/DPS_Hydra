@@ -166,6 +166,15 @@ def getThisNodeData():
         thisNode = None
     return thisNode
 
+def resetNode(host):
+    with transaction() as t:
+        host = hydra_rendernode.fetch("WHERE host = %s", (host,),
+                                        cols = ["task_id", "status", "host"],
+                                        explicitTransaction = t)
+        host.task_id = None
+        host.status = newHostStatus
+        host.update(t)
+
 def onlineNode(node):
     """Sets a node to be online given it's node object"""
     if node.status == IDLE:

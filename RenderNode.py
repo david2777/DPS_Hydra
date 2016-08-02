@@ -17,6 +17,7 @@ from Networking.Servers import TCPServer
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
 import Utilities.Utils as Utils
+import Utilities.NodeUtils as NodeUtils
 import Utilities.JobUtils as JobUtils
 import Utilities.TaskUtils as TaskUtils
 
@@ -63,7 +64,8 @@ class RenderTCPServer(TCPServer):
         if self.thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
             newStatus = OFFLINE if self.thisNode.status in [OFFLINE, PENDING] else IDLE
-            TaskUtils.unstickTask(self.thisNode.task_id, READY, self.thisNode.host, newStatus)
+            TaskUtils.resetTask(self.thisNode.task_id)
+            NodeUtils.resetNode(self.thisNode.host)
             task = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,), cols = ["job_id"])
             JobUtils.manageNodeLimit(task.job_id)
         elif self.thisNode.status in [STARTED, PENDING]:
