@@ -171,6 +171,20 @@ class RenderManagementServer(TCPServer):
     def startTimeoutThread(self, node, timeout):
         logger.debug("Starting timeout thread for node: {0}".format(node.host))
 
+    def updateCurrentFrame(self, node, frame):
+        logger.debug("Updating current frame on task {0} to {1}".format(node, frame))
+        try:
+            thisNode = self.allNodes[node]
+        except KeyError:
+            logger.error("Could not find node '{0}'!".format(node))
+            return False
+        with transaction() as t:
+            thisTask = hydra_taskboard.fetch("WHERE id = %s", (thisNode.task_id,),
+                                                explicitTransaction = t)
+            thisTask.currentFrame = frame
+            thisTask.update(t)
+        return True
+
 def main():
     logger.debug('Starting in {0}'.format(os.getcwd()))
     logger.debug('arglist {0}'.format(sys.argv))

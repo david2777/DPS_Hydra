@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 5.7.9, for Win64 (x86_64)
 --
--- Host: PURPLE    Database: hydra
+-- Host: 127.0.0.1    Database: hydra
 -- ------------------------------------------------------
 -- Server version	5.7.9-log
 
@@ -64,7 +64,7 @@ DROP TABLE IF EXISTS `hydra_jobboard`;
 CREATE TABLE `hydra_jobboard` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID for the job, Auto Increment by DB on  insertion of job, ',
   `execName` varchar(20) NOT NULL COMMENT 'Executeable the job needs',
-  `baseCMD` varchar(255) NOT NULL COMMENT 'The base CMD, ie. -x 1280 -y 720 -cam "TestCam" etc.',
+  `baseCMD` varchar(512) NOT NULL COMMENT 'The base CMD, ie. -x 1280 -y 720 -cam "TestCam" etc.',
   `startFrame` int(6) DEFAULT '1' COMMENT 'The start frame of the job',
   `endFrame` int(6) DEFAULT '1' COMMENT 'The end frame of the job',
   `byFrame` int(4) DEFAULT '1' COMMENT 'Render each x frame. Caluclated by SubmitterMain for now so we can append the last frame to the frames. Should be editable in FarmView eventually. ',
@@ -86,7 +86,7 @@ CREATE TABLE `hydra_jobboard` (
   `attempts` int(4) DEFAULT '0' COMMENT 'Number of times a job has been attempted and failed.',
   `maxAttempts` int(4) DEFAULT '10' COMMENT 'Maximum attempts before a job is stopped as Error.',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -123,22 +123,23 @@ DROP TABLE IF EXISTS `hydra_taskboard`;
 CREATE TABLE `hydra_taskboard` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'The task id for this task. Auto incremented and created on submission by DB. ',
   `job_id` int(11) NOT NULL COMMENT 'The job_id for this task. ',
-  `status` char(1) DEFAULT NULL COMMENT 'Current task status',
+  `status` char(1) DEFAULT 'U' COMMENT 'Current task status',
   `startTime` datetime DEFAULT NULL COMMENT 'Time the task started',
   `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',
   `host` varchar(80) DEFAULT NULL COMMENT 'Host the task is running on',
   `exitCode` int(11) DEFAULT NULL COMMENT 'Exit code from the subprocess',
   `logFile` varchar(100) DEFAULT NULL COMMENT 'Log file directory (Local)',
   `priority` int(4) DEFAULT '50' COMMENT 'Priority for the task',
-  `startFrame` int(6) DEFAULT '1' COMMENT 'The frame for this task',
-  `endFrame` int(6) DEFAULT '1',
+  `startFrame` int(6) NOT NULL COMMENT 'The frame for this task',
+  `endFrame` int(6) NOT NULL,
+  `currentFrame` int(6) NOT NULL COMMENT 'Current frame being rendered',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `id_idx` (`job_id`),
   KEY `node_key_idx` (`host`),
   CONSTRAINT `job_id_key` FOREIGN KEY (`job_id`) REFERENCES `hydra_jobboard` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `renderhost_key` FOREIGN KEY (`host`) REFERENCES `hydra_rendernode` (`host`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=56 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -150,4 +151,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-08-01 21:53:32
+-- Dump completed on 2016-08-02 17:46:26

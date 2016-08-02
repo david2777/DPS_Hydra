@@ -89,7 +89,8 @@ class UberJobTicket:
                                     status = self.jobStatus,
                                     priority = self.priority,
                                     startFrame = startFrame,
-                                    endFrame = endFrame)
+                                    endFrame = endFrame,
+                                    currentFrame = startFrame)
             taskList.append(task)
 
         with transaction() as t:

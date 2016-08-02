@@ -1,0 +1,2 @@
+int $currentFrame = `currentTime -query`;
+exec(("C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\dist\\FrameUpdater.exe " + $currentFrame));

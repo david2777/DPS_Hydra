@@ -24,6 +24,14 @@ class StartRenderQuestion(Question):
         response = server.startRenderTask(self.job, self.task)
         return response
 
+class updateCurrentFrameQuestion(Question):
+    def __init__(self, node, frame):
+        self.node = node
+        self.frame = frame
+    def computeAnswer(self, server):
+        response = server.updateCurrentFrame(self.node, self.frame)
+        return response
+
 class CMDQuestion(Question):
     """A Question for running arbitrary commands on a server."""
     def __init__(self, args):
