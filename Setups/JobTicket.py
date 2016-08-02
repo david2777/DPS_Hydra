@@ -23,7 +23,7 @@ class UberJobTicket:
         self.jobStatus = jobStatus      #CHAR(1)
         self.niceName = niceName        #VARCHAR(60)
         self.owner = owner              #VARCHAR(45)
-        self.compatabilityPattern = ("%"+("%".join(sorted(compatabilityList)))+"%")#VARCHAR(255)
+        self.compatabilityPattern = " ".join(sorted(compatabilityList)) #VARCHAR(255)
         self.createTime = datetime.now()#DATETIME
         self.maxNodes = maxNodes        #TINYINT(4)     ie.(0-255)
         self.timeout = int(timeout * 60)#SMALLINT(6)    ie.(0-65535)
@@ -88,7 +88,6 @@ class UberJobTicket:
             task = hydra_taskboard(job_id = self.job_id,
                                     status = self.jobStatus,
                                     priority = self.priority,
-                                    requirements = self.compatabilityPattern,
                                     startFrame = startFrame,
                                     endFrame = endFrame)
             taskList.append(task)

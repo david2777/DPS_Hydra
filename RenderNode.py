@@ -134,15 +134,11 @@ class RenderTCPServer(TCPServer):
                         renderTask.status = FINISHED
                         renderTask.endTime = datetime.datetime.now()
                     #TODO: Find a better way to mark jobs as failed on a node
+                    #TODO: Add attempts to this
                     else:
-                        renderTask.attempts += 1
-                        if renderTask.attempts >= renderTask.maxAttempts:
-                            renderTask.status = ERROR
-                            renderTask.endTime = datetime.datetime.now()
-                        else:
-                            renderTask.status = READY
-                            renderTask.startTime = None
-                            renderTask.endTime = None
+                        renderTask.status = READY
+                        renderTask.startTime = None
+                        renderTask.endTime = None
 
                 if self.thisNode.status == STARTED:
                     self.thisNode.status = IDLE

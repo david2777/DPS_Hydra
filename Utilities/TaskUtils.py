@@ -55,8 +55,7 @@ def resetTask(task_id, newStatus = READY):
     """
     task = hydra_taskboard.fetch("WHERE id = %s", (task_id,),
                                     cols = ["status", "host", "startTime",
-                                            "endTime", "logFile", "exitCode",
-                                            "failures", "attempts", "id"])
+                                            "endTime", "logFile", "exitCode", "id"])
     logger.info("Reseting Task {0}".format(task_id))
     if task.status == STARTED:
         if not killTask(task.id):
@@ -68,8 +67,6 @@ def resetTask(task_id, newStatus = READY):
     task.endTime = None
     task.logFile = None
     task.exitCode = None
-    task.failures = ""
-    task.attempts = 0
     with transaction() as t:
         task.update(t)
     return True

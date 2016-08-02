@@ -1,3 +1,4 @@
+from __future__ import division
 """The software for managing jobs, tasks, and nodes."""
 #Standard
 import os
@@ -118,13 +119,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskTable.setColumnWidth(7, 120)       #End Time
         self.taskTable.setColumnWidth(8, 120)       #Duration
         self.taskTable.setColumnWidth(9, 120)       #Code
-        self.taskTable.setColumnWidth(10, 120)      #Attempts
-        self.taskTable.setColumnWidth(11, 175)      #Reqs
 
         #Set Job List splitter size
-        #These numbers are really high so that they work proportionally
-        #The 10000 makes it so that the 8500 is 85%
-        self.splitter_jobList.setSizes([8500, 10000])
+        self.splitter_jobList.setSizes([11000, 10000])
 
         #Get rid of the spaces between gird layouts
         self.gridLayout_taskList.setContentsMargins(0,0,0,0)
@@ -511,13 +508,10 @@ class FarmView(QMainWindow, Ui_FarmView):
                         if job.archived == 0:
                             new = 1
                         job_command = "UPDATE hydra_jobboard SET archived = %s WHERE id = %s"
-                        task_command = "UPDATE hydra_taskboard SET archived = %s WHERE job_id = %s"
                         commandList.append(job_command.format(new, job_id))
-                        commandList.append(task_command.format(new, job_id))
 
                     with transaction() as t:
                         t.cur.execute(job_command, (new, job_id,))
-                        t.cur.execute(task_command, (new, job_id,))
 
                 except sqlerror as err:
                     logger.error(str(err))
@@ -580,7 +574,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         newValue = str(item.text())
         task_id = int(self.taskTable.item(row, 0).text())
         valueMap = {1 : "startFrame", 2 : "endFrame", 3 : "host", 5 : "priority",
-                    9 : "exitCode", 10 : "failures", 11 : "requirements"}
+                    9 : "exitCode"}
         if col in [0,4,6,7,8]:#ID, Status, Start Time, End Time, Duration
             logger.warning("You probably shouldn't edit those...")
             return
@@ -616,8 +610,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                                             cols = ["id", "startTime", "endTime",
                                                     "startFrame", "endFrame",
                                                     "host", "status", "priority",
-                                                    "exitCode", "failures",
-                                                    "requirements"],
+                                                    "exitCode"],
                                             multiReturn = True)
         except sqlerror as err:
             warningBox(self, "SQL Error", str(err))
@@ -634,8 +627,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             elif task.startTime:
                 tdiff = datetime.datetime.now().replace(microsecond=0) - task.startTime
             #Populate the taskTable
-            #Remove first and last "%", replace with ", "
-            reqsString = str(task.requirements)[1:-1].replace("%", ", ")
             self.taskTable.setItem(pos, 0, TableWidgetItem_int(str(task.id)))
             self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.startFrame)))
             self.taskTable.setItem(pos, 2, TableWidgetItem_int(str(task.endFrame)))
@@ -647,8 +638,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(task.endTime)))
             self.taskTable.setItem(pos, 8, TableWidgetItem_dt(str(tdiff)))
             self.taskTable.setItem(pos, 9, TableWidgetItem_int(str(task.exitCode)))
-            self.taskTable.setItem(pos, 10, TableWidgetItem(str(task.failures)))
-            self.taskTable.setItem(pos, 11, TableWidgetItem_int(reqsString))
 
         self.taskTable.itemChanged.connect(self.taskTableEditHandler)
         JobUtils.updateJobTaskCount(job_id)
@@ -656,7 +645,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def updateTaskTable(self):
         if self.currentJobSel:
-            cmd = "SELECT host, status, startTime, endTime ,exitCode, failures FROM hydra_taskboard WHERE job_id = %s"
+            cmd = "SELECT host, status, startTime, endTime, exitCode FROM hydra_taskboard WHERE job_id = %s"
             with transaction() as t:
                 t.cur.execute(cmd, (self.currentJobSel,))
                 tasks = t.cur.fetchall()
@@ -677,7 +666,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(task[3])))
                 self.taskTable.setItem(pos, 8, TableWidgetItem_dt(str(tdiff)))
                 self.taskTable.setItem(pos, 9, TableWidgetItem_int(str(task[4])))
-                self.taskTable.setItem(pos, 10, TableWidgetItem(str(task[5])))
 
             self.taskTable.itemChanged.connect(self.taskTableEditHandler)
 

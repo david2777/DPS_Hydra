@@ -156,7 +156,7 @@
     finished on termination.
 
 -[In Progress]Render Manager
-    -Move Requirements, Failures to JobBoard
+    -Move Requirements, Failures, attempts to JobBoard
 
 -[Todo]Make better icons
 
