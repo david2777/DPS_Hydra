@@ -115,13 +115,6 @@ class RenderManagementServer(TCPServer):
 
     def filterTask(self, task, job, node):
         returnList = []
-        #Check reqs
-        taskReqs = task.requirements.split(" ")
-        taskReqs = [x for x in taskReqs if x != ""]
-        returnList += [x in node.capabilities.split(" ") for x in taskReqs]
-        logger.debug(returnList)
-        logger.debug(node.capabilities.split(" "))
-        logger.debug(task.requirements.split(" "))
         #Check min priority
         returnList.append(int(task.priority) >= int(node.minPriority))
         logger.debug([int(task.priority), int(node.minPriority)])
