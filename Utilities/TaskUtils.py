@@ -61,6 +61,7 @@ def sendKillQuestion(renderhost, newStatus=KILLED):
 
 def killTask(task_id, newStatus = KILLED):
     """Kill a task given it's task id. Return True if successful, else False."""
+    #TODO:Figure out better way to handle no kill response
     task = hydra_taskboard.fetch("WHERE id = %s", (task_id,),
                                     cols = ["status", "startTime", "endTime",
                                             "exitCode", "host", "id"])
