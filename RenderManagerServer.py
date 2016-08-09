@@ -140,7 +140,8 @@ class RenderManagementServer(TCPServer):
             self.lastTimeoutCheck = self.nowTime
         self.nowTime = datetime.datetime.now()
         timeDelta = (self.nowTime - self.lastTimeoutCheck).total_seconds()
-        for taskID, timeout in self.timeouts.iteritems():
+        iterList = [[k,v] for k,v in self.timeouts.iteritems()]
+        for taskID, timeout in iterList:
             task = hydra_taskboard.fetch("WHERE id = %s", (taskID,))
             if task.status != "S":
                 self.timeouts.pop(taskID, None)

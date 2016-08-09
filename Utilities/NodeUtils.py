@@ -1,6 +1,7 @@
 """Useful utilities to get info on or modify nodes listed on the database."""
 #Standard
 import datetime
+import re
 
 #Third Party
 from MySQLdb import Error as sqlerror
@@ -9,6 +10,27 @@ from MySQLdb import Error as sqlerror
 from Constants import TIMEDICT, TIMEDICT_REV, DAYDICT, EVENTDICT
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
+
+def getSoftwareVersionText(sw_ver):
+    """Given the software_version attribute of a hydra_rendernode row, returns
+    a string suitable for display purposes."""
+
+    #Get RenderNodeMain version number if exists
+    if sw_ver:
+        #Case 1: executable in a versioned directory
+        v = re.search("Hydra_RenderFarm_([0-9]+)", sw_ver, re.IGNORECASE)
+        if v:
+            return v.group(1)
+
+        #Case 2: source code file
+        elif re.search("rendernodemain.py$", sw_ver, re.IGNORECASE):
+            return "Dev"
+
+        #Case 3: no freakin' clue
+        return "Unkown_Dev"
+
+    else:
+        return "None"
 
 def simplifyScheduleData(qtDataList):
     """Take data from the QTableWidget, simplifty it for storage in the DB"""

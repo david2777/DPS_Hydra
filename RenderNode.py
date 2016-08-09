@@ -41,9 +41,9 @@ class RenderTCPServer(TCPServer):
         self.rsGPUs = self.rsGPUs.split(",")[:-1]
         self.rsGPUids = [x.split(":")[0] for x in self.rsGPUs]
         if len(self.rsGPUs) != len(self.rsGPUids):
-            logger.warning("Problems parsing RS Preferences")
-            logger.info("{0} Redshift Enabled GPU(s) found on this node".format(len(self.rsGPUs)))
-            logger.debug("GPUs available for rendering are {0}".format(self.rsGPUs))
+            logger.warning("Problems parsing Redshift Preferences")
+        logger.info("{0} Redshift Enabled GPU(s) found on this node".format(len(self.rsGPUs)))
+        logger.debug("GPUs available for rendering are {0}".format(self.rsGPUs))
 
         #Create RenderLog Directory
         if not os.path.isdir(Constants.RENDERLOGDIR):
@@ -52,7 +52,7 @@ class RenderTCPServer(TCPServer):
         #Load executeables from DB
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}
-        logger.info(self.execsDict)
+        logger.debug(self.execsDict)
 
         #Setup Class Variables
         self.childProcess = None
@@ -94,7 +94,7 @@ class RenderTCPServer(TCPServer):
         logger.info('Starting render task {0}'.format(renderTask.id))
         log = file(renderTask.logFile, 'w')
         log.write('Hydra log file {0} on {1}\n'.format(renderTask.logFile, renderTask.host))
-        log.write('RenderNodeMain is {0}\n'.format(sys.argv))
+        log.write('RenderNode is {0}\n'.format(sys.argv))
         log.write('Command: {0}\n\n'.format(renderCMD))
         Utils.flushOut(log)
 

@@ -22,7 +22,6 @@ import RenderNode
 from Setups.LoggingSetup import logger, outputWindowFormatter
 from Setups.MySQLSetup import *
 from Constants import BASELOGDIR
-from FarmView import getSoftwareVersionText
 from Setups.Threads import stoppableThread, workerSignalThread
 import Utilities.NodeUtils as NodeUtils
 import Utilities.TaskUtils as TaskUtils
@@ -386,7 +385,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         else:
             taskText = "None"
         self.taskIDLabel.setText(taskText)
-        self.nodeVersionLabel.setText(getSoftwareVersionText(self.thisNode.software_version))
+        self.nodeVersionLabel.setText(NodeUtils.getSoftwareVersionText(self.thisNode.software_version))
         self.minPriorityLabel.setText(str(self.thisNode.minPriority))
         self.capabilitiesLabel.setText(self.thisNode.capabilities)
         self.scheduleEnabled.setText(str(self.thisNode.scheduleEnabled))

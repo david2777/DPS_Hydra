@@ -2,7 +2,6 @@ from __future__ import division
 """The software for managing jobs, tasks, and nodes."""
 #Standard
 import os
-import re
 import sys
 import time
 import fnmatch
@@ -22,6 +21,7 @@ from CompiledUI.UI_FarmView import Ui_FarmView
 from Dialogs.TaskSearchDialog import TaskSearchDialog
 from Dialogs.NodeEditorDialog import NodeEditorDialog
 from Dialogs.DetailedDialog import DetailedDialog
+from Dialogs.DataTable import DataTableDialog
 from Dialogs.MessageBoxes import *
 
 #Hydra
@@ -235,6 +235,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         dataList = [sqlTable.fetch(sqlWhere, (d_id,)) for d_id in data_ids]
         DetailedDialog.create(dataList)
 
+    def revealDataTable(self, data_ids, sqlTable, sqlWhere):
+        dataList = sqlTable.fetch(sqlWhere, (data_ids,))
+        DataTableDialog.create(dataList)
+
     #---------------------------------------------------------------------#
     #----------------------------JOB HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
@@ -416,7 +420,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Reveal Detailed Data
         elif mode == "data":
-            self.revealDetailedHandler(job_ids, hydra_jobboard, "WHERE id = %s")
+            if len(job_ids) == 1:
+                self.revealDataTable(job_ids, hydra_jobboard, "WHERE id = %s")
+            else:
+                self.revealDetailedHandler(job_ids, hydra_jobboard, "WHERE id = %s")
 
         #Kill or Pause Job
         elif mode in ["kill", "pause"]:
@@ -608,6 +615,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addJobTreeShot(job)
 
     def updateTaskTable(self):
+        #NOTE:This method is broken because sorting will change the order...
+        #Probably doesn't matter since I think I'll change this to a TreeView soon
         if not self.currentJobSel:
             return
         tasks = hydra_taskboard.fetch("WHERE job_id = %s", (self.currentJobSel,),
@@ -656,7 +665,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #load Detailed Data
         if mode == "data":
-            self.revealDetailedHandler(task_ids, hydra_taskboard, "WHERE id = %s")
+            if len(task_ids) == 1:
+                self.revealDataTable(task_ids, hydra_taskboard, "WHERE id = %s")
+            else:
+                self.revealDetailedHandler(task_ids, hydra_taskboard, "WHERE id = %s")
 
         #Start Task
         elif mode == "start":
@@ -696,7 +708,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             if len(task_ids) == 1:
                 task = hydra_taskboard.fetch("WHERE id = %s", (task_ids[0],),
                                             cols = ["logFile", "host", "id"])
-                loadLog(self, task)
+                self.loadLog(task)
             else:
                 choice = yesNoBox(self, "Open logs?", "Note, this will open a text"
                                 " editor for EACH task selected. Continue?")
@@ -705,7 +717,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 for task_id in task_ids:
                     task = hydra_taskboard.fetch("WHERE id = %s", (task_id,),
                                                 cols = ["logFile", "host", "id"])
-                    loadLog(self, task)
+                    self.loadLog(task)
 
 
         else:
@@ -714,6 +726,26 @@ class FarmView(QMainWindow, Ui_FarmView):
         JobUtils.manageNodeLimit(self.currentJobSel)
         JobUtils.updateJobTaskCount(self.currentJobSel)
         self.doUpdate()
+
+    def loadLog(self, record):
+        logFile = record.logFile
+        if logFile:
+            logFile = os.path.abspath(logFile)
+            lSplit = logFile.split("\\")
+            lSplit[0] = "\\\\{0}".format(record.host)
+            logFile = "\\".join(lSplit)
+            logFile = os.path.abspath(logFile)
+            if os.path.exists(logFile):
+                logger.debug("Opening Log File @ {0}".format(str(logFile)))
+                webbrowser.open(logFile)
+            else:
+                warningBox(self, "Invalid Log File Path",
+                        "Invalid log file path for task: {0}".format(record.id))
+                logger.error("Invalid log file path for task: {0}".format(record.id))
+                logger.error(logFile)
+        else:
+            warningBox(self, "No Log on File", Constants.NOLOG_STRING.format(record.id))
+            logger.warning("No log file on record for task: {0}".format(record.id))
 
     def advancedSearchHandler(self):
         #results = TaskSearchDialog.create()
@@ -759,8 +791,12 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.nodeMenu.popup(QCursor.pos())
 
-
-    def initRenderNodeTable(self, nodes):
+    def initRenderNodeTable(self):
+        renderCols = ["host", "status", "task_id", "pulse", "software_version",
+                        "capabilities", "scheduleEnabled"]
+        nodes = hydra_rendernode.fetch(orderTuples = (("host", "ASC"),),
+                                            multiReturn = True,
+                                            cols = renderCols)
         self.renderNodeTable.setSortingEnabled(False)
         self.renderNodeTable.setRowCount(len(nodes))
         for row, node in enumerate(nodes):
@@ -773,7 +809,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 seconds = int(total_seconds % 60)
                 timeString = "{0} Hours, {1} Mins, {2} Secs ago".format(hours, minutes, seconds)
 
-            nodeVersion  = getSoftwareVersionText(node.software_version)
+            nodeVersion = NodeUtils.getSoftwareVersionText(node.software_version)
             self.renderNodeTable.setItem(row, 0, TableWidgetItem(str(node.host)))
             self.renderNodeTable.setItem(row, 1, TableWidgetItem(str(niceNames[node.status])))
             self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(node.task_id)))
@@ -785,36 +821,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             if node.host == self.thisNodeName:
                 self.renderNodeTable.item(row, 0).setFont(QFont('Segoe UI', 8, QFont.DemiBold))
         self.renderNodeTable.setSortingEnabled(True)
-
-    def updateRenderNodeTable(self):
-        #TODO: Update this to use fetch with cols for performance
-        rows = self.renderNodeTable.rowCount()
-        try:
-            with transaction() as t:
-                query = "SELECT host, status, task_id, pulse, scheduleEnabled FROM hydra_rendernode"
-                t.cur.execute(query)
-                nodeData = t.cur.fetchall()
-        except sqlerror as err:
-            logger.error(str(err))
-            SQLErrorBox(self)
-
-        #h = host, s = status, t = task_id, p = pulse
-        nodeDict = {h:[s,t,p,e] for h, s, t, p, e in nodeData}
-        for row in range(rows):
-            nodeName = str(self.renderNodeTable.item(row, 0).text())
-            status, task_id, pulse, scheduleEnabled = nodeDict[nodeName]
-            timeString = "None"
-            if pulse:
-                total_seconds = (datetime.datetime.now().replace(microsecond=0) - pulse).total_seconds()
-                hours = int(total_seconds / 60 / 60 )
-                minutes = int(total_seconds / 60 % 60)
-                seconds = int(total_seconds % 60)
-                timeString = "{0} Hours, {1} Mins, {2} Secs ago".format(hours, minutes, seconds)
-            self.renderNodeTable.setItem(row, 1, TableWidgetItem(str(niceNames[status])))
-            self.renderNodeTable.item(row, 1).setBackgroundColor(niceColors[status])
-            self.renderNodeTable.setItem(row, 2, TableWidgetItem(str(task_id)))
-            self.renderNodeTable.setItem(row, 4, TableWidgetItem(str(scheduleEnabled)))
-            self.renderNodeTable.setItem(row, 5, TableWidgetItem(str(timeString)))
 
     def renderNodeTableHandler(self):
         self.resetStatusBar()
@@ -837,17 +843,10 @@ class FarmView(QMainWindow, Ui_FarmView):
                           " these nodes?\n" + str(hosts))
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
-                try:
-                    thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
-                                                        cols = ["status", "task_id", "host"])
-                    NodeUtils.onlineNode(thisNode)
-                except sqlerror as err:
-                    logger.error(str(err))
-                    SQLErrorBox(self)
-                finally:
-                    self.updateRenderNodeTable()
-        else:
-            aboutBox(self, "Aborted", "No action taken.")
+                thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
+                                                    cols = ["status", "task_id", "host"])
+                NodeUtils.onlineNode(thisNode)
+            self.initRenderNodeTable()
 
     def offlineRenderNodesHandler(self):
         hosts = self.renderNodeTableHandler()
@@ -858,17 +857,10 @@ class FarmView(QMainWindow, Ui_FarmView):
                           " these nodes?\n" + str(hosts))
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
-                try:
-                    thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
-                                                        cols = ["status", "task_id", "host"])
-                    NodeUtils.offlineNode(thisNode)
-                except sqlerror as err:
-                    logger.error(str(err))
-                    SQLErrorBox(self)
-                finally:
-                    self.updateRenderNodeTable()
-        else:
-            aboutBox(self, "Aborted", "No action taken.")
+                thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
+                                                    cols = ["status", "task_id", "host"])
+                NodeUtils.offlineNode(thisNode)
+            self.initRenderNodeTable()
 
     def getOffRenderNodesHandler(self):
         hosts = self.renderNodeTableHandler()
@@ -876,29 +868,29 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
 
         choice = yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
-        if choice == QMessageBox.Yes:
-            for renderHost in hosts:
-                thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
-                                                    cols = ["host", "status", "task_id"])
-                NodeUtils.offlineNode(thisNode)
-                if thisNode.task_id:
-                    try:
-                        response = TaskUtils.killTask(thisNode.task_id, READY)
-                        if not response:
-                            logger.warning("Problem killing task durring GetOff on {0}".format(thisNode.host))
-                            warningBox(self, "Error",
-                                    "There was a problem killing the task during GetOff on {0}".format(thisNode.host))
-                        else:
-                            aboutBox(self, "Success", "Job was reset, {0} offlined.".format(thisNode.host))
-                    except socketerror:
-                        logger.error(socketerror.message)
-                        warningBox(self, "Error", Constants.SOCKETERR_STRING)
-                else:
-                    aboutBox(self, "Success", "No job was found on {0}, node offlined".format(thisNode.host))
+        if choice == QMessageBox.No:
+            return
 
-                self.updateRenderNodeTable()
-        else:
-            aboutBox(self, "Aborted", "No action taken.")
+        for renderHost in hosts:
+            thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
+                                                cols = ["host", "status", "task_id"])
+            NodeUtils.offlineNode(thisNode)
+            if thisNode.task_id:
+                try:
+                    response = TaskUtils.killTask(thisNode.task_id, READY)
+                    if not response:
+                        logger.warning("Problem killing task durring GetOff on {0}".format(thisNode.host))
+                        warningBox(self, "Error",
+                                "There was a problem killing the task during GetOff on {0}".format(thisNode.host))
+                    else:
+                        aboutBox(self, "Success", "Job was reset, {0} offlined.".format(thisNode.host))
+                except socketerror:
+                    logger.error(socketerror.message)
+                    warningBox(self, "Error", Constants.SOCKETERR_STRING)
+            else:
+                aboutBox(self, "Success", "No job was found on {0}, node offlined".format(thisNode.host))
+
+            self.initRenderNodeTable()
 
     def nodeEditorTableHandler(self):
         hosts = self.renderNodeTableHandler()
@@ -917,38 +909,39 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.doFetch()
 
     def nodeEditor(self, nodeName):
-        nodeExists = True
-        if nodeExists:
-            thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
-                                                cols = ["host", "minPriority",
-                                                        "capabilities",
-                                                        "scheduleEnabled",
-                                                        "weekSchedule"])
-            comps = thisNode.capabilities.split(" ")
-            defaults = {"host" : thisNode.host,
-                        "priority" : thisNode.minPriority,
-                        "comps" : comps,
-                        "scheduleEnabled" : int(thisNode.scheduleEnabled),
-                        "weekSchedule" : thisNode.weekSchedule}
-            edits = NodeEditorDialog.create(defaults)
-            #logger.debug(edits)
-            if edits:
-                if edits["schedEnabled"]:
-                    schedEnabled = 1
-                else:
-                    schedEnabled = 0
-                query = "UPDATE hydra_rendernode SET minPriority = %s"
-                query += ", scheduleEnabled = %s, capabilities = %s"
-                query += " WHERE host = %s"
-                editsTuple = (edits["priority"], schedEnabled, edits["comps"], nodeName)
-                with transaction() as t:
-                    t.cur.execute(query, editsTuple)
-                self.updateRenderNodeTable()
+        thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
+                                            cols = ["host", "minPriority",
+                                                    "capabilities",
+                                                    "scheduleEnabled",
+                                                    "weekSchedule"])
+        comps = thisNode.capabilities.split(" ")
+        defaults = {"host" : thisNode.host,
+                    "priority" : thisNode.minPriority,
+                    "comps" : comps,
+                    "scheduleEnabled" : int(thisNode.scheduleEnabled),
+                    "weekSchedule" : thisNode.weekSchedule}
+        edits = NodeEditorDialog.create(defaults)
+        #logger.debug(edits)
+        if edits:
+            if edits["schedEnabled"]:
+                schedEnabled = 1
+            else:
+                schedEnabled = 0
+            query = "UPDATE hydra_rendernode SET minPriority = %s"
+            query += ", scheduleEnabled = %s, capabilities = %s"
+            query += " WHERE host = %s"
+            editsTuple = (edits["priority"], schedEnabled, edits["comps"], nodeName)
+            with transaction() as t:
+                t.cur.execute(query, editsTuple)
+            self.initRenderNodeTable()
 
     def revealNodeDetailedHandler(self):
         node_list = self.renderNodeTableHandler()
         if node_list:
-            self.revealDetailedHandler(node_list, hydra_rendernode, "WHERE host = %s")
+            if len(node_list) == 1:
+                self.revealDataTable(node_list, hydra_rendernode, "WHERE host = %s")
+            else:
+                self.revealDetailedHandler(node_list, hydra_rendernode, "WHERE host = %s")
 
     def selectByHostHandler(self):
         reply = strBox(self, "Select By Host Name", "Host (using * as wildcard):")
@@ -979,46 +972,30 @@ class FarmView(QMainWindow, Ui_FarmView):
     def onlineThisNodeHandler(self):
         """Changes the local render node's status to online if it was offline,
         goes back to started if it was pending offline."""
-        #Get most current info from the database
-        try:
-            thisNode = NodeUtils.getThisNodeData()
-        except sqlerror as err:
-            logger.error(str(err))
-            SQLErrorBox(self)
-            return
-
+        thisNode = NodeUtils.getThisNodeData()
         if thisNode:
             NodeUtils.onlineNode(thisNode)
             self.updateStatusBar(thisNode)
-
-        self.updateRenderNodeTable()
+            self.initRenderNodeTable()
 
     def offlineThisNodeHandler(self):
         """Changes the local render node's status to offline if it was idle,
         pending if it was working on something."""
         #Get the most current info from the database
-        try:
-            thisNode = NodeUtils.getThisNodeData()
-        except sqlerror as err:
-            logger.error(str(err))
-            SQLErrorBox(self)
-            return
-
+        thisNode = NodeUtils.getThisNodeData()
         if thisNode:
             NodeUtils.offlineNode(thisNode)
             self.updateStatusBar(thisNode)
-
-        self.updateRenderNodeTable()
+            self.initRenderNodeTable()
 
     def getOffThisNodeHandler(self):
         """Offlines the node and sends a message to the render node server
         running on localhost to kill its current task(task will be
         resubmitted)"""
-        try:
-            thisNode = NodeUtils.getThisNodeData()
-        except sqlerror as err:
-            logger.error(str(err))
-            SQLErrorBox(self)
+        thisNode = NodeUtils.getThisNodeData()
+        if not thisNode:
+            logger.error("This Node could not be found while trying to getOff!")
+            warningBox(self, "Error", "This Node could not be found while trying to getOff!")
             return
 
         choice = yesNoBox(self, "Confirm", Constants.GETOFFLOCAL_STRING)
@@ -1039,11 +1016,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                     warningBox(self, "Error", Constants.SOCKETERR_STRING)
             else:
                 aboutBox(self, "Success", "No job was found on node, node offlined")
-            self.updateRenderNodeTable()
-            if thisNode:
-                self.updateStatusBar(thisNode)
-        else:
-            aboutBox(self, "Abort", "No action taken.")
+            self.initRenderNodeTable()
+            self.updateStatusBar(thisNode)
 
     def nodeEditorHandler(self):
         if self.thisNodeExists:
@@ -1053,59 +1027,44 @@ class FarmView(QMainWindow, Ui_FarmView):
     #--------------------------UPDATE HANDLERS----------------------------#
     #---------------------------------------------------------------------#
     def findThisNode(self):
-        allNodes = hydra_rendernode.fetch(multiReturn = True, cols = ["host"])
-        if self.thisNodeName in [x.host for x in allNodes]:
-            return True
-        else:
-            warningBox(self, title = "Notice",
-                            msg = Constants.DOESNOTEXISTERR_STRING)
-            self.setThisNodeButtonsEnabled(False)
-            return False
+        allNodes = hydra_rendernode.fetch(multiReturn = True, cols = ["host", "status"])
+        for node in allNodes:
+            if node.host == self.thisNodeName:
+                return node
+        #If node cannot be found
+        warningBox(self, title = "Notice",
+                        msg = Constants.DOESNOTEXISTERR_STRING)
+        self.setThisNodeButtonsEnabled(False)
+        return False
 
     def doFetch(self):
-        """Aggregate method for updating all of the widgets."""
-        try:
-            renderCols = ["host", "status", "task_id", "pulse", "software_version",
-                            "capabilities", "scheduleEnabled"]
-            allNodes = hydra_rendernode.fetch(orderTuples = (("host", "ASC"),),
-                                                multiReturn = True,
-                                                cols = renderCols)
-            self.initRenderNodeTable(allNodes)
-            if self.thisNodeExists:
-                thisNode = [x for x in allNodes if x.host == self.thisNodeName]
-                if len(thisNode) == 1:
-                    self.updateStatusBar(thisNode[0])
-                else:
-                    logger.error("Could not find this node!")
-
-            self.populateJobTree()
-        except sqlerror as err:
-            self.autoUpdateCheckbox.setCheckState(0)
-            logger.error(str(err))
-            SQLErrorBox(self)
+        """Aggregate method for initilizaing all of the widgets on the default tab."""
+        self.initRenderNodeTable()
+        self.populateJobTree()
+        if self.thisNodeExists:
+            thisNode = self.findThisNode()
+            self.updateStatusBar(thisNode)
 
     def doUpdate(self):
+        """Smart updater that updates information the current tab on the main
+        tabWidget"""
         curTab = self.tabWidget.currentIndex()
-        try:
-            thisNode = hydra_rendernode.fetch("WHERE host = %s",
-                                                (self.thisNodeName,))
-            self.updateStatusBar(thisNode)
-            if curTab == 0:
-                #Job List
-                self.populateJobTree()
-                self.updateTaskTable()
-                self.updateRenderNodeTable()
-            elif curTab == 1:
-                #Recent Jobs
-                self.updateRenderJobGrid()
-            elif curTab == 2:
-                #This Node
-                if self.thisNodeExists:
-                    self.updateThisNodeInfo(thisNode)
-        except sqlerror as err:
-            self.autoUpdateCheckbox.setCheckState(0)
-            logger.error(str(err))
-            SQLErrorBox(self)
+
+        thisNode = hydra_rendernode.fetch("WHERE host = %s",
+                                            (self.thisNodeName,))
+        self.updateStatusBar(thisNode)
+        if curTab == 0:
+            #Job List
+            self.populateJobTree()
+            self.updateTaskTable()
+            self.initRenderNodeTable()
+        elif curTab == 1:
+            #Recent Jobs
+            self.updateRenderJobGrid()
+        elif curTab == 2:
+            #This Node
+            if self.thisNodeExists:
+                self.updateThisNodeInfo(thisNode)
 
     def updateThisNodeInfo(self, thisNode):
         """Updates widgets on the "This Node" tab with the most recent
@@ -1116,7 +1075,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.taskIDLabel.setText(str(thisNode.task_id))
         else:
             self.taskIDLabel.setText("None")
-        self.nodeVersionLabel.setText(getSoftwareVersionText(thisNode.software_version))
+        self.nodeVersionLabel.setText(NodeUtils.getSoftwareVersionText(thisNode.software_version))
         self.minPriorityLabel.setText(str(thisNode.minPriority))
         self.capabilitiesLabel.setText(thisNode.capabilities)
         self.scheduleEnabled.setText(str(thisNode.scheduleEnabled))
@@ -1162,78 +1121,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def doNothing(self):
         pass
 
-#------------------------------------------------------------------------#
-#---------------------------EXTERNAL FUNCTIONS---------------------------#
-#------------------------------------------------------------------------#
-
-def getSoftwareVersionText(sw_ver):
-    """Given the software_version attribute of a hydra_rendernode row, returns
-    a string suitable for display purposes."""
-
-    #Get RenderNodeMain version number if exists
-    if sw_ver:
-        #Case 1: executable in a versioned directory
-        v = re.search("Hydra_RenderFarm_([0-9]+)", sw_ver, re.IGNORECASE)
-        if v:
-            return v.group(1)
-
-        #Case 2: source code file
-        elif re.search("rendernodemain.py$", sw_ver, re.IGNORECASE):
-            return "Dev"
-
-        #Case 3: no freakin' clue
-        return "Unkown_Dev"
-
-    else:
-        return "None"
-
-def setupDataGrid(records, columns, grid):
-    """Populate a data grid. "colums" is a list of widget factory objects."""
-    #Build the header row
-    for(column, attr) in enumerate(columns):
-        item = grid.itemAtPosition(0, column)
-        if item:
-            grid.removeItem(item)
-            item.widget().hide()
-        grid.addWidget(attr.headerWidget(), 0, column)
-
-    #Build the data rows
-    for(row, record) in enumerate(records):
-        for(column, attr) in enumerate(columns):
-            item = grid.itemAtPosition(row + 1, column)
-            if item:
-                grid.removeItem(item)
-                item.widget().hide()
-            grid.addWidget(attr.dataWidget(record),row + 1, column,)
-
-def clearLayout(layout):
-    while layout.count():
-        child = layout.takeAt(0)
-        if child.widget() is not None:
-            child.widget().deleteLater()
-        elif child.layout() is not None:
-            clearLayout(child.layout())
-
-def loadLog(parent, record):
-    logFile = record.logFile
-    if logFile:
-        logFile = os.path.abspath(logFile)
-        lSplit = logFile.split("\\")
-        lSplit[0] = "\\\\{0}".format(record.host)
-        logFile = "\\".join(lSplit)
-        logFile = os.path.abspath(logFile)
-        if os.path.exists(logFile):
-            logger.debug("Opening Log File @ {0}".format(str(logFile)))
-            webbrowser.open(logFile)
-        else:
-            warningBox(parent, "Invalid Log File Path",
-                    "Invalid log file path for task: {0}".format(record.id))
-            logger.error("Invalid log file path for task: {0}".format(record.id))
-            logger.error(logFile)
-    else:
-        warningBox(parent, "No Log on File", Constants.NOLOG_STRING.format(record.id))
-        logger.warning("No log file on record for task: {0}".format(record.id))
-
+#This is at the bottom for a specific reason I can't remember
 niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              READY: QColor(255,255,255),        #White
              FINISHED: QColor(200,240,200),     #Light Green
