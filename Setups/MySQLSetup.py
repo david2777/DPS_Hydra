@@ -34,37 +34,39 @@ if not autoLogin:
     else:
         _db_password = returnValues[1]
 
+#Statuses for either jobs/tasks or render nodes
+STARTED = 'S'               #Working on a job/job in progress
+
 #Statuses for jobs/tasks
-MANAGED = 'M'               #Job is being managed by the max node manager
-PAUSED = 'U'                #Job was paused
-ERROR = 'E'                 #Job returned a non-zero exit code
 READY = 'R'                 #Ready to be run by a render node
+PAUSED = 'U'                #Job was paused
 FINISHED = 'F'              #Job complete
 KILLED = 'K'                #Job was killed
+ERROR = 'E'                 #Job returned a non-zero exit code
 CRASHED = 'C'               #Machine or server software crashed, task was found in host's DB record upon restart
-TIMEOUT = 'T'
+TIMEOUT = 'T'               #Job took longer than the timeout time allowed
+RESET = 'X'
 
 #Statuses for render nodes
 IDLE = 'I'                  #Ready to accept jobs
 OFFLINE = 'O'               #Not ready to accept jobs
 PENDING = 'P'               #Offline after current job is complete
 
-#Statuses for either jobs/tasks or render nodes
-STARTED = 'S'               #Working on a job
-
-niceNames = {PAUSED: 'Paused',
+niceNames = {STARTED: 'Started',
             READY: 'Ready',
+            PAUSED: 'Paused',
             FINISHED: 'Finished',
             KILLED: 'Killed',
+            ERROR: 'Error',
             CRASHED: 'Crashed',
+            TIMEOUT: "Timed Out",
+            RESET: 'Reset',
             IDLE: 'Idle',
             OFFLINE: 'Offline',
             PENDING: 'Pending',
-            STARTED: 'Started',
-            ERROR: 'Error',
-            MANAGED: 'Managed',
-            TIMEOUT: "Timed Out",
             }
+
+niceNamesRev = {v: k for k, v in niceNames.items()}
 
 class tupleObject:
     @classmethod

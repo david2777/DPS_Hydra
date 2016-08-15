@@ -7,6 +7,16 @@
 
 -[In Progress]Render consecutive frames
     -Need a new RenderLayer management system
+    -New task/job system
+        -Tasks will be generated at render time
+        -TaskView will become QTreeWidget with RenderLayers as trunks
+        -Each time a job is picked up it will send a RenderLayer and frame range
+        and setup a task with the info to track progress.
+        -Each subsequent time that RL is rendered it will make a NEW task
+        -Probably have a system watching stdout on the render task or the log
+        file to check for timeouts.
+        -Timeouts will probably be timeout per frame * frames
+    -Ideally, a way to track current render frame locally as a fallback
 
 -[In Progress]Render Manager
     -Move Requirements, Failures, attempts to JobBoard

@@ -61,17 +61,15 @@ class RenderTCPServer(TCPServer):
         self.thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),))
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
+        #TODO:Fix
         if self.thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
-            newStatus = OFFLINE if self.thisNode.status in [OFFLINE, PENDING] else IDLE
-            TaskUtils.resetTask(self.thisNode.task_id)
-            NodeUtils.resetNode(self.thisNode.host)
-            task = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,), cols = ["job_id"])
-            JobUtils.manageNodeLimit(task.job_id)
+            TaskUtils.killTask(self.thisNode.task_id, "C", False)
+            self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
+            self.thisNode.task_id = None
         elif self.thisNode.status in [STARTED, PENDING]:
             logger.warning("Reseting bad status, node set {0} but no task found!".format(self.thisNode.status))
-            self.thisNode.task_id = None
-            self.thisNode.status = READY if self.thisNode.status == STARTED else OFFLINE
+            self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
 
         #Update self.thisNode software_version
         self.thisNode.software_version = sys.argv[0]
@@ -88,18 +86,21 @@ class RenderTCPServer(TCPServer):
         taskFile = "\"{0}\"".format(renderJob.taskFile)
         renderList = [self.execsDict[renderJob.execName], renderJob.baseCMD,
                         "-s", str(renderTask.startFrame), "-e",
-                        str(renderTask.endFrame), taskFile]
+                        str(renderTask.endFrame), "-rl",
+                        str(renderTask.renderLayer), taskFile]
         renderCMD = " ".join(renderList)
 
+        logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(renderTask.id))
         logger.info('Starting render task {0}'.format(renderTask.id))
-        log = file(renderTask.logFile, 'w')
-        log.write('Hydra log file {0} on {1}\n'.format(renderTask.logFile, renderTask.host))
+        log = file(logFile, 'w')
+        log.write('Hydra log file {0} on {1}\n'.format(logFile, renderTask.host))
         log.write('RenderNode is {0}\n'.format(sys.argv))
         log.write('Command: {0}\n\n'.format(renderCMD))
         Utils.flushOut(log)
 
         try:
             #Run the job and keep track of the process
+
             self.childProcess = subprocess.Popen(renderCMD, stdout = log,
                                                     **Utils.buildSubprocessArgs(False))
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
@@ -107,10 +108,10 @@ class RenderTCPServer(TCPServer):
             #Wait for task to finish
             self.childProcess.communicate()
             #Record the results
-            renderTask.exitCode = self.childProcess.returncode
+
             logString = "\nProcess exited with code {0} at {1} on {2}\n"
             nowTime = datetime.datetime.now().replace(microsecond = 0)
-            log.write(logString.format(renderTask.exitCode, nowTime,
+            log.write(logString.format(self.childProcess.returncode, nowTime,
                                         self.thisNode.host))
 
         except Exception as e:
@@ -126,26 +127,19 @@ class RenderTCPServer(TCPServer):
                                                         (self.thisNode.host,),
                                                         explicitTransaction = t)
 
+                renderTask.exitCode = self.childProcess.returncode
                 #Check if render was killed
                 if self.childKilled:
                     renderTask.status = self.statusAfterDeath
                     self.childKilled = False
                 #ExitCode 0 is regular, any other is irregular
                 else:
-                    if renderTask.exitCode == 0:
-                        renderTask.status = FINISHED
-                        renderTask.endTime = datetime.datetime.now()
-                    #TODO: Find a better way to mark jobs as failed on a node
-                    #TODO: Add attempts to this
-                    else:
-                        renderTask.status = READY
-                        renderTask.startTime = None
-                        renderTask.endTime = None
+                    status = FINISHED if renderTask.exitCode == 0 else ERROR
+                    renderTask.status = status
+                    renderTask.endTime = datetime.datetime.now()
 
-                if self.thisNode.status == STARTED:
-                    self.thisNode.status = IDLE
-                elif self.thisNode.status == PENDING:
-                    self.thisNode.status = OFFLINE
+                status = IDLE if self.thisNode.status == STARTED else OFFLINE
+                self.thisNode.status = status
                 logger.debug("New Node Status: {0}".format(self.thisNode.status))
                 self.thisNode.task_id = None
 
@@ -156,8 +150,6 @@ class RenderTCPServer(TCPServer):
             self.childProcess = None
             self.childKilled = False
             self.statusAfterDeath = None
-            JobUtils.updateJobTaskCount(renderTask.job_id)
-            JobUtils.manageNodeLimit(renderTask.job_id)
             logger.info("Done with render task {0}".format(renderTask.id))
 
     def killCurrentJob(self, statusAfterDeath):

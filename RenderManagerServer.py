@@ -3,6 +3,7 @@ import os
 import sys
 import datetime
 from operator import attrgetter
+from collections import defaultdict
 
 #Hydra
 import Constants
@@ -10,7 +11,6 @@ from Setups.LoggingSetup import logger
 from Networking.Servers import TCPServer
 from Networking.Questions import IsAliveQuestion, StartRenderQuestion
 from Networking.Connections import TCPConnection
-from Utilities.JobUtils import updateJobTaskCount
 from Utilities.Utils import getInfoFromCFG
 from Setups.MySQLSetup import *
 
@@ -19,8 +19,8 @@ class RenderManagementServer(TCPServer):
         self.managmentServer = TCPServer.__init__(self, *arglist, **kwargs)
 
         self.allJobs = {}
-        self.allTasks = {}
-        self.renderTasks = []
+        self.renderJobs = []
+        self.runningTasks = {}
         self.allNodes = {}
         self.idleNodes = []
         self.timeouts = {}
@@ -30,21 +30,16 @@ class RenderManagementServer(TCPServer):
     def processRenderTasks(self):
         logger.debug("Processing Render Tasks")
         #Fetch all Jobs
-        jobList = hydra_jobboard.fetch("WHERE archived = 0", multiReturn = True)
+        jobList = hydra_jobboard.fetch("WHERE archived = 0 AND status IN ('R','S','X')", multiReturn = True)
         self.allJobs = {x.id : x for x in jobList}
 
-        #Fetch all Tasks and sort them
-        idStr = ",".join(str(x) for x in self.allJobs.keys())
-        query = "WHERE status = 'R'"
-        if idStr != "":
-            query += " AND job_id IN ({0})".format(idStr)
-        else:
-            logger.info("There appears to be no active jobs in the jobboard!")
-            #Giving it an impossible query, job_ids start at 1
-            query += " AND job_id = '0'"
-        taskList = hydra_taskboard.fetch(query, multiReturn = True)
-        self.allTasks = {x.id : x for x in taskList}
-        self.renderTasks = self.createRenderTasks()
+        taskList = hydra_taskboard.fetch("WHERE status = 'S'", multiReturn = True)
+        self.runningTasks = defaultdict(list)
+        for task in taskList:
+            self.runningTasks[int(task.job_id)].append(task)
+
+        self.renderJobs = self.createRenderJobs()
+        logger.debug(self.renderJobs)
 
         #Fetch all Nodes and find out which ones are online
         nodeList = hydra_rendernode.fetch(multiReturn = True)
@@ -53,7 +48,7 @@ class RenderManagementServer(TCPServer):
         self.idleNodes = self.checkNodeStatus()
 
         #Assign Tasks to Nodes
-        self.assignRenderTasks()
+        self.assignRenderJobs()
 
         #Check on timeouts
         self.checkOnTimeouts()
@@ -61,12 +56,28 @@ class RenderManagementServer(TCPServer):
         #Done! Wait to loop through again.
         logger.debug("End of loop. Waiting...")
 
-    def createRenderTasks(self):
-        logger.debug("Creating Render Tasks")
-        #TODO: Advanced sorting for things like every x frame
-        sortedTasks = sorted(self.allTasks.values(), key = attrgetter("priority"), reverse = True)
-        sorted(sortedTasks, key = attrgetter("id"))
-        return [x.id for x in sortedTasks]
+    def createRenderJobs(self):
+        logger.debug("Creating Render Jobs")
+        #TODO:More filtering and cleanup
+        #Sorting
+        sortedJobs = sorted(self.allJobs.values(), key = attrgetter("priority"), reverse = True)
+        sortedJobs = sorted(sortedJobs, key = attrgetter("id"))
+        #Filtering
+        renderJobs = []
+        for job in sortedJobs:
+            renderLayers = job.renderLayers.split(",")
+            renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
+
+            if len(renderLayers) != len(renderLayerTracker):
+                logger.critical("Malformed RenderLayers or RenderLayerTracker on job with id {0}".format(job.id))
+                break
+
+            runningRenderLayers = [x.renderLayer for x in self.runningTasks[int(job.id)]]
+            for i in range(len(renderLayers)):
+                if job.endFrame != renderLayerTracker[i]:
+                    if renderLayers[i] not in runningRenderLayers:
+                        renderJobs.append([int(job.id), str(renderLayers[i])])
+        return renderJobs
 
     def checkNodeStatus(self):
         logger.debug("Checking Node Status on Idle Nodes")
@@ -80,46 +91,49 @@ class RenderManagementServer(TCPServer):
                 onlineList.append(node)
         return onlineList
 
-    def assignRenderTasks(self):
-        if len(self.renderTasks) < 1 or len(self.idleNodes) < 1:
-            logger.debug("No Idle Nodes or Ready Tasks found. Skipping assignment...")
+    def assignRenderJobs(self):
+        if len(self.renderJobs) < 1 or len(self.idleNodes) < 1:
+            logger.debug("No Idle Nodes or Ready Jobs found. Skipping assignment...")
             return True
         logger.debug("Assigning Render Tasks")
         resultList = []
         i = 0
         for node in self.idleNodes:
-            for task in self.renderTasks:
-                taskOBJ = self.allTasks[task]
-                jobOBJ = self.allJobs[taskOBJ.job_id]
+            for jobID, renderLayer in self.renderJobs:
+                jobOBJ = self.allJobs[jobID]
                 nodeOBJ = self.allNodes[node]
-                response = self.filterTask(taskOBJ, jobOBJ, nodeOBJ)
+                response = self.filterTask(jobOBJ, nodeOBJ)
                 if response:
+                    startFrame = self.getStartFrame(jobOBJ, renderLayer)
+                    taskOBJ = hydra_taskboard(job_id = jobID, status = "S",
+                                            startTime = datetime.datetime.now(),
+                                            host = node,
+                                            renderLayer =  renderLayer,
+                                            startFrame = startFrame,
+                                            endFrame = jobOBJ.endFrame,
+                                            currentFrame = startFrame)
                     nodeOBJ.status = STARTED
-                    nodeOBJ.task_id = taskOBJ.id
-                    taskOBJ.status = STARTED
-                    taskOBJ.host = nodeOBJ.host
-                    taskOBJ.startTime = datetime.datetime.now()
-                    taskOBJ.logFile = os.path.join(Constants.RENDERLOGDIR,
-                                                    '{:0>10}.log.txt'.format(taskOBJ.id))
                     with transaction() as t:
+                        taskOBJ.insert(t)
+                        nodeOBJ.task_id = taskOBJ.id
                         nodeOBJ.update(t)
-                        taskOBJ.update(t)
-                    updateJobTaskCount(taskOBJ.job_id)
                     if jobOBJ.timeout > 1:
                         self.timeouts[taskOBJ.id] = jobOBJ.timeout
                     result = self.assignTask(nodeOBJ, taskOBJ, jobOBJ)
                     resultList.append(result)
-                    self.renderTasks.remove(task)
                     break
         return all(resultList)
 
-    def filterTask(self, task, job, node):
-        returnList = []
-        #Check min priority
-        returnList.append(int(task.priority) >= int(node.minPriority))
-        logger.debug([int(task.priority), int(node.minPriority)])
-        #TODO:Check failures
+    def filterTask(self, job, node):
+        returnList = [True]
+        #TODO:Make this do stuff
         return all(returnList)
+
+    def getStartFrame(self, jobOBJ, renderLayer):
+        renderLayers = jobOBJ.renderLayers.split(",")
+        frameList = jobOBJ.renderLayerTracker.split(",")
+        idx = renderLayers.index(renderLayer)
+        return int(frameList[idx])
 
     def shutdownCMD(self):
         self.managmentServer.shutdown()

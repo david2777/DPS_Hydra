@@ -131,7 +131,7 @@
              <item row="2" column="0" colspan="4">
               <widget class="QTreeWidget" name="jobTree">
                <property name="alternatingRowColors">
-                <bool>true</bool>
+                <bool>false</bool>
                </property>
                <property name="selectionMode">
                 <enum>QAbstractItemView::ExtendedSelection</enum>
@@ -195,7 +195,7 @@
             </layout>
            </widget>
            <widget class="QWidget" name="layoutWidget_3">
-            <layout class="QGridLayout" name="gridLayout_taskList">
+            <layout class="QGridLayout" name="gridLayout_taskTree">
              <item row="0" column="2" colspan="2">
               <spacer name="horizontalSpacer_taskList">
                <property name="orientation">
@@ -210,14 +210,14 @@
               </spacer>
              </item>
              <item row="0" column="0" colspan="2">
-              <widget class="QLabel" name="taskTableLabel">
+              <widget class="QLabel" name="taskTreeLabel">
                <property name="text">
                 <string>Task List (Job ID: 0) (Node Limit: 0)</string>
                </property>
               </widget>
              </item>
              <item row="2" column="0" colspan="4">
-              <widget class="QTableWidget" name="taskTable">
+              <widget class="QTreeWidget" name="taskTree">
                <property name="enabled">
                 <bool>true</bool>
                </property>
@@ -235,87 +235,27 @@
                <property name="alternatingRowColors">
                 <bool>false</bool>
                </property>
+               <property name="selectionMode">
+                <enum>QAbstractItemView::ExtendedSelection</enum>
+               </property>
                <property name="selectionBehavior">
                 <enum>QAbstractItemView::SelectRows</enum>
                </property>
-               <property name="showGrid">
+               <property name="indentation">
+                <number>15</number>
+               </property>
+               <property name="rootIsDecorated">
                 <bool>true</bool>
                </property>
-               <property name="gridStyle">
-                <enum>Qt::SolidLine</enum>
-               </property>
-               <property name="sortingEnabled">
+               <property name="animated">
                 <bool>true</bool>
                </property>
-               <property name="cornerButtonEnabled">
-                <bool>false</bool>
+               <property name="columnCount">
+                <number>1</number>
                </property>
-               <property name="rowCount">
-                <number>0</number>
-               </property>
-               <attribute name="horizontalHeaderDefaultSectionSize">
-                <number>100</number>
-               </attribute>
-               <attribute name="horizontalHeaderMinimumSectionSize">
-                <number>25</number>
-               </attribute>
-               <attribute name="horizontalHeaderStretchLastSection">
-                <bool>true</bool>
-               </attribute>
-               <attribute name="verticalHeaderVisible">
-                <bool>false</bool>
-               </attribute>
-               <attribute name="verticalHeaderDefaultSectionSize">
-                <number>20</number>
-               </attribute>
                <column>
                 <property name="text">
-                 <string>Task ID</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>Start</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>End</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>Host</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>Status</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>Priority</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>Start Time</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>End Time</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>Duration</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string>Exit Code</string>
+                 <string notr="true">1</string>
                 </property>
                </column>
               </widget>
@@ -417,8 +357,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>98</width>
-             <height>52</height>
+             <width>1250</width>
+             <height>624</height>
             </rect>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">

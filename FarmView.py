@@ -88,9 +88,9 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     def setupTables(self):
         #jobTree header and column widths
-        header = QTreeWidgetItem(["Name", "Job ID", "Status", "Tasks", "Owner",
+        jobHeader = QTreeWidgetItem(["Name", "ID", "Status", "Tasks", "Owner",
                                     "Priority", "Start", "End", "Max Nodes"])
-        self.jobTree.setHeaderItem(header)
+        self.jobTree.setHeaderItem(jobHeader)
         #Must set widths AFTER setting header
         self.jobTree.setColumnWidth(0, 300)         #Project/Name
         self.jobTree.setColumnWidth(1, 50)          #ID
@@ -102,6 +102,23 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTree.setColumnWidth(6, 70)          #End Frame
         self.jobTree.setColumnWidth(6, 60)          #Max Nodes
 
+        #taskTree header and column widths
+        taskHeader = QTreeWidgetItem(["RenderLayer", "ID", "Status", "Host",
+                                        "sFrame", "eFrame", "cFrame", "StartTime",
+                                        "EndTime", "Duration", "ExitCode"])
+        self.taskTree.setHeaderItem(taskHeader)
+        self.taskTree.setColumnWidth(0, 130)        #RenderLayer
+        self.taskTree.setColumnWidth(1, 50)         #ID
+        self.taskTree.setColumnWidth(2, 60)         #Status
+        self.taskTree.setColumnWidth(3, 125)        #Host
+        self.taskTree.setColumnWidth(4, 50)         #StartFrame
+        self.taskTree.setColumnWidth(5, 50)         #EndFrame
+        self.taskTree.setColumnWidth(6, 50)         #CurrentFrame
+        self.taskTree.setColumnWidth(7, 110)        #Start Time
+        self.taskTree.setColumnWidth(8, 110)        #End Time
+        self.taskTree.setColumnWidth(9, 75)         #Duration
+
+
         #renderNodeTable column widths
         self.renderNodeTable.setColumnWidth(0, 200)     #Host
         self.renderNodeTable.setColumnWidth(1, 70)      #Status
@@ -111,29 +128,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTable.setColumnWidth(5, 175)     #Heartbeat
         self.renderNodeTable.setColumnWidth(6, 110)     #Capabilities
 
-        #taskTable column widths
-        self.taskTable.setColumnWidth(0, 60)        #ID
-        self.taskTable.setColumnWidth(1, 60)        #Start Frame
-        self.taskTable.setColumnWidth(2, 60)        #End Frame
-        self.taskTable.setColumnWidth(3, 100)       #Host
-        self.taskTable.setColumnWidth(4, 60)        #Status
-        self.taskTable.setColumnWidth(5, 60)        #Priority
-        self.taskTable.setColumnWidth(6, 120)       #Start Time
-        self.taskTable.setColumnWidth(7, 120)       #End Time
-        self.taskTable.setColumnWidth(8, 120)       #Duration
-        self.taskTable.setColumnWidth(9, 120)       #Code
-
         #Job List splitter size
-        self.splitter_jobList.setSizes([11000, 10000])
+        self.splitter_jobList.setSizes([10500, 10000])
 
         #Get rid of the spaces between gird layouts
-        self.gridLayout_taskList.setContentsMargins(0,0,0,0)
+        self.gridLayout_taskTree.setContentsMargins(0,0,0,0)
         self.gridLayout_jobListJobs.setContentsMargins(0,0,0,0)
 
-        #Get the global column count for later
-        self.taskTableCols = self.taskTable.columnCount()
-
-        self.taskTable.setAlternatingRowColors(True)
         self.renderNodeTable.setAlternatingRowColors(True)
 
     def connectButtons(self):
@@ -161,9 +162,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.jobTree.customContextMenuRequested.connect(self.jobContextMenu)
 
-        self.taskTable.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.taskTable.customContextMenuRequested.connect(self.taskContextMenu)
-        self.taskTable.itemChanged.connect(self.taskTableEditHandler)
+        self.taskTree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.taskTree.customContextMenuRequested.connect(self.taskContextMenu)
+        #self.taskTree.itemChanged.connect(self.taskTreeEditHandler)
 
         self.renderNodeTable.setContextMenuPolicy(Qt.CustomContextMenu)
         self.renderNodeTable.customContextMenuRequested.connect(self.nodeContextHandler)
@@ -195,16 +196,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         QShortcut(QKeySequence("Shift+Del"), self, jobUnarchiveFunc)
 
         #Task Table
-        taskStartFunc = functools.partial(self.taskActionHandler, "start")
-        taskPauseFunc = functools.partial(self.taskActionHandler, "pause")
-        taskKillFunc = functools.partial(self.taskActionHandler, "kill")
-        taskResetFunc = functools.partial(self.taskActionHandler, "reset")
-        taskLogFunc = functools.partial(self.taskActionHandler, "log")
-        QShortcut(QKeySequence("Ctrl+Shift+S"), self, taskStartFunc)
-        QShortcut(QKeySequence("Ctrl+Shift+P"), self, taskPauseFunc)
-        QShortcut(QKeySequence("Ctrl+Shift+K"), self, taskKillFunc)
-        QShortcut(QKeySequence("Ctrl+Shift+R"), self, taskResetFunc)
-        QShortcut(QKeySequence("Ctrl+Shift+L"), self, taskLogFunc)
 
     #---------------------------------------------------------------------#
     #---------------------------MISC FUNCTIONS----------------------------#
@@ -256,9 +247,6 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "Kill jobs selected in Job Tree", "kill", "Ctrl+K")
         self.addItem(self.jobMenu, "Reset Jobs", self.jobActionHandler,
                 "Reset jobs selected in Job Tree", "reset", "Ctrl+R")
-        self.addItem(self.jobMenu, "Start Test Frames...", self.callTestFrameBox,
-                "Open a dialog to start the first X frames in each job selected in Job Tree "
-                "selected in the Job List")
         self.jobMenu.addSeparator()
 
         self.addItem(self.jobMenu, "Archive Jobs", self.jobActionHandler,
@@ -267,9 +255,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addItem(self.jobMenu, "Unarchive Jobs", self.jobActionHandler,
                 "Unarchive Jobs and add them back to the JobTreeView",
                 "unarchive", "Shift+Del")
-        self.addItem(self.jobMenu, "Reset Node Limit on Jobs", self.jobActionHandler,
-                "Reset the number of tasks which are ready to match the limit "
-                "of the number of concurant tasks.", "manage")
         self.addItem(self.jobMenu, "Reveal Detailed Data...", self.jobActionHandler,
                 "Opens a dialog window the detailed data for the selected jobs.", "data")
         self.jobMenu.addSeparator()
@@ -281,15 +266,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         editJob.setEnabled(False)
 
         self.jobMenu.popup(QCursor.pos())
-
-    def jobTreeClickedHandler(self):
-        """Handles when the user clicks a job in the JobTree by loading the
-        task data into the TaskTable"""
-        shotItem = self.jobTree.currentItem()
-        if shotItem.parent():
-            job_id = int(shotItem.text(1))
-            self.initTaskTable(job_id, shotItem)
-            self.currentJobSel = job_id
 
     def fetchJobs(self, mode = "all", job_id = None):
         #Build the fetch command
@@ -310,10 +286,9 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Fetch the Jobs
         return hydra_jobboard.fetch(command, commandTuple, multiReturn = True,
-                                    cols = ["id", "niceName", "job_status",
+                                    cols = ["id", "niceName", "status",
                                             "owner", "priority","startFrame",
                                             "endFrame", "maxNodes",
-                                            "tasksComplete", "tasksTotal",
                                             "projectName", "archived"])
 
     def userFilterAction(self):
@@ -327,14 +302,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.populateJobTree(clear = True)
 
     def formatJobData(self, job):
-        if job.tasksTotal > 0:
-            percent = "{0:.0%}".format(float(job.tasksComplete / job.tasksTotal))
-            taskString  = "{0} ({1}/{2})".format(percent, job.tasksComplete,
-                                                job.tasksTotal)
-        else:
-            taskString = "0% (0/0)"
+        taskString = "0% (0/0)"
 
-        return [job.niceName, str(job.id), niceNames[job.job_status],
+        return [job.niceName, str(job.id), niceNames[job.status],
                 taskString, job.owner, str(job.priority), str(job.startFrame),
                 str(job.endFrame), str(job.maxNodes)]
 
@@ -363,7 +333,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if job.archived == 1:
             for i in range(0,9):
                 shotItem.setBackgroundColor(i, QColor(200,200,200))
-        shotItem.setBackgroundColor(2, niceColors[job.job_status])
+        shotItem.setBackgroundColor(2, niceColors[job.status])
         if job.owner == self.username:
             shotItem.setFont(4, QFont('Segoe UI', 8, QFont.DemiBold))
 
@@ -409,58 +379,39 @@ class FarmView(QMainWindow, Ui_FarmView):
         return data if data != [] else None
 
     def jobActionHandler(self, mode):
-        job_ids = self.getJobTreeSel()
-        if not job_ids:
+        jobIDs = self.getJobTreeSel()
+        if not jobIDs:
             return
 
         #Start Job
         if mode == "start":
-            map(JobUtils.startJob, job_ids)
+            map(JobUtils.startJob, jobIDs)
             self.populateJobTree()
 
         #Reveal Detailed Data
         elif mode == "data":
-            if len(job_ids) == 1:
-                self.revealDataTable(job_ids, hydra_jobboard, "WHERE id = %s")
+            if len(jobIDs) == 1:
+                self.revealDataTable(jobIDs, hydra_jobboard, "WHERE id = %s")
             else:
-                self.revealDetailedHandler(job_ids, hydra_jobboard, "WHERE id = %s")
+                self.revealDetailedHandler(jobIDs, hydra_jobboard, "WHERE id = %s")
 
         #Kill or Pause Job
-        elif mode in ["kill", "pause"]:
+        elif mode in ["kill", "pause", "reset"]:
+            #TODO: Handle failues better
             choice = yesNoBox(self, "Confirm", "Really {0} the selected jobs?".format(mode))
             if choice == QMessageBox.No:
                 return
 
-            statusAfterDeath = KILLED if mode == "kill" else PAUSED
-            responses = [JobUtils.killJob(job_id, statusAfterDeath) for job_id in job_ids]
+            modeDict = {"kill" : KILLED, "pause" : PAUSED, "reset" : RESET}
+            statusAfterDeath = modeDict[mode]
+
+            responses = [JobUtils.killJob(jobID, statusAfterDeath) for jobID in jobIDs]
 
             self.populateJobTree()
 
             if not all(responses):
                 warningBox(self, "Error",
                             "One or more nodes couldn't kill their tasks.")
-
-        #Reset Job
-        elif mode == "reset":
-            choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
-            if choice == QMessageBox.No:
-                return
-
-            responses = [JobUtils.resetJob(job_id, READY) for job_id in job_ids]
-
-            map(JobUtils.setupNodeLimit, job_ids)
-            self.populateJobTree()
-
-            if not all(responses):
-                warningBox(self, "Error",
-                            "One or more nodes couldn't reset their tasks.")
-
-        #Reset Node Management on Job
-        elif mode == "manage":
-            choice = yesNoBox(self, "Confirm", Constants.RESETNODEMGMT_STRING)
-            if choice == QMessageBox.Yes:
-                map(JobUtils.setupNodeLimit, job_ids)
-            self.populateJobTree()
 
         #Toggle Archive on Job
         elif mode in ["archive", "unarchive"]:
@@ -469,30 +420,21 @@ class FarmView(QMainWindow, Ui_FarmView):
             if choice == QMessageBox.No:
                 return
 
-            commandList = []
-            new = 0 if mode == "unarchive" else 1
-            jobCommand = "UPDATE hydra_jobboard SET archived = %s WHERE id = %s"
-            commandList = [(new, job_id) for job_id in job_ids]
+            archMode = 1 if mode == "archive" else 0
+            responses = [JobUtils.archiveJob(jobID, archMode) for jobID in jobIDs]
 
-            try:
-                with transaction() as t:
-                    for commandTuple in commandList:
-                        t.cur.execute(jobCommand, commandTuple)
+            if not all(responses):
+                logger.error("Wow somehow Archive Job had an error")
 
-            except sqlerror as err:
-                logger.error(str(err))
-                warningBox(self, "SQL Error", str(err))
-
-            finally:
-                self.populateJobTree(clear = True)
+            self.populateJobTree(clear = True)
 
         else:
             logger.error("Bad job action handler arg")
-        #TODO: Remove this?
-        JobUtils.updateJobTaskCount(self.currentJobSel)
+
         self.doUpdate()
 
     def setJobPriority(self):
+        #TODO: Move to main action handler or get rid of main action handler
         selection = self.getJobTreeSel("Rows")
         if not selection:
             return
@@ -507,26 +449,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             else:
                 logger.debug("PrioritizeJob skipped on {0}".format(job_id))
 
-    def callTestFrameBox(self):
-        job_ids = self.getJobTreeSel()
-        if not job_ids:
-            return
-
-        job_id = job_ids[0]
-        reply = intBox(self, "StartTestFrames", "Start X Test Frames?", 10)
-        if not reply[1]:
-            return
-
-        logger.debug("Starting {0} test frames on job_id {1}".format(reply[0], job_id))
-        tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
-                                        cols = ["id", "status"],
-                                        multiReturn = True)
-        taskIDs = [int(task.id) for task in tasks]
-        map(TaskUtils.startTask, taskIDs[0:reply[0]])
-        JobUtils.updateJobTaskCount(job_id, tasks = tasks, commit = True)
-        JobUtils.manageNodeLimit(job_id)
-        self.populateJobTree()
-
     #---------------------------------------------------------------------#
     #---------------------------TASK HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
@@ -535,17 +457,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
 
-        self.addItem(self.taskMenu, "Start Tasks", self.taskActionHandler,
-                "Start all tasks selected in the Task Table",
-                "start", "Ctrl+Shift+S")
-        self.addItem(self.taskMenu, "Pause Tasks", self.taskActionHandler,
-                "Pause all tasks selected in the Task Table",
-                "pause", "Ctrl+Shift+P")
         self.addItem(self.taskMenu, "Kill Tasks", self.taskActionHandler,
                 "Kill all tasks selected in the Task Table", "kill", "Ctrl+Shift+K")
         self.addItem(self.taskMenu, "Reset Tasks", self.taskActionHandler,
                 "Reset all tasks selected in the Task Tree", "reset", "Ctrl+Shift+R")
-        self.taskMenu.addSeparator()
         self.addItem(self.taskMenu, "Reveal Detailed Data...", self.taskActionHandler,
                 "Opens a dialog window the detailed data for the selected tasks.", "data")
         self.addItem(self.taskMenu, "Load LogFile", self.taskActionHandler,
@@ -553,217 +468,94 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "log", "Ctrl+Shift+L")
         self.taskMenu.popup(QCursor.pos())
 
-    def taskTableEditHandler(self, item):
-        #TODO:Verify data, verify changes with user?
-        #TODO:Cleanup
-        row = int(item.row())
-        col = int(item.column())
-        newValue = str(item.text())
-        task_id = int(self.taskTable.item(row, 0).text())
-        valueMap = {1 : "startFrame", 2 : "endFrame", 3 : "host", 5 : "priority",
-                    9 : "exitCode"}
-        if col in [0,4,6,7,8]:#ID, Status, Start Time, End Time, Duration
-            logger.warning("You probably shouldn't edit those...")
-            return
-        elif col in [1,2,5,9]:#Start Frame, End Frame, Priority, Exit Code
-            newValue = int(newValue)
-        try:
-            query = "UPDATE hydra_taskboard SET {0} = %s WHERE id = %s".format(valueMap[col])
-            with transaction() as t:
-                t.cur.execute(query, (newValue, task_id))
-        except sqlerror as err:
-            warningBox(self, "SQL Error", str(err))
-            logger.error(str(err))
+    def jobTreeClickedHandler(self):
+        """Handles when the user clicks a job in the JobTree by loading the
+        task data into the TaskTree"""
+        shotItem = self.jobTree.currentItem()
+        if shotItem.parent():
+            job_id = int(shotItem.text(1))
+            self.loadTaskTree(job_id, True)
+            self.currentJobSel = job_id
 
-        self.updateTaskTable()
+    def taskTreeEditHandler(self, item):
+        pass
 
-    def initTaskTable(self, job_id, shotItem):
+    def loadTaskTree(self, job_id, clear = False):
+        if clear:
+            self.taskTree.clear()
+        #SetupTrunks
         job = hydra_jobboard.fetch("WHERE id = %s", (job_id,),
-                                    cols = ["id", "maxNodes"])
-        sStr = "Task List (Job ID: {0}) (Node Limit: {1})"
-        self.taskTableLabel.setText(sStr.format(str(job_id), str(job.maxNodes)))
+                                    cols = ["id", "renderLayers",
+                                            "renderLayerTracker", "startFrame",
+                                            "endFrame", "status"])
+        for rl in job.renderLayers.split(","):
+            root = QTreeWidgetItem(self.taskTree, [rl])
+            root.setFont(0, QFont('Segoe UI', 10, QFont.DemiBold))
 
-        taskCols = ["id", "startTime", "endTime", "startFrame", "endFrame",
-                "host", "status", "priority", "exitCode"]
+        #Load tasks
         tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
-                                        cols = taskCols, multiReturn = True)
-
-        self.taskTable.setRowCount(len(tasks))
-        self.taskTable.itemChanged.disconnect(self.taskTableEditHandler)
-        for pos, task in enumerate(tasks):
-            tdiff = None
-            if task.endTime:
-                tdiff = task.endTime - task.startTime
-            elif task.startTime:
-                tdiff = datetime.datetime.now().replace(microsecond=0) - task.startTime
-            #Populate the taskTable
-            self.taskTable.setItem(pos, 0, TableWidgetItem_int(str(task.id)))
-            self.taskTable.setItem(pos, 1, TableWidgetItem_int(str(task.startFrame)))
-            self.taskTable.setItem(pos, 2, TableWidgetItem_int(str(task.endFrame)))
-            self.taskTable.setItem(pos, 3, TableWidgetItem(str(task.host)))
-            self.taskTable.setItem(pos, 4, TableWidgetItem(str(niceNames[task.status])))
-            self.taskTable.setItem(pos, 5, TableWidgetItem_int(str(task.priority)))
-            self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(task.startTime)))
-            self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(task.endTime)))
-            self.taskTable.setItem(pos, 8, TableWidgetItem_dt(str(tdiff)))
-            self.taskTable.setItem(pos, 9, TableWidgetItem_int(str(task.exitCode)))
-            self.taskTable.item(pos, 4).setBackgroundColor(niceColors[task.status])
-
-        self.taskTable.itemChanged.connect(self.taskTableEditHandler)
-        JobUtils.updateJobTaskCount(job_id)
-        job = self.fetchJobs("single", job_id)[0]
-        self.addJobTreeShot(job)
-
-    def updateTaskTable(self):
-        #NOTE:This method is broken because sorting will change the order...
-        #Probably doesn't matter since I think I'll change this to a TreeView soon
-        if not self.currentJobSel:
-            return
-        tasks = hydra_taskboard.fetch("WHERE job_id = %s", (self.currentJobSel,),
                                         multiReturn = True,
-                                        cols = ["host", "status", "startTime",
-                                                "endTime", "exitCode"])
+                                        cols = ["id", "renderLayer", "status",
+                                                "startTime", "endTime", "host",
+                                                "startFrame", "endFrame",
+                                                "currentFrame", "exitCode"])
+        #Add tasks to taskTree
+        for task in tasks:
+            roots = self.taskTree.findItems(str(task.renderLayer), Qt.MatchContains)
+            if len(roots) > 0:
+                root = roots[0]
+                taskData = self.formatTaskData(task)
+                taskItem = QTreeWidgetItem(root, taskData)
+                #Formatting
+                taskItem.setBackgroundColor(2, niceColors[task.status])
+                if task.host == self.thisNodeName:
+                    taskItem.setFont(3, QFont('Segoe UI', 8, QFont.DemiBold))
+            else:
+                logger.error("Could not find root for renderLayer {0} on task {1}!".format(task.renderLayer, task.id))
 
-        self.taskTable.itemChanged.disconnect(self.taskTableEditHandler)
-        for pos, task in enumerate(tasks):
-            tdiff = None
-            if task.endTime:
-                tdiff = task.endTime - task.startTime
-            elif task.startTime:
-                tdiff = datetime.datetime.now().replace(microsecond=0) - task.startTime
-            #Populate the taskTable
-            self.taskTable.setItem(pos, 3, TableWidgetItem(str(task.host)))
-            self.taskTable.setItem(pos, 4, TableWidgetItem(str(niceNames[task.status])))
-            self.taskTable.setItem(pos, 6, TableWidgetItem_dt(str(task.startTime)))
-            self.taskTable.setItem(pos, 7, TableWidgetItem_dt(str(task.endTime)))
-            self.taskTable.setItem(pos, 8, TableWidgetItem_dt(str(tdiff)))
-            self.taskTable.setItem(pos, 9, TableWidgetItem_int(str(task.exitCode)))
-            self.taskTable.item(pos, 4).setBackgroundColor(niceColors[task.status])
+        #Add default data if active tasks don't exist and do formatting
+        #Note that since the RLs were added in order we can use the same index
+        rlTracker = [int(x) for x in job.renderLayerTracker.split(",")]
+        for i in range(0,self.taskTree.topLevelItemCount()):
+            topLevelItem = self.taskTree.topLevelItem(i)
+            if topLevelItem.childCount() < 1:
+                defaultTaskData = [topLevelItem.text(0), "None", niceNames[READY],
+                                    "None", str(job.startFrame),
+                                    str(job.endFrame), str(job.startFrame),
+                                    "None", "None", "None", "None"]
+                taksItem = QTreeWidgetItem(topLevelItem, defaultTaskData)
 
-        self.taskTable.itemChanged.connect(self.taskTableEditHandler)
+            #Add top level formatting to taskTree data
+            if rlTracker[i] == job.endFrame:
+                topLevelItem.setBackgroundColor(0, niceColors[FINISHED])
+            else:
+                statusToUse = topLevelItem.child(topLevelItem.childCount() - 1).text(2)
+                statusToUse = "Ready" if statusToUse == "Finished" else statusToUse
+                topLevelItem.setBackgroundColor(0, niceColors[niceNamesRev[str(statusToUse)]])
+                topLevelItem.setExpanded(True)
 
-    def getTaskTableSel(self, mode = "IDs"):
-        self.resetStatusBar()
-        rows = self.taskTable.selectionModel().selectedRows()
-        if len(rows) < 1:
-            msg = "Please select something from the Task Table and try again."
-            warningBox(self, "Selection Error", msg)
-            return
-
-        if mode == "IDs":
-            return [self.taskTable.item(ro.row(), 0).text() for ro in rows]
-        elif mode == "Rows":
-            return [item.row() for item in rows]
+    def formatTaskData(self, task):
+        if task.endTime:
+            duration = task.endTime - task.startTime
+        elif task.startTime:
+            duration = datetime.datetime.now().replace(microsecond=0) - task.startTime
         else:
-            logger.error("Bad getTaskTableSel mode!")
-            return
+            duration = None
+
+        return [str(task.renderLayer), str(task.id), niceNames[task.status],
+                    str(task.host), str(task.startFrame), str(task.endFrame),
+                    str(task.currentFrame), str(task.startTime),
+                    str(task.endTime), str(duration), str(task.exitCode)]
+
+    def getTaskTreeSel(self, mode = "IDs"):
+        pass
 
     def taskActionHandler(self, mode):
-        task_ids = self.getTaskTableSel()
-        if not task_ids:
-            return
-
-        #load Detailed Data
-        if mode == "data":
-            if len(task_ids) == 1:
-                self.revealDataTable(task_ids, hydra_taskboard, "WHERE id = %s")
-            else:
-                self.revealDetailedHandler(task_ids, hydra_taskboard, "WHERE id = %s")
-
-        #Start Task
-        elif mode == "start":
-            map(TaskUtils.startTask, task_ids)
-            self.updateTaskTable()
-
-        #Reset Task
-        elif mode == "reset":
-            choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?")
-            if choice == QMessageBox.No:
-                return
-            responses = [TaskUtils.resetTask(t_id, READY) for t_id in task_ids]
-            self.updateTaskTable()
-            if not all(responses):
-                msg = "Unable to reset task {0} because there was an error communicating with it's host.".format(task_id)
-                warningBox(self, "Reset Task Error", msg)
-
-        #Pause or Kill Task
-        elif mode in ["pause", "kill"]:
-            choice = yesNoBox(self, "Confirm", "Really {0} selected tasks?".format(mode))
-            if choice == QMessageBox.No:
-                return
-            statusAfterDeath = KILLED if mode == "kill" else PAUSED
-            notKilled = []
-            for task_id in task_ids:
-                response = TaskUtils.killTask(task_id, statusAfterDeath)
-                if not response:
-                    notKilled.append(task_id)
-            if len(notKilled) > 0:
-                warningBox(self, "Error",
-                        "Task(s) with id(s) {0} couldn't be killed for some reason.".format(str(notKilled)))
-            self.updateTaskTable()
-            self.populateJobTree()
-
-        #Load LogFile
-        elif mode == "log":
-            if len(task_ids) == 1:
-                task = hydra_taskboard.fetch("WHERE id = %s", (task_ids[0],),
-                                            cols = ["logFile", "host", "id"])
-                self.loadLog(task)
-            else:
-                choice = yesNoBox(self, "Open logs?", "Note, this will open a text"
-                                " editor for EACH task selected. Continue?")
-                if choice == QMessageBox.No:
-                    return
-                for task_id in task_ids:
-                    task = hydra_taskboard.fetch("WHERE id = %s", (task_id,),
-                                                cols = ["logFile", "host", "id"])
-                    self.loadLog(task)
-
-
-        else:
-            logger.error("Bad task handler arg")
-        #TODO: Get rid of these?
-        JobUtils.manageNodeLimit(self.currentJobSel)
-        JobUtils.updateJobTaskCount(self.currentJobSel)
-        self.doUpdate()
+        pass
 
     def loadLog(self, record):
-        logFile = record.logFile
-        if logFile:
-            logFile = os.path.abspath(logFile)
-            lSplit = logFile.split("\\")
-            lSplit[0] = "\\\\{0}".format(record.host)
-            logFile = "\\".join(lSplit)
-            logFile = os.path.abspath(logFile)
-            if os.path.exists(logFile):
-                logger.debug("Opening Log File @ {0}".format(str(logFile)))
-                webbrowser.open(logFile)
-            else:
-                warningBox(self, "Invalid Log File Path",
-                        "Invalid log file path for task: {0}".format(record.id))
-                logger.error("Invalid log file path for task: {0}".format(record.id))
-                logger.error(logFile)
-        else:
-            warningBox(self, "No Log on File", Constants.NOLOG_STRING.format(record.id))
-            logger.warning("No log file on record for task: {0}".format(record.id))
-
-    def advancedSearchHandler(self):
-        #results = TaskSearchDialog.create()
-        logger.warning("Not Implemeted!")
-
-    def searchByTaskID(self):
-        """~~UNTESTED~~"""
-        reply = intBox(self, "Search for job via TaskID", 0)
-        if reply[1]:
-            taskID = int(reply[0])
-            cmd = "SELECT job_id FROM hydra_taskboard WHERE id = %s"
-            with transaction() as t:
-                [task] = t.cur.execute(cmd, (taskID,))
-            shotItem = self.jobTree.findItems(str(task.job_id), Qt.MatchRecursive, 1)
-            if shotItem != []:
-                self.jobTree.itemClicked(shotItem[0], 0)
-            else:
-                self.warningBox("Error!", "Could not find job for given task!")
+        #webbrowser.open(logFile)
+        pass
 
     #---------------------------------------------------------------------#
     #---------------------------NODE HANDLERS-----------------------------#
@@ -1056,7 +848,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if curTab == 0:
             #Job List
             self.populateJobTree()
-            self.updateTaskTable()
+            #self.updateTaskTree()
             self.initRenderNodeTable()
         elif curTab == 1:
             #Recent Jobs
@@ -1129,7 +921,7 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              CRASHED: QColor(220,90,90),        #Dark Red
              STARTED: QColor(200,220,240),      #Light Blue
              ERROR: QColor(220,90,90),          #Red
-             MANAGED: QColor(240,230,200),      #Light Orange
+             RESET: QColor(240,230,200),      #Light Orange
              IDLE: QColor(255,255,255),         #White
              OFFLINE: QColor(240,240,240),      #Gray
              PENDING: QColor(240,230,200),      #Orange
