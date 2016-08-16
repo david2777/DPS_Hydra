@@ -212,7 +212,7 @@
              <item row="0" column="0" colspan="2">
               <widget class="QLabel" name="taskTreeLabel">
                <property name="text">
-                <string>Task List (Job ID: 0) (Node Limit: 0)</string>
+                <string>Task Tree (Job ID: 0)</string>
                </property>
               </widget>
              </item>

@@ -88,8 +88,8 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     def setupTables(self):
         #jobTree header and column widths
-        jobHeader = QTreeWidgetItem(["Name", "ID", "Status", "Tasks", "Owner",
-                                    "Priority", "Start", "End", "Max Nodes"])
+        jobHeader = QTreeWidgetItem(["Name", "ID", "Status", "Progress", "Owner",
+                                    "Priority", "Start", "End", "Render Layers"])
         self.jobTree.setHeaderItem(jobHeader)
         #Must set widths AFTER setting header
         self.jobTree.setColumnWidth(0, 300)         #Project/Name
@@ -289,7 +289,9 @@ class FarmView(QMainWindow, Ui_FarmView):
                                     cols = ["id", "niceName", "status",
                                             "owner", "priority","startFrame",
                                             "endFrame", "maxNodes",
-                                            "projectName", "archived"])
+                                            "projectName", "archived",
+                                            "renderLayers,"
+                                            "renderLayerTracker"])
 
     def userFilterAction(self):
         self.userFilterCheckbox.setChecked(0) if self.userFilter else 2
@@ -302,11 +304,17 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.populateJobTree(clear = True)
 
     def formatJobData(self, job):
-        taskString = "0% (0/0)"
+        renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
+        renderLayersTotal = len(renderLayerTracker)
+        renderLayersDone = sum([1 for x in renderLayerTracker if x >= job.endFrame])
+        totalFrames = sum([(job.endFrame - job.startFrame) for x in renderLayerTracker])
+        completeFrames = sum([(x - job.startFrame) for x in renderLayerTracker])
+        percent = "{0:.0%}".format(float(completeFrames / totalFrames))
+        taskString  = "{0} ({1}/{2})".format(percent, renderLayersDone, renderLayersTotal)
 
         return [job.niceName, str(job.id), niceNames[job.status],
                 taskString, job.owner, str(job.priority), str(job.startFrame),
-                str(job.endFrame), str(job.maxNodes)]
+                str(job.endFrame), str(job.renderLayers)]
 
     def addJobTreeShot(self, job):
         jobData = self.formatJobData(job)
@@ -476,6 +484,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             job_id = int(shotItem.text(1))
             self.loadTaskTree(job_id, True)
             self.currentJobSel = job_id
+            self.taskTreeLabel.setText("Task Tree (Job ID: {0})".format(job_id))
 
     def taskTreeEditHandler(self, item):
         pass

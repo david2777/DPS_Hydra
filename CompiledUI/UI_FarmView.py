@@ -275,7 +275,7 @@ class Ui_FarmView(object):
         self.jobTableLabel.setText(_translate("FarmView", "Job List:", None))
         self.userFilterCheckbox.setText(_translate("FarmView", "Only Show My Jobs", None))
         self.archivedCheckBox.setText(_translate("FarmView", "Show Archived Jobs", None))
-        self.taskTreeLabel.setText(_translate("FarmView", "Task List (Job ID: 0) (Node Limit: 0)", None))
+        self.taskTreeLabel.setText(_translate("FarmView", "Task Tree (Job ID: 0)", None))
         self.renderNodeTable.setSortingEnabled(True)
         item = self.renderNodeTable.horizontalHeaderItem(0)
         item.setText(_translate("FarmView", "Host", None))

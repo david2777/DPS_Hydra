@@ -38,29 +38,33 @@ class RenderManagementServer(TCPServer):
         for task in taskList:
             self.runningTasks[int(task.job_id)].append(task)
 
-        self.renderJobs = self.createRenderJobs()
+        self.renderJobs = self.createRenderJobs(self.allJobs)
         logger.debug(self.renderJobs)
 
         #Fetch all Nodes and find out which ones are online
         nodeList = hydra_rendernode.fetch(multiReturn = True)
         self.allNodes = {str(x.host) : x for x in nodeList}
         self.idleNodes = [k for k,v in self.allNodes.iteritems() if v.status == IDLE]
-        self.idleNodes = self.checkNodeStatus()
+        self.idleNodes = self.checkNodeStatus(self.idleNodes)
 
         #Assign Tasks to Nodes
-        self.assignRenderJobs()
+        self.timeouts = self.assignRenderJobs(self.renderJobs, self.idleNodes,
+                                                self.allJobs, self.allNodes,
+                                                self.timeouts)
 
         #Check on timeouts
-        self.checkOnTimeouts()
+        #reutrnList = self.checkOnTimeouts(self.timeouts)
+        #self.timeouts = returnList[0]
+        #self.lastTimeoutCheck = returnList[1]
+        #self.nowTime = returnList[2]
 
         #Done! Wait to loop through again.
         logger.debug("End of loop. Waiting...")
 
-    def createRenderJobs(self):
+    def createRenderJobs(self, allJobs):
         logger.debug("Creating Render Jobs")
-        #TODO:More filtering and cleanup
         #Sorting
-        sortedJobs = sorted(self.allJobs.values(), key = attrgetter("priority"), reverse = True)
+        sortedJobs = sorted(allJobs.values(), key = attrgetter("priority"), reverse = True)
         sortedJobs = sorted(sortedJobs, key = attrgetter("id"))
         #Filtering
         renderJobs = []
@@ -69,20 +73,33 @@ class RenderManagementServer(TCPServer):
             renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
 
             if len(renderLayers) != len(renderLayerTracker):
-                logger.critical("Malformed RenderLayers or RenderLayerTracker on job with id {0}".format(job.id))
+                logger.critical("Malformed renderLayers or renderLayerTracker on job with id {0}".format(job.id))
+                with transaction() as t:
+                    t.cur.execute("UPDATE hydra_jobboard SET status = 'E' WHERE id = %s", (job.id,))
                 break
 
             runningRenderLayers = [x.renderLayer for x in self.runningTasks[int(job.id)]]
+            if job.maxNodes > 0:
+                if len(runningRenderLayers) < int(job.maxNodes):
+                    logger.debug("Skipping job {0} because it is over node limit".format(job.id))
+                    break
+
+            if job.attempts >= job.maxAttempts:
+                logger.debug("Skipping job {0} because it is over attempt limit".format(job.id))
+                with transaction() as t:
+                    t.cur.execute("UPDATE hydra_jobboard SET status = 'E' WHERE id = %s", (job.id,))
+                break
+
             for i in range(len(renderLayers)):
                 if job.endFrame != renderLayerTracker[i]:
                     if renderLayers[i] not in runningRenderLayers:
                         renderJobs.append([int(job.id), str(renderLayers[i])])
         return renderJobs
 
-    def checkNodeStatus(self):
+    def checkNodeStatus(self, idleNodes):
         logger.debug("Checking Node Status on Idle Nodes")
         onlineList = []
-        for node in self.idleNodes:
+        for node in idleNodes:
             connection = TCPConnection(hostname = node)
             answer = connection.getAnswer(IsAliveQuestion())
             if not answer:
@@ -91,17 +108,15 @@ class RenderManagementServer(TCPServer):
                 onlineList.append(node)
         return onlineList
 
-    def assignRenderJobs(self):
-        if len(self.renderJobs) < 1 or len(self.idleNodes) < 1:
+    def assignRenderJobs(self, renderJobs, idleNodes, allJobs, allNodes, timeouts):
+        if len(renderJobs) < 1 or len(idleNodes) < 1:
             logger.debug("No Idle Nodes or Ready Jobs found. Skipping assignment...")
             return True
         logger.debug("Assigning Render Tasks")
-        resultList = []
-        i = 0
         for node in self.idleNodes:
             for jobID, renderLayer in self.renderJobs:
-                jobOBJ = self.allJobs[jobID]
-                nodeOBJ = self.allNodes[node]
+                jobOBJ = allJobs[jobID]
+                nodeOBJ = allNodes[node]
                 response = self.filterTask(jobOBJ, nodeOBJ)
                 if response:
                     startFrame = self.getStartFrame(jobOBJ, renderLayer)
@@ -118,16 +133,34 @@ class RenderManagementServer(TCPServer):
                         nodeOBJ.task_id = taskOBJ.id
                         nodeOBJ.update(t)
                     if jobOBJ.timeout > 1:
-                        self.timeouts[taskOBJ.id] = jobOBJ.timeout
+                        timeouts[taskOBJ.id] = jobOBJ.timeout
                     result = self.assignTask(nodeOBJ, taskOBJ, jobOBJ)
-                    resultList.append(result)
-                    break
-        return all(resultList)
+                    #TODO: Handle assigment exceptions
+
+        return timeouts
 
     def filterTask(self, job, node):
-        returnList = [True]
-        #TODO:Make this do stuff
-        return all(returnList)
+        if job.priority < node.minPriority:
+            logger.debug("Skipping job {0} because it does not meet {1}'s minPriority requirement".format(job.id, node.host))
+            return False
+
+        if job.failures and job.failures != "":
+            failures = job.failures.split(",")
+            if node.host in failures:
+                logger.debug("Skipping job {0} because it has failed on node {1} in the past".format(job.id, node.host))
+                return False
+
+        if job.requirements and job.requirements != "":
+            jobReqs = job.requirements.split(",")
+            nodeCaps = node.capabilities.split(",")
+            checker = [x in nodeCaps for x in jobReqs]
+            if not all(checker):
+                logger.debug("Skipping job {0} because node {1} cannot meet its feature requirements".format(job.id, node.host))
+                return False
+
+        #If all of the above tests pass
+        return True
+
 
     def getStartFrame(self, jobOBJ, renderLayer):
         renderLayers = jobOBJ.renderLayers.split(",")
@@ -147,22 +180,23 @@ class RenderManagementServer(TCPServer):
         else:
             logger.error("Task {0} was declined on {1}".format(task.id, node.host))
 
-    def checkOnTimeouts(self):
+    def checkOnTimeouts(self, timeouts, lastTimeoutCheck, nowTime):
         logger.debug("Checking on Tasks in progress with timeouts")
-        #TODO:See if this works
-        if not self.lastTimeoutCheck:
-            self.lastTimeoutCheck = self.nowTime
-        self.nowTime = datetime.datetime.now()
-        timeDelta = (self.nowTime - self.lastTimeoutCheck).total_seconds()
-        iterList = [[k,v] for k,v in self.timeouts.iteritems()]
+        #TODO: See if this works
+        if not lastTimeoutCheck:
+            lastTimeoutCheck = nowTime
+        nowTime = datetime.datetime.now()
+        timeDelta = (nowTime - lastTimeoutCheck).total_seconds()
+        iterList = [[k,v] for k,v in timeouts.iteritems()]
         for taskID, timeout in iterList:
             task = hydra_taskboard.fetch("WHERE id = %s", (taskID,))
             if task.status != "S":
-                self.timeouts.pop(taskID, None)
+                timeouts.pop(taskID, None)
             else:
-                self.timeouts[taskID] = timeout - timeDelta
-                if self.timeouts[taskID] < 0:
+                timeouts[taskID] = timeout - timeDelta
+                if timeouts[taskID] < 0:
                     logger.debug("Kill job should go here...")
+        return timeouts, lastTimeoutCheck, nowTime
 
     def killTask(self, node, statusAfterDeath = KILLED):
         logger.debug("Killing task on node: {0}".format(node.host))
