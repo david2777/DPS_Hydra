@@ -1,6 +1,7 @@
 #Standard
 import subprocess
 import re
+import os
 
 #Third Party
 import maya.cmds as cmds
@@ -46,7 +47,7 @@ for layer in renderLayers:
 renderLayersReturn = ",".join(renderLayersList)
 
 #----------Setup Base Submitter Command Line Args----------#
-command = "start \\\\zed\\Apps\\_Hydra_RenderFarm\\_Shortcuts\\Submitter.lnk \"{0}\" -s \"{1}\" -e \"{2}\" -p \"{3}\"".format(sceneFile, startFrame, endFrame, projectDir)
+command = "python C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py \"{0}\" -s \"{1}\" -e \"{2}\" -p \"{3}\"".format(sceneFile, startFrame, endFrame, projectDir)
 
 #------------Build Extra Maya Command Line Args------------#
 extraCmdList = []
@@ -54,6 +55,8 @@ extraCmdList = []
 extraCmdList.append("-r {0}".format(currentEngine))
 
 extraCmdList.append("-cam {0}".format(renderCam))
+
+extraCmdList.append("-postFrame \\\"source FrameUpdater;\\\"")
 
 if extraCmdList != []:
     command += " -m \"{0}\"".format(" ".join(extraCmdList))
@@ -69,6 +72,7 @@ command += " -q \"{0}\"".format(projectName)
 
 try:
     renderDir = mel.eval("source GetRenderPath;string $renderDirectory = GetRenderPath();")
+    renderDir = os.path.join(renderDir, "mayaRenders")
     command += " -d \"{0}\"".format(renderDir)
 except RuntimeError:
     pass

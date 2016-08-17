@@ -396,6 +396,11 @@ class FarmView(QMainWindow, Ui_FarmView):
             map(JobUtils.startJob, jobIDs)
             self.populateJobTree()
 
+        #Pause Job
+        elif mode == "pause":
+            map(JobUtils.pauseJob, jobIDs)
+            self.populateJobTree()
+
         #Reveal Detailed Data
         elif mode == "data":
             if len(jobIDs) == 1:
@@ -403,8 +408,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             else:
                 self.revealDetailedHandler(jobIDs, hydra_jobboard, "WHERE id = %s")
 
-        #Kill or Pause Job
-        elif mode in ["kill", "pause", "reset"]:
+        #Kill or Reset
+        elif mode in ["kill", "reset"]:
             #TODO: Handle failues better
             choice = yesNoBox(self, "Confirm", "Really {0} the selected jobs?".format(mode))
             if choice == QMessageBox.No:

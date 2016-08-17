@@ -72,6 +72,10 @@ class RenderManagementServer(TCPServer):
             renderLayers = job.renderLayers.split(",")
             renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
 
+            if all([int(x) == int(job.endFrame) for x in renderLayerTracker]):
+                with transaction() as t:
+                    t.cur.execute("UPDATE hydra_jobboard SET status = 'F' WHERE id = %s", (job.id,))
+
             if len(renderLayers) != len(renderLayerTracker):
                 logger.critical("Malformed renderLayers or renderLayerTracker on job with id {0}".format(job.id))
                 with transaction() as t:
@@ -79,7 +83,7 @@ class RenderManagementServer(TCPServer):
                 break
 
             runningRenderLayers = [x.renderLayer for x in self.runningTasks[int(job.id)]]
-            if job.maxNodes > 0:
+            if job.maxNodes > 0 and len(runningRenderLayers) > 0:
                 if len(runningRenderLayers) < int(job.maxNodes):
                     logger.debug("Skipping job {0} because it is over node limit".format(job.id))
                     break
@@ -135,6 +139,7 @@ class RenderManagementServer(TCPServer):
                     if jobOBJ.timeout > 1:
                         timeouts[taskOBJ.id] = jobOBJ.timeout
                     result = self.assignTask(nodeOBJ, taskOBJ, jobOBJ)
+                    break
                     #TODO: Handle assigment exceptions
 
         return timeouts
@@ -152,7 +157,7 @@ class RenderManagementServer(TCPServer):
 
         if job.requirements and job.requirements != "":
             jobReqs = job.requirements.split(",")
-            nodeCaps = node.capabilities.split(",")
+            nodeCaps = node.capabilities.split(" ")
             checker = [x in nodeCaps for x in jobReqs]
             if not all(checker):
                 logger.debug("Skipping job {0} because node {1} cannot meet its feature requirements".format(job.id, node.host))
@@ -225,6 +230,15 @@ class RenderManagementServer(TCPServer):
                                                 explicitTransaction = t)
             thisTask.currentFrame = frame
             thisTask.update(t)
+
+            thisJob = hydra_jobboard.fetch("WHERE id =  %s", (thisTask.job_id,))
+            rls = thisJob.renderLayers.split(",")
+            idx = rls.index(thisTask.renderLayer)
+            rlTracker = thisJob.renderLayerTracker.split(",")
+            rlTracker[idx] = str(frame)
+            thisJob.renderLayerTracker = ",".join(rlTracker)
+            thisJob.update(t)
+
         return True
 
 def main():

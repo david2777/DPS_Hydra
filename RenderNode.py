@@ -81,12 +81,18 @@ class RenderTCPServer(TCPServer):
         self.renderServ.shutdown()
 
     def startRenderTask(self, renderJob, renderTask):
+        self.renderThread = threading.Thread(target = self.launchRenderTask,
+                                                args = (renderJob, renderTask))
+        self.renderThread.start()
+
+
+    def launchRenderTask(self, renderJob, renderTask):
         logger.info("Starting task with id {0} on job with id {1}".format(renderTask.id, renderJob.id))
         taskFile = "\"{0}\"".format(renderJob.taskFile)
         renderList = [self.execsDict[renderJob.execName], renderJob.baseCMD,
                         "-s", str(renderTask.startFrame), "-e",
-                        str(renderTask.endFrame), "-rl",
-                        str(renderTask.renderLayer), taskFile]
+                        str(renderTask.endFrame), "-b", str(renderJob.byFrame),
+                         "-rl", str(renderTask.renderLayer), taskFile]
         renderCMD = " ".join(renderList)
 
         logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(renderTask.id))

@@ -17,7 +17,7 @@ import Constants
 from Setups.MySQLSetup import db_username, hydra_capabilities, hydra_executable
 from Setups.LoggingSetup import logger
 from Dialogs.MessageBoxes import aboutBox, yesNoBox
-from Setups.JobTicket import UberJobTicket
+from Setups.JobTicket import submitJob
 import Utilities.JobUtils as JobUtils
 from Utilities.Utils import findResource
 
@@ -172,11 +172,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         timeout = int(self.timeoutSpinbox.value())
         projectName = str(self.projectNameLineEdit.text())
         singleTask = self.singleTaskCheckbox.isChecked()
-
-        #Stuff not in JobTicket
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
-        if renderLayers != "":
-            baseCMD += " -rl {0}".format(renderLayers)
+
 
         proj = str(self.projLineEdit.text())
         if len(proj) < 5:
@@ -231,44 +228,35 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
-            niceNameOverride = "{0}_Test".format(niceName)
             baseCMDOverride = baseCMD + " -x 640 -y 360"
             priorityOverride = int(priority * 1.25)
-            phase01Ticket = UberJobTicket(execName, baseCMDOverride, startFrame,
-                                            endFrame, byFrame, taskFile,
-                                            priorityOverride, phase,
-                                            jobStatus, niceNameOverride,
-                                            owner, compatabilityList,
-                                            maxNodesP1, timeout, projectName,
-                                            False)
 
-            p1_job_id = phase01Ticket.doSubmit()
-            if jobStatus == "R":
-                JobUtils.setupNodeLimit(p1_job_id)
-            logger.info("Phase 01 submitted with id: {0}".format(p1_job_id))
+            phase01 = submitJob(niceName, projectName, owner, jobStatus,
+                                compatabilityList, execName, baseCMDOverride,
+                                startFrame, endFrame, byFrame, renderLayers,
+                                taskFile, priorityOverride, phase, maxNodesP1,
+                                timeout, 10)
+
+            logger.info("Phase 01 submitted with id: {0}".format(phase01.id))
             phase01Status = True
 
         if self.finalCheckBox.isChecked():
             logger.info("Building Phase 02")
             #Phase specific overrides
             phase = 2
-            niceNameOverride = "{0}_Final".format(niceName)
             byFrameOverride = 1
             if phase01Status:
                 jobStatusOverride = "U"
             else:
                 jobStatusOverride = jobStatus
-            phase02Ticket = UberJobTicket(execName, baseCMD, startFrame,
-                                            endFrame, byFrameOverride, taskFile,
-                                            priority, phase, jobStatusOverride,
-                                            niceNameOverride, owner,
-                                            compatabilityList, maxNodesP2,
-                                            timeout, projectName, singleTask)
 
-            p2_job_id = phase02Ticket.doSubmit()
-            if jobStatusOverride == "R":
-                JobUtils.setupNodeLimit(p2_job_id)
-            logger.info("Phase 02 submitted with id: {0}".format(p2_job_id))
+            phase02 = submitJob(niceName, projectName, owner, jobStatus,
+                                compatabilityList, execName, baseCMD,
+                                startFrame, endFrame, 1, renderLayers,
+                                taskFile, priority, phase, maxNodesP2,
+                                timeout, 10)
+
+            logger.info("Phase 02 submitted with id: {0}".format(phase02.id))
 
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")
@@ -356,8 +344,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             if check.isChecked():
                 reqList.append(str(check.text()))
 
-        #Job Ticket takes a list and sorts and formats it
-        return reqList
+        return ",".join(sorted(reqList))
 
     def getJobStatus(self):
         if self.startStatusRadioButton.isChecked():

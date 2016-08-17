@@ -8,6 +8,10 @@ def startJob(jobID):
     with transaction() as t:
         t.cur.execute("UPDATE hydra_jobboard SET status = 'R' WHERE id = %s", (jobID,))
 
+def pauseJob(jobID):
+    with transaction() as t:
+        t.cur.execute("UPDATE hydra_jobboard SET status = 'U' WHERE id = %s", (jobID,))
+
 def killJob(jobID, newStatus):
     tasks = hydra_taskboard.fetch("WHERE job_id = %s", (jobID,),
                                     multiReturn = True, cols = ["id"])
