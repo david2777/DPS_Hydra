@@ -11,7 +11,7 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
                 priority, phase, maxNodes, timeout, maxAttempts):
     """A simple function for submitting a job to the jobBoard"""
     #Setup default renderLayerTracker
-    renderLayerTracker = [str(startFrame) for x in renderLayers.split(",")]
+    renderLayerTracker = ["0" for x in renderLayers.split(",")]
     renderLayerTracker = ",".join(renderLayerTracker)
     niceName = "{0}_PHASE{1:02d}".format(niceName, phase)
 

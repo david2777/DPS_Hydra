@@ -48,9 +48,8 @@ class RenderManagementServer(TCPServer):
         self.idleNodes = self.checkNodeStatus(self.idleNodes)
 
         #Assign Tasks to Nodes
-        self.timeouts = self.assignRenderJobs(self.renderJobs, self.idleNodes,
-                                                self.allJobs, self.allNodes,
-                                                self.timeouts)
+        self.assignRenderJobs(self.renderJobs, self.idleNodes, self.allJobs,
+                                self.allNodes)
 
         #Check on timeouts
         #reutrnList = self.checkOnTimeouts(self.timeouts)
@@ -75,6 +74,8 @@ class RenderManagementServer(TCPServer):
             if all([int(x) == int(job.endFrame) for x in renderLayerTracker]):
                 with transaction() as t:
                     t.cur.execute("UPDATE hydra_jobboard SET status = 'F' WHERE id = %s", (job.id,))
+
+
 
             if len(renderLayers) != len(renderLayerTracker):
                 logger.critical("Malformed renderLayers or renderLayerTracker on job with id {0}".format(job.id))
@@ -112,7 +113,7 @@ class RenderManagementServer(TCPServer):
                 onlineList.append(node)
         return onlineList
 
-    def assignRenderJobs(self, renderJobs, idleNodes, allJobs, allNodes, timeouts):
+    def assignRenderJobs(self, renderJobs, idleNodes, allJobs, allNodes):
         if len(renderJobs) < 1 or len(idleNodes) < 1:
             logger.debug("No Idle Nodes or Ready Jobs found. Skipping assignment...")
             return True
@@ -136,13 +137,10 @@ class RenderManagementServer(TCPServer):
                         taskOBJ.insert(t)
                         nodeOBJ.task_id = taskOBJ.id
                         nodeOBJ.update(t)
-                    if jobOBJ.timeout > 1:
-                        timeouts[taskOBJ.id] = jobOBJ.timeout
                     result = self.assignTask(nodeOBJ, taskOBJ, jobOBJ)
+                    self.renderJobs.remove([jobID, renderLayer])
                     break
                     #TODO: Handle assigment exceptions
-
-        return timeouts
 
     def filterTask(self, job, node):
         if job.priority < node.minPriority:
@@ -171,7 +169,10 @@ class RenderManagementServer(TCPServer):
         renderLayers = jobOBJ.renderLayers.split(",")
         frameList = jobOBJ.renderLayerTracker.split(",")
         idx = renderLayers.index(renderLayer)
-        return int(frameList[idx])
+        frame = int(frameList[idx])
+        if frame < jobOBJ.startFrame:
+            frame = jobOBJ.startFrame
+        return frame
 
     def shutdownCMD(self):
         self.managmentServer.shutdown()

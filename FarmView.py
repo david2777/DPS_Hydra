@@ -307,8 +307,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
         renderLayersTotal = len(renderLayerTracker)
         renderLayersDone = sum([1 for x in renderLayerTracker if x >= job.endFrame])
-        totalFrames = sum([(job.endFrame - job.startFrame) for x in renderLayerTracker])
-        completeFrames = sum([(x - job.startFrame) for x in renderLayerTracker])
+        if job.startFrame != job.endFrame:
+            totalFrames = sum([(job.endFrame - job.startFrame) for x in renderLayerTracker])
+            completeFrames = sum([(x - job.startFrame) for x in renderLayerTracker])
+        else:
+            #TODO: Fix this
+            totalFrames = 1
+            completeFrames = 1
         percent = "{0:.0%}".format(float(completeFrames / totalFrames))
         taskString  = "{0} ({1}/{2})".format(percent, renderLayersDone, renderLayersTotal)
 

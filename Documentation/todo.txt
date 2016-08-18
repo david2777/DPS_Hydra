@@ -2,8 +2,9 @@
     -Maybe need to add more submitter args to be able to add quotes to them
 
 -[In Progress]Fix Bugs
-    -RenderNode locks up while rendering. Needs to be in another thread or
-    maybe it's an issue with the communicate() call
+    -Job Kill needs end time
+    -Job Kill needs to be able to handle task not running on node
+    -Assignment should check for response now that it starts render in separate thread
 
 -[In Progress]Render consecutive frames
     -Need a new RenderLayer management system
