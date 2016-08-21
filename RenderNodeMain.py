@@ -262,25 +262,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         task_id = self.thisNode.task_id
         self.offlineThisNodeHandler()
         if task_id:
-            try:
-                killed = TaskUtils.killTask(task_id, READY)
-                if not killed:
-                    logger.error("Node could not kill for some reason!")
-                    self.aboutBoxHidden("Error",
-                                "Task couldn't be killed for some reason.")
-                else:
-                    logger.info("Node Got Off current task!")
-            except socketerror as err:
-                logger.error(str(err))
-                self.aboutBoxHidden("Error", "Task couldn't be killed "
-                "because there was a problem communicating with the "
-                "host running it.")
-            except sqlerror as err:
-                logger.error(str(err))
-                self.aboutBoxHidden("SQL Error", str(err))
-        else:
-            self.aboutBoxHidden("Task Kill Error",
-                    "No tasks found on current node. Set status to Offline.")
+            killed = self.renderServer.killCurrentJob(KILLED)
 
     def clearOutputHandler(self):
         choice = yesNoBox(self, "Confirm", "Really clear output?")
@@ -315,7 +297,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         #Start Render Server
         try:
             self.renderServer = RenderNode.RenderTCPServer()
-            self.renderServer.createIdleLoop(5, self.renderServer.processRenderTasks)
             self.renderServerStatus = True
             self.renderServerPixmap.setPixmap(self.donePixmap)
             logger.info("Render Server Started!")
@@ -468,12 +449,9 @@ def pulse():
         logger.error(traceback.format_exc(e))
 
 if __name__ == "__main__":
-    """
     app = QApplication(sys.argv)
     app.quitOnLastWindowClosed = False
     window = RenderNodeMainUI()
     window.show()
     retcode = app.exec_()
     sys.exit(retcode)
-    """
-    raw_input("Broken for now")

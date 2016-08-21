@@ -85,7 +85,7 @@ class RenderManagementServer(TCPServer):
 
             runningRenderLayers = [x.renderLayer for x in self.runningTasks[int(job.id)]]
             if job.maxNodes > 0 and len(runningRenderLayers) > 0:
-                if len(runningRenderLayers) < int(job.maxNodes):
+                if len(runningRenderLayers) >= int(job.maxNodes):
                     logger.debug("Skipping job {0} because it is over node limit".format(job.id))
                     break
 
