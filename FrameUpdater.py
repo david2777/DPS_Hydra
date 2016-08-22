@@ -14,9 +14,9 @@ def main(frame):
     connection = TCPConnection(renderManagerHost, int(renderManagerPort))
     answer = connection.getAnswer(updateCurrentFrameQuestion(node, frame))
     if answer:
-        logger.debug("Frame updated successfully")
+        logger.debug("Frame updated successfully on ManagerServer")
     else:
-        logger.error("Frame {0} was not updated successfully on node {1}".format(frame, node))
+        logger.error("Frame {0} was not updated successfully on ManagerServer".format(frame))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

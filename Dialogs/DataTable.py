@@ -4,7 +4,6 @@ from PyQt4.QtCore import *
 
 #Hydra Qt
 from CompiledUI.UI_DataTableDialog import Ui_DataTableWidget
-from Setups.WidgetFactories import TableWidgetItem
 
 class DataTableDialog(QDialog, Ui_DataTableWidget):
     def __init__(self, data, parent=None):
@@ -27,7 +26,7 @@ class DataTableDialog(QDialog, Ui_DataTableWidget):
         self.DataTable.setVerticalHeaderLabels(rows)
 
         for pos, row in enumerate(rows):
-            self.DataTable.setItem(pos, 0, TableWidgetItem(str(getattr(self.data, row))))
+            self.DataTable.setItem(pos, 0, QTableWidgetItem(str(getattr(self.data, row))))
 
     @classmethod
     def create(cls, data):

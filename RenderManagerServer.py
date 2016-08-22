@@ -132,15 +132,24 @@ class RenderManagementServer(TCPServer):
                                             startFrame = startFrame,
                                             endFrame = jobOBJ.endFrame,
                                             currentFrame = startFrame)
-                    nodeOBJ.status = STARTED
                     with transaction() as t:
                         taskOBJ.insert(t)
-                        nodeOBJ.task_id = taskOBJ.id
-                        nodeOBJ.update(t)
                     result = self.assignTask(nodeOBJ, taskOBJ, jobOBJ)
-                    self.renderJobs.remove([jobID, renderLayer])
-                    break
-                    #TODO: Handle assigment exceptions
+                    if result:
+                            nodeOBJ.status = STARTED
+                            nodeOBJ.task_id = taskOBJ.id
+                            nodeOBJ.update(t)
+                        self.renderJobs.remove([jobID, renderLayer])
+                        break
+                    else:
+                        logger.debug("Cleaning up task {0}".format(taskOBJ.id))
+                        taskOBJ.status = KILLED
+                        taskOBJ.endTime = datetime.datetime.now()
+                        taskOBJ.exitCode = 101
+                        #Mark job failure? Offline node?
+                        with transaction() as t:
+                            taskOBJ.update(t)
+                        break
 
     def filterTask(self, job, node):
         if job.priority < node.minPriority:
@@ -180,11 +189,12 @@ class RenderManagementServer(TCPServer):
     def assignTask(self, node, task, job):
         logger.debug("Assigning task with id {0} to node {1}".format(task.id, node.host))
         connection = TCPConnection(hostname = node.host)
-        response = connection.sendQuestion(StartRenderQuestion(job, task))
+        response = connection.getAnswer(StartRenderQuestion(job, task))
         if response:
             logger.debug("Task {0} was accepted on {1}".format(task.id, node.host))
         else:
             logger.error("Task {0} was declined on {1}".format(task.id, node.host))
+        return response
 
     def checkOnTimeouts(self, timeouts, lastTimeoutCheck, nowTime):
         logger.debug("Checking on Tasks in progress with timeouts")

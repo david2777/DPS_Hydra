@@ -366,7 +366,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         else:
             taskText = "None"
         self.taskIDLabel.setText(taskText)
-        self.nodeVersionLabel.setText(NodeUtils.getSoftwareVersionText(self.thisNode.software_version))
+        self.nodeVersionLabel.setText(str(self.thisNode.software_version))
         self.minPriorityLabel.setText(str(self.thisNode.minPriority))
         self.capabilitiesLabel.setText(self.thisNode.capabilities)
         self.scheduleEnabled.setText(str(self.thisNode.scheduleEnabled))

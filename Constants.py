@@ -4,7 +4,10 @@ import os
 import sys
 import getpass
 
-#Logging
+#Versioning
+VERSION  = 0.1
+
+#Files
 if sys.platform == "win32":
     BASEDIR = r"C:\Hydra"
 else:

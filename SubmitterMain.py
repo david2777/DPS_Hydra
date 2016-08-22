@@ -14,10 +14,9 @@ from CompiledUI.UI_Submitter import Ui_MainWindow
 
 #Hydra
 import Constants
-from Setups.MySQLSetup import db_username, hydra_capabilities, hydra_executable
+from Setups.MySQLSetup import *
 from Setups.LoggingSetup import logger
 from Dialogs.MessageBoxes import aboutBox, yesNoBox
-from Setups.JobTicket import submitJob
 import Utilities.JobUtils as JobUtils
 from Utilities.Utils import findResource
 
@@ -229,15 +228,37 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             #Phase specific overrides
             phase = 1
             baseCMDOverride = baseCMD + " -x 640 -y 360"
-            priorityOverride = int(priority * 1.25)
+
+            if ((endFrame - startFrame) % byFrame) != 0:
+                phase01FinalFrame = True
+                #This looks kinda dumb but works because Python 2.7 divide returns an int
+                endFrameOverride = ((((endFrame - startFrame) / byFrame) * byFrame) + startFrame)
+            else:
+                phase01FinalFrame = False
+                endFrameOverride = endFrame
 
             phase01 = submitJob(niceName, projectName, owner, jobStatus,
                                 compatabilityList, execName, baseCMDOverride,
-                                startFrame, endFrame, byFrame, renderLayers,
-                                taskFile, priorityOverride, phase, maxNodesP1,
+                                startFrame, endFrameOverride, byFrame, renderLayers,
+                                taskFile, int(priority * 1.25), phase, maxNodesP1,
                                 timeout, 10)
 
             logger.info("Phase 01 submitted with id: {0}".format(phase01.id))
+
+            if phase01FinalFrame:
+                niceNameOverride = "{0}_FinalFrame".format(niceName)
+                byFrameOverride = 1
+                phase01FinalFrame = submitJob(niceNameOverride, projectName,
+                                                owner, jobStatus,
+                                                compatabilityList, execName,
+                                                baseCMDOverride, endFrame,
+                                                endFrame, byFrameOverride,
+                                                renderLayers, taskFile,
+                                                int(priority * 1.35), phase,
+                                                maxNodesP1, timeout, 10)
+
+                logger.info("Phase 01 final frame workaround submitted with id: {0}".format(phase01FinalFrame.id))
+
             phase01Status = True
 
         if self.finalCheckBox.isChecked():
@@ -250,17 +271,17 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             else:
                 jobStatusOverride = jobStatus
 
-            phase02 = submitJob(niceName, projectName, owner, jobStatus,
+            phase02 = submitJob(niceName, projectName, owner, jobStatusOverride,
                                 compatabilityList, execName, baseCMD,
-                                startFrame, endFrame, 1, renderLayers,
-                                taskFile, priority, phase, maxNodesP2,
-                                timeout, 10)
+                                startFrame, endFrame, byFrameOverride,
+                                renderLayers, taskFile, priority, phase,
+                                maxNodesP2, timeout, 10)
 
             logger.info("Phase 02 submitted with id: {0}".format(phase02.id))
 
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")
-        #aboutBox(self, title = "Submitted!", msg = "Job and Tasks have been submitted!\nCheck FarmView to view the status of your Jobs!")
+        #aboutBox(self, title = "Submitted!", msg = "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
 
     def browseFileButtonHandler(self, QTTarget, startDir, caption, fileFilter):
         returnDir = QFileDialog.getOpenFileName(
@@ -351,6 +372,31 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             return "R"
         else:
             return "U"
+
+def submitJob(niceName, projectName, owner, status, requirements, execName,
+                baseCMD, startFrame, endFrame, byFrame, renderLayers, taskFile,
+                priority, phase, maxNodes, timeout, maxAttempts):
+    """A simple function for submitting a job to the jobBoard"""
+    #Setup default renderLayerTracker
+    renderLayerTracker = ["0" for x in renderLayers.split(",")]
+    renderLayerTracker = ",".join(renderLayerTracker)
+    niceName = "{0}_PHASE{1:02d}".format(niceName, phase)
+
+    job = hydra_jobboard(niceName = niceName, projectName = projectName,
+                        owner = owner, status = status,
+                        requirements = requirements, execName = execName,
+                        baseCMD = baseCMD, startFrame = startFrame,
+                        endFrame = endFrame, byFrame = byFrame,
+                        renderLayers = renderLayers,
+                        renderLayerTracker = renderLayerTracker,
+                        taskFile = taskFile, priority = priority,
+                        phase = phase, maxNodes = maxNodes, timeout = timeout,
+                        maxAttempts = maxAttempts)
+
+    with transaction() as t:
+        job.insert(transaction=t)
+
+    return job
 
 if __name__ == '__main__':
     try:

@@ -56,8 +56,8 @@ class RenderTCPServer(TCPServer):
 
         #Setup Class Variables
         self.childProcess = None
-        self.childKilled = False
         self.statusAfterDeath = None
+        self.childKilled = False
         self.thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),))
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
@@ -71,7 +71,7 @@ class RenderTCPServer(TCPServer):
             self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
 
         #Update self.thisNode software_version
-        self.thisNode.software_version = sys.argv[0]
+        self.thisNode.software_version = Constants.VERSION
 
         #Commit any changes we just made to self.thisNode
         with transaction() as t:
@@ -84,10 +84,12 @@ class RenderTCPServer(TCPServer):
         self.renderThread = threading.Thread(target = self.launchRenderTask,
                                                 args = (renderJob, renderTask))
         self.renderThread.start()
-
+        return self.renderThread.isAlive()
 
     def launchRenderTask(self, renderJob, renderTask):
         logger.info("Starting task with id {0} on job with id {1}".format(renderTask.id, renderJob.id))
+        self.childKilled = False
+        self.statusAfterDeath = None
         taskFile = "\"{0}\"".format(renderJob.taskFile)
         renderList = [self.execsDict[renderJob.execName], renderJob.baseCMD,
                         "-s", str(renderTask.startFrame), "-e",
@@ -133,10 +135,10 @@ class RenderTCPServer(TCPServer):
 
                 renderTask.exitCode = self.childProcess.returncode
                 renderTask.endTime = datetime.datetime.now()
-                #Check if render was killed
                 if self.childKilled:
                     renderTask.status = self.statusAfterDeath
-                #ExitCode 0 is regular, any other is irregular
+                    renderTask.exitCode = 1
+                    renderTask.endTime = datetime.datetime.now()
                 else:
                     if renderTask.exitCode == 0:
                         status = FINISHED
@@ -150,6 +152,7 @@ class RenderTCPServer(TCPServer):
 
                     renderTask.status = status
 
+
                 status = IDLE if self.thisNode.status == STARTED else OFFLINE
                 self.thisNode.status = status
                 logger.debug("New Node Status: {0}".format(self.thisNode.status))
@@ -161,8 +164,6 @@ class RenderTCPServer(TCPServer):
 
             log.close()
             self.childProcess = None
-            self.childKilled = False
-            self.statusAfterDeath = None
             logger.info("Done with render task {0}".format(renderTask.id))
 
     def killCurrentJob(self, statusAfterDeath):
@@ -202,6 +203,10 @@ class RenderTCPServer(TCPServer):
                     logger.debug(str(err))
             else:
                 logger.debug("Skipping PID {0} because it is probably already dead.".format(proc.pid))
+
+        if any(psutil.pid_exists(proc.pid) for proc in children_procs):
+            logger.error("Could not kill all render processes for some reason!")
+            self.childKilled = False
 
 def heartbeat(interval = 60):
     host = Utils.myHostName()

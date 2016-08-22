@@ -4,6 +4,8 @@ from Setups.MySQLSetup import *
 from Setups.LoggingSetup import logger
 import Utilities.TaskUtils as TaskUtils
 
+#TODO: Reset and Remove Render Layers from a Job
+
 def startJob(jobID):
     with transaction() as t:
         t.cur.execute("UPDATE hydra_jobboard SET status = 'R' WHERE id = %s", (jobID,))
@@ -21,10 +23,6 @@ def killJob(jobID, newStatus):
     with transaction() as t:
         t.cur.execute(jobUpdate, (jobID,))
     return all(responses)
-
-def prioritizeJob(jobID, priority):
-    with transaction() as t:
-        t.cur.execute("UPDATE hydra_jobboard SET priority = %s WHERE id = %s", (priority, jobID))
 
 def archiveJob(jobID, mode):
     jobCommand = "UPDATE hydra_jobboard SET archived = %s WHERE id = %s"
