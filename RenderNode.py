@@ -133,12 +133,12 @@ class RenderTCPServer(TCPServer):
                                                         (self.thisNode.host,),
                                                         explicitTransaction = t)
 
-                renderTask.exitCode = self.childProcess.returncode
                 renderTask.endTime = datetime.datetime.now()
+                renderTask.exitCode = self.childProcess.returncode if self.childProcess else 1
+
                 if self.childKilled:
                     renderTask.status = self.statusAfterDeath
                     renderTask.exitCode = 1
-                    renderTask.endTime = datetime.datetime.now()
                 else:
                     if renderTask.exitCode == 0:
                         status = FINISHED

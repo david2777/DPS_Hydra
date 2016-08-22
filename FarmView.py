@@ -563,10 +563,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         else:
             duration = None
 
+        startTime = str(task.startTime)[5:] if task.startTime else "None"
+        endTime = str(task.endTime)[5:] if task.endTime else "None"
+
         return [str(task.renderLayer), str(task.id), niceNames[task.status],
                     str(task.host), str(task.startFrame), str(task.endFrame),
-                    str(task.currentFrame), str(task.startTime),
-                    str(task.endTime), str(duration), str(task.exitCode)]
+                    str(task.currentFrame), startTime, endTime,
+                    str(duration), str(task.exitCode)]
 
     def getTaskTreeSel(self, mode = "IDs"):
         self.resetStatusBar()

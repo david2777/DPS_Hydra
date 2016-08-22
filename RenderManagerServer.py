@@ -136,6 +136,7 @@ class RenderManagementServer(TCPServer):
                         taskOBJ.insert(t)
                     result = self.assignTask(nodeOBJ, taskOBJ, jobOBJ)
                     if result:
+                        with transaction() as t:
                             nodeOBJ.status = STARTED
                             nodeOBJ.task_id = taskOBJ.id
                             nodeOBJ.update(t)
