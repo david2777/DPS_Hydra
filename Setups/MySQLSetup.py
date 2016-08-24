@@ -28,10 +28,11 @@ if autoLogin:
 
 if not autoLogin:
     returnValues = PasswordStorage.qtPrompt()
-    if not returnValues[0]:
+    if not returnValues[0] or returnValues[1]:
         logger.error("Could not login!")
         sys.exit(1)
     else:
+        db_username = returnValues[0]
         _db_password = returnValues[1]
 
 #Statuses for either jobs/tasks or render nodes

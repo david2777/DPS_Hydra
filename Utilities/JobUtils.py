@@ -16,10 +16,14 @@ def pauseJob(jobID):
 
 def killJob(jobID, newStatus):
     tasks = hydra_taskboard.fetch("WHERE job_id = %s", (jobID,),
-                                    multiReturn = True, cols = ["id"])
+                                    multiReturn = True, cols = ["id", "renderLayers"])
     idList = [int(ta.id) for ta in tasks]
     responses = [TaskUtils.killTask(taskID, newStatus) for taskID in idList]
-    jobUpdate = "UPDATE hydra_jobboard SET status = 'U' WHERE id = %s"
+    jobUpdate = "UPDATE hydra_jobboard SET status = 'U'"
+    if newStatus == RESET:
+        rlTracker = ",".join(["0" for x in len(job.renderLayers.split(","))])
+        jobUpdate += ", renderLayerTracker = '{}'".format(rlTracker)
+    jobUpdate += " WHERE id = %s"
     with transaction() as t:
         t.cur.execute(jobUpdate, (jobID,))
     return all(responses)

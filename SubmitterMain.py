@@ -170,7 +170,6 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         maxNodesP2 = int(self.maxNodesP2SpinBox.value())
         timeout = int(self.timeoutSpinbox.value())
         projectName = str(self.projectNameLineEdit.text())
-        singleTask = self.singleTaskCheckbox.isChecked()
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
 
 

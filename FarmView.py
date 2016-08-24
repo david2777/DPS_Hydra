@@ -243,27 +243,32 @@ class FarmView(QMainWindow, Ui_FarmView):
                         self.resetStatusBar)
 
         self.addItem(self.jobMenu, "Start Jobs", self.jobActionHandler,
-                "Start jobs selected in Job Tree", "start", "Ctrl+S")
+                "Mark job(s) as Ready so new subtasks can be created",
+                "start", "Ctrl+S")
         self.addItem(self.jobMenu, "Pause Jobs", self.jobActionHandler,
-                "Pause jobs selected in Job Tree", "pause", "Ctrl+P")
+                "Don't make any new subtasks but don't kill existing ones",
+                "pause", "Ctrl+P")
         self.addItem(self.jobMenu, "Kill Jobs", self.jobActionHandler,
-                "Kill jobs selected in Job Tree", "kill", "Ctrl+K")
+                "Kill all subtasks and don't create anymore until job is Started again",
+                "kill", "Ctrl+K")
         self.addItem(self.jobMenu, "Reset Jobs", self.jobActionHandler,
-                "Reset jobs selected in Job Tree", "reset", "Ctrl+R")
+                "Kill all subtasks and reset each Render Layer to be rendered again",
+                "reset", "Ctrl+R")
         self.jobMenu.addSeparator()
 
         self.addItem(self.jobMenu, "Archive Jobs", self.jobActionHandler,
-                "Archive Jobs and hide them from the JobTreeView",
+                "Archive Job(s) and hide them from the JobTreeView",
                 "archive", "Del")
         self.addItem(self.jobMenu, "Unarchive Jobs", self.jobActionHandler,
-                "Unarchive Jobs and add them back to the JobTreeView",
+                "Unarchive Job(s) and add them back to the JobTreeView",
                 "unarchive", "Shift+Del")
         self.addItem(self.jobMenu, "Reveal Detailed Data...", self.jobActionHandler,
-                "Opens a dialog window the detailed data for the selected jobs.", "data")
+                "Opens a dialog window the detailed data for the selected job(s)",
+                "data")
         self.jobMenu.addSeparator()
 
-        self.addItem(self.jobMenu, "Set Job Priority...", self.setJobPriority,
-        "Set priority on each job selected in the Job List")
+        self.addItem(self.jobMenu, "Set Job Priority...", self.jobActionHandler,
+        "Set priority on each job selected in the Job List", "priority")
         editJob = self.addItem(self.jobMenu, "Edit Job...", self.doNothing,
                             "Edit Job, WIP")
         editJob.setEnabled(False)
@@ -312,11 +317,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         renderLayersDone = sum([1 for x in renderLayerTracker if x >= job.endFrame])
         if job.startFrame != job.endFrame:
             totalFrames = sum([(job.endFrame - job.startFrame) for x in renderLayerTracker])
-            completeFrames = sum([(x - job.startFrame) for x in renderLayerTracker])
+            startFrames = [x if x > job.startFrame else job.startFrame for x in renderLayerTracker]
+            completeFrames = sum([(x - job.startFrame) for x in startFrames])
         else:
-            #TODO: Fix this
-            totalFrames = 1
-            completeFrames = 1
+            totalFrames = renderLayersTotal
+            completeFrames = sum([1 for x in renderLayerTracker if x > 0])
         percent = "{0:.0%}".format(float(completeFrames / totalFrames))
         taskString  = "{0} ({1}/{2})".format(percent, renderLayersDone, renderLayersTotal)
 
@@ -418,12 +423,11 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Kill or Reset
         elif mode in ["kill", "reset"]:
-            #TODO: Handle failues better
             choice = yesNoBox(self, "Confirm", "Really {0} the selected jobs?".format(mode))
             if choice == QMessageBox.No:
                 return
 
-            modeDict = {"kill" : KILLED, "pause" : PAUSED, "reset" : RESET}
+            modeDict = {"kill" : KILLED, "reset" : RESET}
             statusAfterDeath = modeDict[mode]
 
             responses = [JobUtils.killJob(jobID, statusAfterDeath) for jobID in jobIDs]
@@ -431,8 +435,10 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.populateJobTree()
 
             if not all(responses):
-                warningBox(self, "Error",
-                            "One or more nodes couldn't kill their tasks.")
+                failureIDXes = [i for i, x in enumerate(responses) if not x]
+                failureIDs = [jobIDs[i] for i in failureIDXes]
+                warningBox(self, "Job Kill Error!",
+                            "Warning! Job kill returned at least one error on tasks under the following jobs: {}".format(failureIDs))
 
         #Toggle Archive on Job
         elif mode in ["archive", "unarchive"]:
@@ -449,27 +455,24 @@ class FarmView(QMainWindow, Ui_FarmView):
 
             self.populateJobTree(clear = True)
 
+        elif mode == "priority":
+            selection = self.getJobTreeSel("Rows")
+            for sel in selection:
+                job_id = int(sel.text(1))
+                job_priority = int(sel.text(5))
+                msgString = "Priority for job {0}:".format(job_id)
+                reply = intBox(self, "Set Job Priority", msgString , job_priority)
+                if reply[1]:
+                    with transaction() as t:
+                        t.cur.execute("UPDATE hydra_jobboard SET priority = %s WHERE id = %s", (reply[0], job_id))
+                    self.populateJobTree()
+                else:
+                    logger.debug("PrioritizeJob skipped on {0}".format(job_id))
+
         else:
             logger.error("Bad job action handler arg")
 
         self.doUpdate()
-
-    def setJobPriority(self):
-        #TODO: Move to main action handler or get rid of main action handler
-        selection = self.getJobTreeSel("Rows")
-        if not selection:
-            return
-        for sel in selection:
-            job_id = int(sel.text(1))
-            job_priority = int(sel.text(5))
-            msgString = "Priority for job {0}:".format(job_id)
-            reply = intBox(self, "Set Job Priority", msgString , job_priority)
-            if reply[1]:
-                with transaction() as t:
-                    t.cur.execute("UPDATE hydra_jobboard SET priority = %s WHERE id = %s", (reply[0], job_id))
-                self.populateJobTree()
-            else:
-                logger.debug("PrioritizeJob skipped on {0}".format(job_id))
 
     #---------------------------------------------------------------------#
     #---------------------------TASK HANDLERS-----------------------------#
@@ -542,7 +545,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             if topLevelItem.childCount() < 1:
                 defaultTaskData = [topLevelItem.text(0), "None", niceNames[READY],
                                     "None", str(job.startFrame),
-                                    str(job.endFrame), str(job.startFrame),
+                                    str(job.endFrame), str(rlTracker[i]),
                                     "None", "None", "None", "None"]
                 taksItem = QTreeWidgetItem(topLevelItem, defaultTaskData)
 
@@ -599,6 +602,9 @@ class FarmView(QMainWindow, Ui_FarmView):
             return
 
         if mode == "kill":
+            response = yesNoBox(self, "Confirm", "Are you sure you want to kill these tasks: {}".format(taskIDs))
+            if response == QMessageBox.No:
+                return
             responses = [TaskUtils.killTask(taskID, KILLED) for taskID in taskIDs]
             if not all(responses):
                 logger.error("Task Kill failed on one or more tasks.")

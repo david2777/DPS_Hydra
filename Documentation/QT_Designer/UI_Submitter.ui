@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>448</width>
+    <width>506</width>
     <height>320</height>
    </rect>
   </property>
@@ -244,16 +244,6 @@
             </property>
             <property name="checked">
              <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="singleTaskCheckbox">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string>Single Task</string>
             </property>
            </widget>
           </item>
@@ -550,7 +540,6 @@
   <tabstop>testFramesSpinBox</tabstop>
   <tabstop>testCheckBox</tabstop>
   <tabstop>finalCheckBox</tabstop>
-  <tabstop>singleTaskCheckbox</tabstop>
   <tabstop>tabWidget</tabstop>
   <tabstop>sceneLineEdit</tabstop>
   <tabstop>sceneButton</tabstop>
