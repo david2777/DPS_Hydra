@@ -240,6 +240,9 @@ class RenderManagementServer(TCPServer):
         with transaction() as t:
             thisTask = hydra_taskboard.fetch("WHERE id = %s", (thisNode.task_id,),
                                                 explicitTransaction = t)
+            if thisTask == []:
+                logger.warning("Task could not be found for node {}".format(node))
+                return False
             thisTask.currentFrame = frame
             thisTask.update(t)
 
