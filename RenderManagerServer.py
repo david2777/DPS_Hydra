@@ -236,13 +236,13 @@ class RenderManagementServer(TCPServer):
             thisNode = self.allNodes[node]
         except KeyError:
             logger.error("Could not find node '{0}'!".format(node))
-            return False
+            return 22
         with transaction() as t:
             thisTask = hydra_taskboard.fetch("WHERE id = %s", (thisNode.task_id,),
                                                 explicitTransaction = t)
             if thisTask == []:
                 logger.warning("Task could not be found for node {}".format(node))
-                return False
+                return 33
             thisTask.currentFrame = frame
             thisTask.update(t)
 

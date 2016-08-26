@@ -40,11 +40,16 @@ def killTask(task_id, newStatus, TCPKill = True):
                 return killed
 
         if not TCPKill:
+            logger.debug("TCPKill recived None, marking task as killed")
+            node = hydra_rendernode.fetch("WHERE host = %s", (task.host,))
+            node.status = IDLE if node.status == STARTED else OFFLINE
+            node.task_id = None
             task.status = newStatus
             task.exitCode = 1
             task.endTime = datetime.datetime.now()
             with transaction() as t:
                 task.update(t)
+                node.update(t)
             return True
     else:
         logger.debug("Task Kill is skipping task {0} because of status {1}".format(task.id, task.status))

@@ -38,6 +38,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
+        logger.info('Starting in {0}'.format(os.getcwd()))
+        logger.info('arglist is {0}'.format(sys.argv))
+
         with open(Utils.findResource("styleSheet.css"),"r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
@@ -47,18 +50,11 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                     "You cannot run more than one RenderNode at the same time. Closing...")
             sys.exit(1)
 
-        self.thisNode = None
-        try:
-            self.thisNode = NodeUtils.getThisNodeData()
-            self.currentSchedule = self.thisNode.weekSchedule
-            self.currentScheduleEnabled = self.thisNode.scheduleEnabled
-        except sqlerror as err:
-            logger.error(str(err))
-            self.onlineButton.setEnabled(False)
-            self.offlineButton.setEnabled(False)
-            self.getoffButton.setEnabled(False)
+        self.thisNode = NodeUtils.getThisNodeData()
 
         if not self.thisNode:
+            self.offlineButton.setEnabled(False)
+            self.getoffButton.setEnabled(False)
             logger.error("Node does not exist in database!")
             aboutBox(self, "Error",
                 "This node was not found in the database! If you wish to render  "
@@ -67,7 +63,50 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 " try again.")
             sys.exit(1)
 
-        #Add handlers
+        self.currentSchedule = self.thisNode.weekSchedule
+        self.currentScheduleEnabled = self.thisNode.scheduleEnabled
+
+        self.buildUI()
+        self.connectButtons()
+        self.updateThisNodeInfo()
+        #Note: sys.exit calls after this might not kill the server threads
+        #TODO: Fix that
+        self.startupServers()
+
+        self.autoUpdateThread = workerSignalThread("run", 15)
+        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.updateThisNodeInfo)
+        self.autoUpdateThread.start()
+
+        logger.info("Render Node Main is live! Waiting for tasks...")
+
+        try:
+            autoHide = True if str(sys.argv[1]).lower() == "true" else False
+            logger.info(autoHide)
+        except IndexError:
+            autoHide = False
+
+        if autoHide and self.trayIconBool:
+            logger.info("Autohide is enabled!")
+            self.sendToTrayHandler()
+        else:
+            self.show()
+
+    def normalOutputWritten(self, text):
+        """Append text to the QTextEdit."""
+        cursor = self.outputTextEdit.textCursor()
+        cursor.movePosition(QTextCursor.End)
+        cursor.insertText(text)
+        self.outputTextEdit.setTextCursor(cursor)
+        self.outputTextEdit.ensureCursorVisible()
+
+    def buildUI(self):
+        def addItem(name, handler, statusTip, menu):
+            action = QAction(name, self)
+            action.setStatusTip(statusTip)
+            action.triggered.connect(handler)
+            menu.addAction(action)
+
+        #Add Logging handlers for output field
         emStream = EmittingStream(textWritten=self.normalOutputWritten)
         handler = logging.StreamHandler(emStream)
         handler.setLevel(logging.INFO)
@@ -77,8 +116,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
         sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
 
-        logger.debug('Starting in {0}'.format(os.getcwd()))
-        logger.debug('arglist is {0}'.format(sys.argv))
         #Get Pixmaps and Icon
         self.donePixmap = QPixmap(Utils.findResource("Images/status/done.png"))
         self.inProgPixmap = QPixmap(Utils.findResource("Images/status/inProgress.png"))
@@ -89,36 +126,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.refreshIcon = QIcon()
         self.refreshIcon.addPixmap(self.refreshPixmap)
         self.RIcon = QIcon(Utils.findResource("Images/RenderNodeMain.png"))
-
-        self.buildUI()
-        self.connectButtons()
-        self.updateThisNodeInfo()
-        try:
-            self.startupServers()
-        except Exception, e:
-            logger.error(traceback.format_exc(e))
-
-        self.autoUpdateThread = workerSignalThread("run", 15)
-        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.updateThisNodeInfo)
-        self.autoUpdateThread.start()
-
-        logger.info("Render Node Main is live! Waiting for tasks...")
-
-    def normalOutputWritten(self, text):
-        """Append text to the QTextEdit."""
-        cursor = self.outputTextEdit.textCursor()
-        cursor.movePosition(QTextCursor.End)
-        cursor.insertText(text)
-        self.outputTextEdit.setTextCursor(cursor)
-        self.outputTextEdit.ensureCursorVisible()
-
-
-    def buildUI(self):
-        def addItem(name, handler, statusTip, menu):
-            action = QAction(name, self)
-            action.setStatusTip(statusTip)
-            action.triggered.connect(handler)
-            menu.addAction(action)
 
         self.isVisable = True
 
@@ -205,7 +212,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             if self.renderServerStatus:
                 self.renderServer.shutdownCMD()
                 #Wait to make sure the render server is dead
-                time.sleep(5)
+                time.sleep(1)
             if isTask:
                 self.onlineThisNodeHandler()
             self.trayIcon.hide()
@@ -452,6 +459,5 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.quitOnLastWindowClosed = False
     window = RenderNodeMainUI()
-    window.show()
     retcode = app.exec_()
     sys.exit(retcode)
