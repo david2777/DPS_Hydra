@@ -19,6 +19,7 @@ def simplifyScheduleData(qtDataList):
     firstAction = None
     for eventItem in qtDataList:
         eventList = eventItem.split(":")
+        #Conver the schedule table UI index to a real time
         time = TIMEDICT[int(eventList[1])]
         simpleDataList.append("{0}-{1}-{2}".format(eventList[0], time, eventList[2]))
         if not firstAction:
@@ -30,23 +31,9 @@ def simplifyScheduleData(qtDataList):
 
     return simpleDataList
 
-def makeScheduleReadable(simpleDataList):
-    """Returns a more human readable list of schedule actions given an decoded
-    schedule data list"""
-    if not simpleDataList:
-        return []
-    readableDataList = []
-    for eventItem in simpleDataList:
-        eventList = eventItem.split("-")
-        day = DAYDICT[int(eventList[0])]
-        action = EVENTDICT[int(eventList[2])]
-        readableDataList.append("{0} @ {1} do {2}".format(day, eventList[1], action))
-
-    return readableDataList
-
 def expandScheduleData(dbData):
-    """Take schedule dbData from the dbDatabase and encode it for application to
-    the QTableWidget on load"""
+    """Take schedule data from the database and encode it for application to
+    the QTableWidget schedule UI"""
     if not dbData:
         return None
     expandedDataList = []
@@ -55,13 +42,41 @@ def expandScheduleData(dbData):
         return None
     for eventItem in dbData:
         eventList = eventItem.split("-")
+        #Convert the time to a schdule table UI index
         time = TIMEDICT_REV[eventList[1]]
         expandedDataList.append("{0}:{1}:{2}".format(eventList[0], time, eventList[2]))
 
+    #If the schdule doesn't have data for the start of the week (Midnight Sunday
+    #   Morning) make up a schedule item continuing the action from the last
+    #   schdule item of the week.
     if int(expandedDataList[0].split(":")[0]) != 0 and int(expandedDataList[1].split(":")[0]) != 0:
         expandedDataList = [("0:0:{0}".format(int(expandedDataList[-1].split(":")[2])))] + expandedDataList
 
     return expandedDataList
+
+def findSchedule(dayOfWeek, dataDict):
+    """Take and ISOWeekday and a dictionary from within findNextEvent and finds
+    the next event durring the given ISOWeekday and in the dataDict."""
+    schedule = None
+    i = 0
+    while not schedule and i < 9:
+        #Check if day of week is the the dataDict
+        if dayOfWeek in dataDict.keys():
+            schedule = dataDict[dayOfWeek]
+        #If not add one to dayOfWeek unless day of week is 6 (Saturday),
+        #   then reset to 0 (Sunday)
+        else:
+            if dayOfWeek < 6:
+                dayOfWeek += 1
+            else:
+                dayOfWeek = 0
+        #Finally, increase counter
+        i += 1
+
+    if i > 8:
+        logger.error("Can't find next event!")
+
+    return schedule, dayOfWeek
 
 def findNextEvent(now, dbData):
     """Take the current datetime and the decoded schedule data from the DB and
@@ -77,69 +92,64 @@ def findNextEvent(now, dbData):
     dataDict = {}
     for actionItem in dataList:
         actionItemList = actionItem.split("-")
-        timeList = actionItemList[1].split(":")
-        myTime = datetime.time(int(timeList[0]), int(timeList[1]))
+        dayOfWeek = int(actionItemList[0])
+        action = int(actionItemList[2])
+        timeList = [int(t) for t in actionItemList[1].split(":")]
+        timeObject = datetime.time(timeList[0], timeList[1])
         try:
-            dataDict[int(actionItemList[0])] += [[myTime, int(actionItemList[2])]]
+            dataDict[dayOfWeek] += [[timeObject, action]]
         except KeyError:
-            dataDict[int(actionItemList[0])] =[[myTime, int(actionItemList[2])]]
+            dataDict[dayOfWeek] = [[timeObject, action]]
 
+    #scheule is a nested list like [[time, action], [time,action]]
     todaySchedule, newDayOfWeek = findSchedule(nowDayOfWeek, dataDict)
     if not todaySchedule:
         return None
 
     sched = None
-    #logger.info(todaySchedule)
-    for todayTime in todaySchedule:
-        if todayTime[0] > nowTime:
-            sched = todayTime
+    #Check each schedule item's activation time, if one of them is after now
+    #   then this schedule will work for today
+    for schedItem in todaySchedule:
+        if schedItem[0] > nowTime:
+            logger.debug("Schedule Found: {}".format(sched))
+            sched = schedItem
 
+    #If not then the next schdule item is probably on a date later in the week.
+    #Iterate the day of week and look again.
     if not sched:
+        oldDayOfWeek = newDayOfWeek
         newDayOfWeek += 1
         todaySchedule, newDayOfWeek = findSchedule(newDayOfWeek, dataDict)
-        #logger.info(newDayOfWeek)
-        #logger.info(todaySchedule)
-        sched = todaySchedule[0]
+        if newDayOfWeek <= oldDayOfWeek:
+            logger.error("Could not find schedule on second search")
+        else:
+            logger.debug(todaySchedule)
+            sched = todaySchedule[0]
 
     if not sched:
         logger.error("Could not find schedule")
 
-    #logger.info([newDayOfWeek] + sched)
-
     return [newDayOfWeek] + sched
-
-def findSchedule(tempDayOfWeek, dataDict):
-    """Take and ISOWeekday and a dictionary from within findNextEvent and finds
-    the next event durring the given ISOWeekday and in the dataDict"""
-    todaySchedule = None
-    loopCount = 0
-    while not todaySchedule and loopCount < 9:
-        if tempDayOfWeek in dataDict.keys():
-            todaySchedule = dataDict[tempDayOfWeek]
-        else:
-            tempDayOfWeek += 1 if tempDayOfWeek < 6 else -6
-        loopCount += 1
-
-    if loopCount > 8:
-        logger.error("Can't find next event!")
-
-    return todaySchedule, tempDayOfWeek
 
 def calcuateSleepTime(now, dbData):
     """Takes the current datetime and the decoded schedule data from the DB
     and finds the time to sleep until the next event"""
+    nextEvent = findNextEvent(now, dbData)
+    
+    if nextEvent[-1] == None:
+        return None, None
+
     nowDate = now.date()
     nowDayOfWeek = now.isoweekday()
     nowTime = now.time()
 
-    nextEvent = findNextEvent(now, dbData)
-
     if nowDayOfWeek <= nextEvent[0]:
+        #Next event is in this week
         nextTime = datetime.datetime.combine(nowDate, nextEvent[1])
         sleepyTime = (nextTime - now).total_seconds()
         sleepyTime += 86400 * (nextEvent[0] - nowDayOfWeek)
     else:
-        #next week
+        #Next event is next week
         nextTime = datetime.datetime.combine(nowDate, nextEvent[1])
         sleepyTime = (nextTime - now).total_seconds()
         sleepyTime += (86400 * (7 - nowDayOfWeek))
@@ -157,7 +167,8 @@ def calcuateSleepTimeFromNode(nodeName):
     """A convience function that does calcuateSleepTime given a host name"""
     thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
                                         cols = ["weekSchedule", "host"])
-    return calcuateSleepTime(datetime.datetime.now().replace(microsecond = 0), thisNode.weekSchedule)
+    nowDateTime = datetime.datetime.now().replace(microsecond = 0)
+    return calcuateSleepTime(nowDateTime, thisNode.weekSchedule)
 
 def getThisNodeData():
     """Returns the current node's info from the DB, None if not found in the DB."""

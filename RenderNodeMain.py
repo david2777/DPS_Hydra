@@ -17,6 +17,7 @@ from PyQt4.QtCore import *
 from CompiledUI.UI_RenderNodeMain import Ui_RenderNodeMainWindow
 from Dialogs.NodeEditorDialog import NodeEditorDialog
 from Dialogs.MessageBoxes import aboutBox, yesNoBox
+
 #Hydra
 import RenderNode
 from Setups.LoggingSetup import logger, outputWindowFormatter
@@ -149,28 +150,18 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             #Tray Icon Context Menu
             self.taskIconMenu = QMenu(self)
 
-            addItem("Open",
-                    self.showWindowHandler,
-                    "Show the RenderNodeMain Window",
-                    self.taskIconMenu)
+            addItem("Open", self.showWindowHandler,
+                    "Show the RenderNodeMain Window", self.taskIconMenu)
             self.taskIconMenu.addSeparator()
-            addItem("Update",
-                    self.updateThisNodeInfo,
-                    "Fetch the latest information from the Database",
-                    self.taskIconMenu)
+            addItem("Update", self.updateThisNodeInfo,
+                    "Fetch the latest information from the Database", self.taskIconMenu)
             self.taskIconMenu.addSeparator()
-            addItem("Online",
-                    self.onlineThisNodeHandler,
-                    "Online this node",
-                    self.taskIconMenu)
-            addItem("Offline",
-                    self.offlineThisNodeHandler,
-                    "Offline this node",
-                    self.taskIconMenu)
-            addItem("GetOff!",
-                    self.getOffThisNodeHandler,
-                    "Kill the current task and offline this node",
-                    self.taskIconMenu)
+            addItem("Online", self.onlineThisNodeHandler,
+                    "Online this node", self.taskIconMenu)
+            addItem("Offline", self.offlineThisNodeHandler,
+                    "Offline this node", self.taskIconMenu)
+            addItem("GetOff!", self.getOffThisNodeHandler,
+                    "Kill the current task and offline this node", self.taskIconMenu)
 
             self.trayIcon.setContextMenu(self.taskIconMenu)
         else:
@@ -404,6 +395,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.updateThisNodeInfo()
 
         sleepTime, nowStatus = NodeUtils.calcuateSleepTimeFromNode(self.thisNode.host)
+        if not sleepTime or not nowStatus:
+            logger.error("Could not find schdule! Checking again in 24 hours.")
+            return 86400
 
         if nowStatus == READY:
             self.startupEvent()

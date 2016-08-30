@@ -7,7 +7,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra
-from Utilities.NodeUtils import simplifyScheduleData, expandScheduleData, makeScheduleReadable
+from Utilities.NodeUtils import simplifyScheduleData, expandScheduleData
 from Utilities.Utils import findResource
 
 #Hydra Qt
