@@ -20,7 +20,7 @@ db_username = Utils.getInfoFromCFG("database", "username")
 
 #Get login information
 autoLogin = Utils.getInfoFromCFG("database", "autologin")
-autoLogin = True if str(autoLogin).lower() == "true" else False
+autoLogin = True if str(autoLogin).lower()[0] == "t" else False
 if autoLogin:
     _db_password = PasswordStorage.loadPassword(db_username)
     if not _db_password:
