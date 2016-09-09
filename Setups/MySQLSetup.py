@@ -117,6 +117,8 @@ class tupleObject:
         colStatement = "*"
         if cols:
             cols = [str(x) for x in cols]
+            if "id" not in cols:
+                cols.append("id")
             colStatement = ",".join(cols)
 
         #Build Select Statement
@@ -171,6 +173,7 @@ class tupleObject:
         query = "UPDATE %s SET %s WHERE %s = %%s" % (self.tableName(), assignments, self.primaryKey)
         logger.debug((query, values))
         transaction.cur.executemany(query, [values])
+        return True
 
 class hydra_rendernode(tupleObject):
     primaryKey = 'host'

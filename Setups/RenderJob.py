@@ -2,6 +2,7 @@
 import types
 
 #Third Party
+from MySQLdb import Error as sqlerror
 
 #Hydra
 import Utilities.TaskUtils as TaskUtils
@@ -9,11 +10,22 @@ from Setups.MySQLSetup import *
 from Setups.LoggingSetup import logger
 
 class RenderJob():
-    def __init__(self, hydraJob):
+    def __init__(self, hydraJob, loadSubtasksOpt = False):
+        #TODO: Rename and move to Constants to make it easy to verify data durring sql_table.update()
         """Pass a hydra_jobboard object or an int of the job id you wish to load"""
-        #If the input hydraJob is not a class instance try to cast it to an int
-        #   and load the hydra_jobboard class instance for that id int
-        if type(hydraJob) not types.InstanceType:
+        self.Commitable_Attrs = ['archived', 'attempts', 'baseCMD', 'byFrame',
+                                'endFrame', 'execName', 'failures', 'maxAttempts',
+                                'maxNodes', 'niceName', 'owner', 'phase',
+                                'priority', 'projectName', 'renderLayerTracker',
+                                'renderLayers', 'requirements', 'startFrame',
+                                'status', 'taskFile', 'timeout']
+        self.SQL_Attrs = self.Commitable_Attrs + ['creationTime', 'id']
+        self.loadSubtasksOpt = loadSubtasksOpt
+        self.subtasksLoaded = False
+        #If the input hydraJob is not a hydra_jobboard instance try to cast it
+        #   to an int and load the hydra_jobboard class instance for that id int
+        if not isinstance(hydraJob, hydra_jobboard):
+            logger.debug("Could not find hydra_jobboard instance, attempting to load via Job ID...")
             try:
                 hydraJob = int(hydraJob)
                 hydraJob = hydra_jobboard.fetch("WHERE id = %s", (hydraJob,))
@@ -24,38 +36,28 @@ class RenderJob():
         logger.debug("Loading Job with id '{}'".format(hydraJob.id))
         self.loads(hydraJob)
 
-    def loads(self, hydraJobOBJ):
-        #Job type is hardcoded for now
-        self.jobOBJ = hydraJobOBJ
-        self.jobType = "MayaRender"
-        self.id = int(hydraJobOBJ.id)
-        self.niceName = hydraJobOBJ.niceName
-        self.projectName = hydraJobOBJ.projectName
-        self.owner = hydraJobOBJ.owner
-        self.status = hydraJobOBJ.status
-        self.creationTime = hydraJobOBJ.creationTime
-        self.requirements = hydraJobOBJ.requirements
-        self.execName = hydraJobOBJ.execName
-        self.baseCMD = hydraJobOBJ.baseCMD
-        self.startFrame = int(hydraJobOBJ.startFrame)
-        self.endFrame = int(hydraJobOBJ.endFrame)
-        self.byFrame = int(hydraJobOBJ.byFrame)
-        self.renderLayers = hydraJobOBJ.renderLayers.split(",")
-        self.renderLayerTracker = hydraJobOBJ.renderLayerTracker.split(",")
-        self.taskFile = "\"{}\"".format(hydraJobOBJ.taskFile)
-        self.priority = int(hydraJobOBJ.priority)
-        self.phase = int(hydraJobOBJ.phase)
-        self.maxNodes = int(hydraJobOBJ.maxNodes)
-        self.timeout = int(hydraJobOBJ.timeout)
-        self.failures = hydraJobOBJ.failures.split(",")
-        self.attempts = int(hydraJobOBJ.attempts)
-        self.maxAttempts = int(hydraJobOBJ.maxAttempts)
-        self.archived = True if int(hydraJobOBJ.archived) == 1 else False
+    def __repr__(self):
+        return "Hydra Render Job Object with ID: {}".format(self.id)
 
+    def loads(self, hydraJobOBJ):
+        #Load all valid attributes as class variables
+        self.jobOBJ = hydraJobOBJ
+        valueDict = {attr : getattr(hydraJobOBJ, attr) for attr in self.SQL_Attrs if hasattr(hydraJobOBJ, attr)}
+        self.__dict__.update(valueDict)
+
+        #Job type is hardcoded for now
+        self.jobType = "MayaRender"
+
+        #Load all subtasks if self.loadSubtasksOpt is True
+        if self.loadSubtasksOpt:
+            self.loadSubtasks()
+        return True
+
+    def loadSubtasks(self):
+        self.subtasksLoaded = True
         self.subTasks = hydra_taskboard.fetch("WHERE job_id = %s", (self.id,),
                                                 multiReturn = True)
         self.activeSubTasks = [t for t in self.subTasks if t.status == "S"]
-        return True
 
     def reload(self):
         self.loads(hydra_jobboard.fetch("WHERE id = %s", (self.id,)))
@@ -74,7 +76,10 @@ class RenderJob():
         return True
 
     def kill(self, statusAfterDeath = "K", TCPKill = True):
+        #TODO: Better exception handling for killing in general
         self.reload()
+        if not self.subtasksLoaded:
+            self.loadSubtasks()
         idList = [int(t.id) for t in self.activeSubTasks]
         logger.info(idList)
         responses = [TaskUtils.killTask(taskID, statusAfterDeath) for taskID in idList]
@@ -130,14 +135,22 @@ class RenderJob():
 
         return " ".join(renderList)
 
-    def updateCompletedTask(self, taskInfo):
-        return False
+    def commit(self):
+        """Update the DB with all of the info from this class."""
+        valueDict = {attr : getattr(self, attr) for attr in self.Commitable_Attrs if hasattr(self, attr)}
+        for k,v in valueDict.iteritems():
+            setattr(self.jobOBJ, k, v)
+        try:
+            with transaction() as t:
+                response = self.jobOBJ.update(t)
+        except sqlerror as e:
+            logger.error(e)
+            response = False
 
-    def __repr__(self):
-        pStr = ("Hydra Render Job: {0}\n"+
-                "\tName: {1}\n"+
-                "\tProject: {2}\n"+
-                "\tOwner: {3}\n"
-                "\tStatus: {4}\n")
-        return pStr.format(self.id, self.niceName, self.projectName,
-                            self.owner, self.status)
+        if response:
+            self.reload()
+            return True
+        else:
+            logger.error("Could not commit changes... Reverting to last good state.")
+            self.reload()
+            return False
