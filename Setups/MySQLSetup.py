@@ -14,6 +14,9 @@ import Utilities.Utils as Utils
 
 #Get databse information
 host = Utils.getInfoFromCFG("database", "host")
+domain = Utils.getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
+if domain != "" and host != "localhost":
+    host += ".{}".format(domain)
 databaseName = Utils.getInfoFromCFG("database", "db")
 port = int(Utils.getInfoFromCFG("database", "port"))
 db_username = Utils.getInfoFromCFG("database", "username")

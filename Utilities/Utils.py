@@ -71,8 +71,11 @@ def writeInfoToCFG(section, option, value):
 def myHostName():
     """Return this computers hostname with the dns extension from the local
     configuration file."""
-    domain = getInfoFromCFG("network", "dnsDomainExtension")
-    return socket.gethostname() + domain
+    baseName = socket.gethostname()
+    domain = getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
+    if domain != "":
+        return "{0}.{1}".format(baseName, domain)
+    return baseName
 
 def getRedshiftPreference(attribute):
     """Return an attribute from the Redshift preferences.xml file"""

@@ -10,6 +10,9 @@ from Utilities.Utils import getInfoFromCFG, myHostName
 def main(frame):
     renderManagerHost = getInfoFromCFG("manager", "host")
     renderManagerPort = getInfoFromCFG("manager", "port")
+    domain = Utils.getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
+    if domain != "" and renderManagerHost != "localhost":
+        renderManagerHost += ".{}".format(domain)
     node = myHostName()
     connection = TCPConnection(renderManagerHost, int(renderManagerPort))
     answer = connection.getAnswer(updateCurrentFrameQuestion(node, frame))

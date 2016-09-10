@@ -118,6 +118,7 @@ class RenderJob():
 
     def createJobCMD(self, platform = "win32"):
         #TODO:Get path with correct platform
+        #TODO:Update this with the changes from RenderNode
         execs = hydra_executable.fetch()
         self.execsDict = {ex.name: ex.path for ex in execs}
 

@@ -38,12 +38,15 @@ class RenderTCPServer(TCPServer):
 
         #Detect RedShift GPUs
         self.rsGPUs = Utils.getRedshiftPreference("SelectedCudaDevices")
-        self.rsGPUs = self.rsGPUs.split(",")[:-1]
-        self.rsGPUids = [x.split(":")[0] for x in self.rsGPUs]
-        if len(self.rsGPUs) != len(self.rsGPUids):
-            logger.warning("Problems parsing Redshift Preferences")
-        logger.info("{0} Redshift Enabled GPU(s) found on this node".format(len(self.rsGPUs)))
-        logger.debug("GPUs available for rendering are {0}".format(self.rsGPUs))
+        if self.rsGPUs:
+            self.rsGPUs = self.rsGPUs.split(",")[:-1]
+            self.rsGPUids = [x.split(":")[0] for x in self.rsGPUs]
+            if len(self.rsGPUs) != len(self.rsGPUids):
+                logger.warning("Problems parsing Redshift Preferences")
+            logger.info("{0} Redshift Enabled GPU(s) found on this node".format(len(self.rsGPUs)))
+            logger.debug("GPUs available for rendering are {0}".format(self.rsGPUs))
+        else:
+            logger.warning("Could not find available Redshift GPUs")
 
         #Create RenderLog Directory
         if not os.path.isdir(Constants.RENDERLOGDIR):
@@ -90,12 +93,19 @@ class RenderTCPServer(TCPServer):
         logger.info("Starting task with id {0} on job with id {1}".format(renderTask.id, renderJob.id))
         self.childKilled = False
         self.statusAfterDeath = None
-        taskFile = "\"{0}\"".format(renderJob.taskFile)
-        renderList = [self.execsDict[renderJob.execName], renderJob.baseCMD,
-                        "-s", str(renderTask.startFrame), "-e",
+        #Not sure if Maya for Linux or Maya 2016 thing but one of the two is
+        #   is appending quotes on the file cmd and messing everything up
+        if sys.platform == "win32":
+            taskFile = "\"{0}\"".format(renderJob.taskFile)
+        else:
+            taskFile = renderJob.taskFile
+        baseCMD = [str(x) for x in renderJob.baseCMD.split(" ")]
+        renderList = [self.execsDict[renderJob.execName]]
+        renderList += baseCMD
+        renderList +=  ["-s", str(renderTask.startFrame), "-e",
                         str(renderTask.endFrame), "-b", str(renderJob.byFrame),
                          "-rl", str(renderTask.renderLayer), taskFile]
-        renderCMD = " ".join(renderList)
+        renderCMD = renderList
 
         logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(renderTask.id))
         logger.info('Starting render task {0}'.format(renderTask.id))
@@ -107,8 +117,7 @@ class RenderTCPServer(TCPServer):
 
         try:
             #Run the job and keep track of the process
-            self.childProcess = subprocess.Popen(renderCMD, stdout = log,
-                                                    **Utils.buildSubprocessArgs(False))
+            self.childProcess = subprocess.Popen(renderCMD, stdout = log, stderr = log)
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
                                                                 renderTask.id))
             #Wait for task to finish
