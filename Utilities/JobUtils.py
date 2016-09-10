@@ -16,7 +16,7 @@ def pauseJob(jobID):
 
 def killJob(jobID, newStatus):
     tasks = hydra_taskboard.fetch("WHERE job_id = %s", (jobID,),
-                                    multiReturn = True, cols = ["id", "renderLayers"])
+                                    multiReturn = True, cols = ["id"])
     idList = [int(ta.id) for ta in tasks]
     responses = [TaskUtils.killTask(taskID, newStatus) for taskID in idList]
     jobUpdate = "UPDATE hydra_jobboard SET status = 'U'"

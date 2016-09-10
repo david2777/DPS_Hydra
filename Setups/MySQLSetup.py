@@ -117,8 +117,10 @@ class tupleObject:
         colStatement = "*"
         if cols:
             cols = [str(x) for x in cols]
+            """
             if "id" not in cols:
                 cols.append("id")
+            """
             colStatement = ",".join(cols)
 
         #Build Select Statement
