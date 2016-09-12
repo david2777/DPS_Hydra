@@ -5,7 +5,7 @@ import sys
 import getpass
 
 #Versioning
-VERSION  = 0.1
+VERSION  = 0.2
 
 #Files
 if sys.platform == "win32":
@@ -16,6 +16,7 @@ else:
 
 BASELOGDIR = os.path.join(BASEDIR, "logs")
 RENDERLOGDIR = os.path.join(BASELOGDIR, "render")
+FRAMELOGPATH = os.path.join(RENDERLOGDIR, 'TempFrameTracker.log.txt')
 SETTINGS = os.path.join(BASEDIR, "HydraSettings.cfg")
 
 #Connections

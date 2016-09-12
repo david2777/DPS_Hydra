@@ -244,6 +244,7 @@ class RenderManagementServer(TCPServer):
                 logger.warning("Task could not be found for node {}".format(node))
                 return 33
             thisTask.currentFrame = frame
+            #thisTask.lastUpdate = datetime.datetime.now().replace(microsecond = 0)
             thisTask.update(t)
 
             thisJob = hydra_jobboard.fetch("WHERE id =  %s", (thisTask.job_id,))

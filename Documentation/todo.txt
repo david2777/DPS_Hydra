@@ -4,7 +4,8 @@
 
 -[In Progress]Render consecutive frames
     -Track current render frame locally as a fallback
-        -FrameUpdater sends frame data to RenderNode and Server?
+        -FrameUpdater will write data locally as a fallback and will also be
+          able to parse the Maya log as a super fallback. 
 
 -[In Progress]Render Manager
 

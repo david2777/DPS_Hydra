@@ -26,15 +26,12 @@ def buildSubprocessArgs(include_stdout = False):
         si = None
         env = None
 
-    if include_stdout:
-        ret = {'stdout:': subprocess.PIPE}
-    else:
-        ret = {}
+    ret = {'stdin': subprocess.PIPE,
+            'startupinfo': si, 'env': env }
 
-    ret.update({'stdin': subprocess.PIPE,
-                'stderr': subprocess.PIPE,
-                'startupinfo': si,
-                'env': env })
+    if include_stdout:
+        ret.update({'stdout:': subprocess.PIPE})
+
     return ret
 
 def getInfoFromCFG(section, option):
@@ -81,7 +78,7 @@ def getRedshiftPreference(attribute):
     """Return an attribute from the Redshift preferences.xml file"""
     if sys.platform == "win32":
         try:
-            tree = ET.parse(r"C:\ProgramData\Redshift\preferences.xml")
+            tree = ET.parse("C:\\ProgramData\\Redshift\\preferences.xml")
         except IOError:
             logger.error("Could not find Redshift Preferences!")
             return

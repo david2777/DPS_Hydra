@@ -13,6 +13,9 @@ renderLayersList = []
 engineDict = {"redshift":"Redshift", "mentalRay":"MentalRay", "vray":"VRay",
                 "renderMan":"RenderMan", "renderManRIS":"RenderMan",
                 "arnold":"Arnold"}
+engineCMDDict = {"redshift":"redshift", "mentalRay":"mr", "vray":"vray",
+                "renderMan":"rman", "renderManRIS":"rman", "arnold":"arnold",
+                "mayaHardware2":"hw2", "software":"sw"}
 sceneFile = cmds.file(q = True, exn = True)
 sceneName = sceneFile.split("/")[-1]
 projectDir = cmds.workspace(q = True, rd = True)
@@ -52,7 +55,7 @@ command = "python C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\SubmitterM
 #------------Build Extra Maya Command Line Args------------#
 extraCmdList = []
 
-extraCmdList.append("-r {0}".format(currentEngine))
+extraCmdList.append("-r {0}".format(engineCMDDict[currentEngine]))
 
 extraCmdList.append("-cam {0}".format(renderCam))
 

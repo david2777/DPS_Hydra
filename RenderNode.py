@@ -31,11 +31,6 @@ class RenderTCPServer(TCPServer):
         #Startup TCP Server
         self.renderServ = TCPServer.__init__(self, *arglist, **kwargs)
 
-        #Setup Subprocess STARTUPINFO
-        if sys.platform == "win32":
-            self.si = subprocess.STARTUPINFO()
-            self.si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-
         #Detect RedShift GPUs
         self.rsGPUs = Utils.getRedshiftPreference("SelectedCudaDevices")
         if self.rsGPUs:
@@ -99,14 +94,19 @@ class RenderTCPServer(TCPServer):
             taskFile = "\"{0}\"".format(renderJob.taskFile)
         else:
             taskFile = renderJob.taskFile
+
+        originalCurrentFrame = int(renderTask.currentFrame)
+
         baseCMD = [str(x) for x in renderJob.baseCMD.split(" ")]
         renderList = [self.execsDict[renderJob.execName]]
         renderList += baseCMD
         renderList +=  ["-s", str(renderTask.startFrame), "-e",
                         str(renderTask.endFrame), "-b", str(renderJob.byFrame),
                          "-rl", str(renderTask.renderLayer), taskFile]
-        renderCMD = renderList
+         #TODO: Figure out a way to avoid joining this without breaking quotes on the base CMD
+        renderCMD = " " .join(renderList)
 
+        self.purgeFrameLog()
         logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(renderTask.id))
         logger.info('Starting render task {0}'.format(renderTask.id))
         log = file(logFile, 'w')
@@ -117,7 +117,9 @@ class RenderTCPServer(TCPServer):
 
         try:
             #Run the job and keep track of the process
-            self.childProcess = subprocess.Popen(renderCMD, stdout = log, stderr = log)
+            self.childProcess = subprocess.Popen(renderCMD, stdout = log, stderr = log,
+                                                    **Utils.buildSubprocessArgs(False))
+
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
                                                                 renderTask.id))
             #Wait for task to finish
@@ -136,6 +138,34 @@ class RenderTCPServer(TCPServer):
 
         #Finally, update the DB with the information from the task
         finally:
+            #Get current frame info from DB and local log file
+            updateFrameManually = False
+            newCurrentFrame = hydra_taskboard.fetch("WHERE id = %s", (renderTask.id,),
+                                                    cols = ["currentFrame"])
+            newCurrentFrame = int(newCurrentFrame.currentFrame)
+
+            if os.path.isfile(Constants.FRAMELOGPATH):
+                with open(Constants.FRAMELOGPATH, "r") as f:
+                    data = f.readline().strip()
+                    try:
+                        logFileFrame = int(data)
+                        if logFileFrame > newCurrentFrame:
+                            logger.warning("Local log file has a higer frame number than the DB value.")
+                            log.write("\nWARNING: Local log file has a higher frame number than the DB value.")
+                            newCurrentFrame = logFileFrame
+                            updateFrameManually = True
+                        elif logFileFrame < newCurrentFrame:
+                            logger.warning("Local log file has a lower frame number than the DB value.")
+                            log.write("\nWARNING: Local log file has a lower frame number than the DB value.")
+                    except ValueError:
+                        logger.critical("Attemtped to read local frame log but data returned was: {}".format(data))
+            else:
+                logger.critical("Could not locate local frame log file @ {}".format(Constants.FRAMELOGPATH))
+
+            currentFrameStatus = True
+            if newCurrentFrame == originalCurrentFrame and newCurrentFrame != int(renderTask.endFrame):
+                currentFrameStatus = False
+
             #Get the latest info about this render node
             with transaction() as t:
                 self.thisNode = hydra_rendernode.fetch("WHERE host = %s",
@@ -145,13 +175,23 @@ class RenderTCPServer(TCPServer):
                 renderTask.endTime = datetime.datetime.now()
                 renderTask.exitCode = self.childProcess.returncode if self.childProcess else 1
 
+                if updateFrameManually:
+                    renderTask.currentFrame = newCurrentFrame
+                    rls = renderJob.renderLayers.split(",")
+                    idx = rls.index(renderTask.renderLayer)
+                    rlTracker = renderJob.renderLayerTracker.split(",")
+                    rlTracker[idx] = str(newCurrentFrame)
+                    renderJob.renderLayerTracker = ",".join(rlTracker)
+
                 if self.childKilled:
                     renderTask.status = self.statusAfterDeath
                     renderTask.exitCode = 1
                 else:
-                    if renderTask.exitCode == 0:
+                    if renderTask.exitCode == 0 and currentFrameStatus:
                         status = FINISHED
                     else:
+                        if renderTask.exitCode == 0:
+                            log.write("\n\nERROR: Task returned exit code 0 but it appears to have not actually rendered any frames.")
                         status = ERROR
                         renderJob.attempts += 1
                         if not renderJob.failures or renderJob.failures == "":
@@ -172,8 +212,16 @@ class RenderTCPServer(TCPServer):
                 self.thisNode.update(t)
 
             log.close()
+            self.purgeFrameLog()
             self.childProcess = None
             logger.info("Done with render task {0}".format(renderTask.id))
+
+    def purgeFrameLog(self):
+        if os.path.isfile(Constants.FRAMELOGPATH):
+            try:
+                os.remove(Constants.FRAMELOGPATH)
+            except IOError:
+                logger.warning("Could not delete local frame log file.")
 
     def killCurrentJob(self, statusAfterDeath):
         """Kills the render node's current job if it's running one."""
