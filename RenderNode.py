@@ -78,50 +78,36 @@ class RenderTCPServer(TCPServer):
     def shutdownCMD(self):
         self.renderServ.shutdown()
 
-    def startRenderTask(self, renderJob, renderTask):
+    def startRenderTask(self, HydraJob, HydraTask):
         self.renderThread = threading.Thread(target = self.launchRenderTask,
-                                                args = (renderJob, renderTask))
+                                                args = (HydraJob, HydraTask))
         self.renderThread.start()
         return self.renderThread.isAlive()
 
-    def launchRenderTask(self, renderJob, renderTask):
-        logger.info("Starting task with id {0} on job with id {1}".format(renderTask.id, renderJob.id))
+    def launchRenderTask(self, HydraJob, HydraTask):
+        logger.info("Starting task with id {0} on job with id {1}".format(HydraTask.id, HydraJob.id))
         self.childKilled = False
         self.statusAfterDeath = None
-        #Not sure if Maya for Linux or Maya 2016 thing but one of the two is
-        #   is appending quotes on the file cmd and messing everything up
-        if sys.platform == "win32":
-            taskFile = "\"{0}\"".format(renderJob.taskFile)
-        else:
-            taskFile = renderJob.taskFile
 
-        originalCurrentFrame = int(renderTask.currentFrame)
-
-        baseCMD = [str(x) for x in renderJob.baseCMD.split(" ")]
-        renderList = [self.execsDict[renderJob.execName]]
-        renderList += baseCMD
-        renderList +=  ["-s", str(renderTask.startFrame), "-e",
-                        str(renderTask.endFrame), "-b", str(renderJob.byFrame),
-                         "-rl", str(renderTask.renderLayer), taskFile]
-         #TODO: Figure out a way to avoid joining this without breaking quotes on the base CMD
-        renderCMD = " " .join(renderList)
+        originalCurrentFrame = int(HydraTask.currentFrame)
 
         self.purgeFrameLog()
-        logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(renderTask.id))
-        logger.info('Starting render task {0}'.format(renderTask.id))
+        logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(HydraTask.id))
+        logger.info('Starting render task {0}'.format(HydraTask.id))
         log = file(logFile, 'w')
-        log.write('Hydra log file {0} on {1}\n'.format(logFile, renderTask.host))
+        log.write('Hydra log file {0} on {1}\n'.format(logFile, HydraTask.host))
         log.write('RenderNode is {0}\n'.format(sys.argv))
         log.write('Command: {0}\n\n'.format(renderCMD))
         Utils.flushOut(log)
 
         try:
             #Run the job and keep track of the process
-            self.childProcess = subprocess.Popen(renderCMD, stdout = log, stderr = log,
-                                                    **Utils.buildSubprocessArgs(False))
+            self.childProcess = subprocess.Popen(HydraJob.createJobCMD(),
+                                                stdout = log, stderr = log,
+                                                **Utils.buildSubprocessArgs(False))
 
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
-                                                                renderTask.id))
+                                                                HydraTask.id))
             #Wait for task to finish
             self.childProcess.communicate()
 
@@ -140,7 +126,7 @@ class RenderTCPServer(TCPServer):
         finally:
             #Get current frame info from DB and local log file
             updateFrameManually = False
-            newCurrentFrame = hydra_taskboard.fetch("WHERE id = %s", (renderTask.id,),
+            newCurrentFrame = hydra_taskboard.fetch("WHERE id = %s", (HydraTask.id,),
                                                     cols = ["currentFrame"])
             newCurrentFrame = int(newCurrentFrame.currentFrame)
 
@@ -163,7 +149,7 @@ class RenderTCPServer(TCPServer):
                 logger.critical("Could not locate local frame log file @ {}".format(Constants.FRAMELOGPATH))
 
             currentFrameStatus = True
-            if newCurrentFrame == originalCurrentFrame and newCurrentFrame != int(renderTask.endFrame):
+            if newCurrentFrame == originalCurrentFrame and newCurrentFrame != int(HydraTask.endFrame):
                 currentFrameStatus = False
 
             #Get the latest info about this render node
@@ -172,34 +158,34 @@ class RenderTCPServer(TCPServer):
                                                         (self.thisNode.host,),
                                                         explicitTransaction = t)
 
-                renderTask.endTime = datetime.datetime.now()
-                renderTask.exitCode = self.childProcess.returncode if self.childProcess else 1
+                HydraTask.endTime = datetime.datetime.now()
+                HydraTask.exitCode = self.childProcess.returncode if self.childProcess else 1
 
                 if updateFrameManually:
-                    renderTask.currentFrame = newCurrentFrame
-                    rls = renderJob.renderLayers.split(",")
-                    idx = rls.index(renderTask.renderLayer)
-                    rlTracker = renderJob.renderLayerTracker.split(",")
+                    HydraTask.currentFrame = newCurrentFrame
+                    rls = HydraJob.renderLayers.split(",")
+                    idx = rls.index(HydraTask.renderLayer)
+                    rlTracker = HydraJob.renderLayerTracker.split(",")
                     rlTracker[idx] = str(newCurrentFrame)
-                    renderJob.renderLayerTracker = ",".join(rlTracker)
+                    HydraJob.renderLayerTracker = ",".join(rlTracker)
 
                 if self.childKilled:
-                    renderTask.status = self.statusAfterDeath
-                    renderTask.exitCode = 1
+                    HydraTask.status = self.statusAfterDeath
+                    HydraTask.exitCode = 1
                 else:
-                    if renderTask.exitCode == 0 and currentFrameStatus:
+                    if HydraTask.exitCode == 0 and currentFrameStatus:
                         status = FINISHED
                     else:
-                        if renderTask.exitCode == 0:
+                        if HydraTask.exitCode == 0:
                             log.write("\n\nERROR: Task returned exit code 0 but it appears to have not actually rendered any frames.")
                         status = ERROR
-                        renderJob.attempts += 1
-                        if not renderJob.failures or renderJob.failures == "":
-                            renderJob.failures = self.thisNode.host
+                        HydraJob.attempts += 1
+                        if not HydraJob.failures or HydraJob.failures == "":
+                            HydraJob.failures = self.thisNode.host
                         else:
-                            renderJob.failures += ",{0}".format(self.thisNode.host)
+                            HydraJob.failures += ",{0}".format(self.thisNode.host)
 
-                    renderTask.status = status
+                    HydraTask.status = status
 
 
                 status = IDLE if self.thisNode.status == STARTED else OFFLINE
@@ -207,14 +193,14 @@ class RenderTCPServer(TCPServer):
                 logger.debug("New Node Status: {0}".format(self.thisNode.status))
                 self.thisNode.task_id = None
 
-                renderTask.update(t)
-                renderJob.update(t)
+                HydraTask.update(t)
+                HydraJob.update(t)
                 self.thisNode.update(t)
 
             log.close()
             self.purgeFrameLog()
             self.childProcess = None
-            logger.info("Done with render task {0}".format(renderTask.id))
+            logger.info("Done with render task {0}".format(HydraTask.id))
 
     def purgeFrameLog(self):
         if os.path.isfile(Constants.FRAMELOGPATH):

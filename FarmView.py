@@ -404,14 +404,17 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not jobIDs:
             return
 
+        cols = ["id", "status", "renderLayers"]
+        jobOBJs = [hydra_jobboard.fetch("WHERE id = %s", (jID,), cols = cols) for jID in jobIDs]
+
         #Start Job
         if mode == "start":
-            map(JobUtils.startJob, jobIDs)
+            [job.start() for job in jobOBJs]
             self.populateJobTree()
 
         #Pause Job
         elif mode == "pause":
-            map(JobUtils.pauseJob, jobIDs)
+            [job.pause() for job in jobOBJs]
             self.populateJobTree()
 
         #Reveal Detailed Data
@@ -427,10 +430,10 @@ class FarmView(QMainWindow, Ui_FarmView):
             if choice == QMessageBox.No:
                 return
 
-            modeDict = {"kill" : KILLED, "reset" : RESET}
-            statusAfterDeath = modeDict[mode]
-
-            responses = [JobUtils.killJob(jobID, statusAfterDeath) for jobID in jobIDs]
+            if mode == "kill":
+                responses = [job.kill() for job in jobOBJs]
+            else:
+                responses = [job.reset() for job in jobOBJs]
 
             self.populateJobTree()
 
@@ -448,7 +451,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 return
 
             archMode = 1 if mode == "archive" else 0
-            responses = [JobUtils.archiveJob(jobID, archMode) for jobID in jobIDs]
+            responses = [job.archive(archMode) for job in jobOBJs]
 
             if not all(responses):
                 logger.error("Wow somehow Archive Job had an error")
