@@ -2,6 +2,7 @@
 #Standard
 import sys
 import shlex
+import datetime
 
 #Third Party
 import MySQLdb
@@ -11,6 +12,8 @@ from PyQt4.QtCore import *
 #Hydra
 from Setups.LoggingSetup import logger
 from Setups import PasswordStorage
+from Networking.Questions import KillCurrentTaskQuestion
+from Networking.Connections import TCPConnection
 import Utilities.Utils as Utils
 
 #Get databse information
@@ -235,21 +238,29 @@ class hydra_rendernode(hydraObject):
         self.updateAttr("status", newStatus)
 
     def getOff(self):
+        if self.status == "S":
+            task = hydra_taskboard.fetch("WHERE id  = %s", (self.task_id,),
+                                        cols = ["id", "status", "exitCode", "endTime"])
+            response = task.kill()
+
+            if response:
+                self.status = "O"
+                self.task_id = None
+            else:
+                self.status = "P"
+
+            with transaction() as t:
+                self.update(t)
+
+        return response
+
+    def isRendering(self):
+        #TODO:Open connection to render node and check status of self.childProcess
         return True
 
 class hydra_jobboard(hydraObject):
     autoColumn = "id"
     primaryKey = "id"
-
-    subtasksLoaded = False
-    #TODO:Fix Job Type
-    jobType = "MayaRender"
-
-    def loadSubtasks(self):
-        self.subtasksLoaded = True
-        self.subTasks = hydra_taskboard.fetch("WHERE job_id = %s", (self.id,),
-                                                multiReturn = True)
-        self.activeSubTasks = [t for t in self.subTasks if t.status == "S"]
 
     def start(self):
         return self.updateAttr("status", "R")
@@ -259,16 +270,17 @@ class hydra_jobboard(hydraObject):
 
     def kill(self, statusAfterDeath = "K", TCPKill = True):
         #TODO: Better exception handling for killing in general
-        if not self.subtasksLoaded:
-            self.loadSubtasks()
-        responses = [task.kill() for task in self.activeSubTasks]
+        subTasks = hydra_taskboard.fetch("WHERE job_id = %s AND status = 'S'", (self.id,),
+                                        cols = ["id", "status", "exitCode", "endTime"],
+                                        multiReturn = True)
+        responses = [task.kill() for task in subTasks]
         #logger.debug(responses)
 
         responses += [self.updateAttr("status", statusAfterDeath)]
         return all(responses)
 
     def reset(self):
-        response = self.kill("R")
+        response = self.kill("U")
         if not response:
             logger.error("Job Kill was unsuccessful, skipping reset...")
             return False
@@ -280,15 +292,22 @@ class hydra_jobboard(hydraObject):
         return True
 
     def archive(self, mode):
+        """Function for archiving/unarchiveing job. Accepts binary ints, booleans,
+        or case insensitive true or false strings."""
         if type(mode) != int:
             mode = 1 if str(mode)[0].lower() == "t" else 0
-        return self.updateAttr("archive", mode)
+        return self.updateAttr("archived", mode)
+
+    def prioritize(self, priority):
+        return self.updateAttr("priority", priority)
 
     def createJobCMD(self, platform = "win32"):
         #TODO:Get path with correct platform
-        #TODO:Test This
-        execs = hydra_executable.fetch()
-        self.execsDict = {ex.name: ex.path for ex in execs}
+        execs = hydra_executable.fetch(multiReturn = True)
+        if platform == "win32":
+            self.execsDict = {ex.name: ex.win32 for ex in execs}
+        else:
+            self.execsDict = {ex.name: ex.linux for ex in execs}
 
         #Not sure if Maya for Linux or Maya 2016 thing but one of the two is
         #   is appending quotes on the file cmd and messing everything up
@@ -319,11 +338,50 @@ class hydra_taskboard(hydraObject):
     autoColumn = "id"
     primaryKey = "id"
 
-    def kill(self):
-        return True
+    def sendKillQuestion(self, newStatus):
+        """Kill the current task running on the renderhost. Return True if successful,
+        else False"""
+        logger.debug('Kill task on {0}'.format(self.host))
+        connection = TCPConnection(hostname = self.host)
+        answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
+        if answer is None:
+            logger.debug("{0} appears to be offline or unresponsive. Treating as dead.".format(self.host))
+            return None
+        else:
+            logger.debug("Child killed: {0}".format(answer.childKilled))
+            if not answer:
+                logger.warning("{0} tried to kill its job but failed for some reason.".format(self.host))
+                return False
+            else:
+                return True
 
-    def check(self):
-        return True
+    def kill(self, statusAfterDeath = "K", TCPKill = True):
+        if self.status == STARTED:
+            if TCPKill:
+                killed = self.sendKillQuestion(self.host, statusAfterDeath)
+                #If sendKillQuestion returns None the node is probably offline so
+                #we need to mark it as killed on here.
+                if killed == None:
+                    TCPKill = False
+                else:
+                    return killed
+
+            if not TCPKill:
+                logger.debug("TCPKill recived None, marking task as killed")
+                node = hydra_rendernode.fetch("WHERE host = %s", (self.host,),
+                                                cols = ["status", "task_id"])
+                node.status = IDLE if node.status == STARTED else OFFLINE
+                node.task_id = None
+                self.status = newStatus
+                self.exitCode = 1
+                self.endTime = datetime.datetime.now()
+                with transaction() as t:
+                    self.update(t)
+                    node.update(t)
+                return True
+        else:
+            logger.debug("Task Kill is skipping task {0} because of status {1}".format(self.id, self.status))
+            return True
 
 class hydra_capabilities(hydraObject):
     autoColumn = None

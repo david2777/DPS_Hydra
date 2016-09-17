@@ -1,11 +1,15 @@
 -[In Progress]Work on Maya Submitter Script
 
 -[In Progress]Fix Bugs, Add Features
+    -Node Scheduler broken
 
 -[In Progress]Render consecutive frames
     -Track current render frame locally as a fallback
         -FrameUpdater will write data locally as a fallback and will also be
-          able to parse the Maya log as a super fallback. 
+          able to parse the Maya log as a super fallback.
+
+-[In Progress]Multiple Job types
+    -Change TaskTree header based on jobType
 
 -[In Progress]Render Manager
 

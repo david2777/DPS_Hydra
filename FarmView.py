@@ -30,8 +30,6 @@ from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
 from Setups.Threads import workerSignalThread
 import Utilities.Utils as Utils
-import Utilities.TaskUtils as TaskUtils
-import Utilities.JobUtils as JobUtils
 import Utilities.NodeUtils as NodeUtils
 
 #------------------------------------------------------------------------------#
@@ -404,7 +402,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not jobIDs:
             return
 
-        cols = ["id", "status", "renderLayers"]
+        cols = ["id", "status", "renderLayers", "archived", "priority"]
         jobOBJs = [hydra_jobboard.fetch("WHERE id = %s", (jID,), cols = cols) for jID in jobIDs]
 
         #Start Job
@@ -454,20 +452,18 @@ class FarmView(QMainWindow, Ui_FarmView):
             responses = [job.archive(archMode) for job in jobOBJs]
 
             if not all(responses):
-                logger.error("Wow somehow Archive Job had an error")
+                failureIDXes = [i for i, x in enumerate(responses) if not x]
+                failureIDs = [jobIDs[i] for i in failureIDXes]
+                logger.error("Job Archiver failed on {}".format(failureIDs))
 
             self.populateJobTree(clear = True)
 
         elif mode == "priority":
-            selection = self.getJobTreeSel("Rows")
-            for sel in selection:
-                job_id = int(sel.text(1))
-                job_priority = int(sel.text(5))
-                msgString = "Priority for job {0}:".format(job_id)
-                reply = intBox(self, "Set Job Priority", msgString , job_priority)
+            for job in jobOBJs:
+                msgString = "Priority for job {0}:".format(job.id)
+                reply = intBox(self, "Set Job Priority", msgString , job.priority)
                 if reply[1]:
-                    with transaction() as t:
-                        t.cur.execute("UPDATE hydra_jobboard SET priority = %s WHERE id = %s", (reply[0], job_id))
+                    job.prioritize(reply[0])
                     self.populateJobTree()
                 else:
                     logger.debug("PrioritizeJob skipped on {0}".format(job_id))
@@ -608,11 +604,16 @@ class FarmView(QMainWindow, Ui_FarmView):
             response = yesNoBox(self, "Confirm", "Are you sure you want to kill these tasks: {}".format(taskIDs))
             if response == QMessageBox.No:
                 return
-            responses = [TaskUtils.killTask(taskID, KILLED) for taskID in taskIDs]
+            cols = ["id", "status", "exitCode", "endTime"]
+            taskOBJs = [hydra_taskboard.fetch("WHERE id = %s", (t,), cols = cols)
+                        for t in taskIDs]
+            responses = [task.kill() for task in taskOBJs]
             if not all(responses):
-                logger.error("Task Kill failed on one or more tasks.")
+                failureIDXes = [i for i, x in enumerate(responses) if not x]
+                failureIDs = [taskIDs[i] for i in failureIDXes]
+                logger.error("Task Kill failed on {}".format(failureIDs))
                 warningBox(self, "Task Kill Error!",
-                            "Task Kill failed on one or more tasks.")
+                            "Task Kill failed on task(s) with IDs {}".format(failureIDs))
 
         elif mode == "log":
             if len(taskIDs) > 1:
@@ -716,7 +717,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             for renderHost in hosts:
                 thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
                                                     cols = ["status", "task_id", "host"])
-                NodeUtils.onlineNode(thisNode)
+                thisNode.online()
             self.initrenderNodeTree()
 
     def offlineRenderNodesHandler(self):
@@ -730,7 +731,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             for renderHost in hosts:
                 thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
                                                     cols = ["status", "task_id", "host"])
-                NodeUtils.offlineNode(thisNode)
+                thisNode.offline()
             self.initrenderNodeTree()
 
     def getOffRenderNodesHandler(self):
@@ -742,26 +743,19 @@ class FarmView(QMainWindow, Ui_FarmView):
         if choice == QMessageBox.No:
             return
 
-        for renderHost in hosts:
-            thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
-                                                cols = ["host", "status", "task_id"])
-            NodeUtils.offlineNode(thisNode)
-            if thisNode.task_id:
-                try:
-                    response = TaskUtils.killTask(thisNode.task_id, READY)
-                    if not response:
-                        logger.warning("Problem killing task durring GetOff on {0}".format(thisNode.host))
-                        warningBox(self, "Error",
-                                "There was a problem killing the task during GetOff on {0}".format(thisNode.host))
-                    else:
-                        aboutBox(self, "Success", "Job was reset, {0} offlined.".format(thisNode.host))
-                except socketerror:
-                    logger.error(socketerror.message)
-                    warningBox(self, "Error", Constants.SOCKETERR_STRING)
-            else:
-                aboutBox(self, "Success", "No job was found on {0}, node offlined".format(thisNode.host))
+        cols = ["host", "status", "task_id"]
+        renderHosts = [hydra_rendernode.fetch("WHERE host = %s", (host,), cols = cols)
+                        for host in hosts]
 
-            self.initrenderNodeTree()
+        responses = [host.getOff() for host in renderHosts]
+        if not all(responses):
+            failureIDXes = [i for i, x in enumerate(responses) if not x]
+            failureHosts = [jobIDs[i] for i in failureIDXes]
+            logger.error("Could not get off {}".format(failureHosts))
+            warningBox(self, "GetOff Error!",
+                        "Could not get off the following hosts: {}".format(failureHosts))
+
+        self.initrenderNodeTree()
 
     def nodeEditorTableHandler(self):
         hosts = self.renderNodeTreeHandler()
@@ -843,9 +837,9 @@ class FarmView(QMainWindow, Ui_FarmView):
     def onlineThisNodeHandler(self):
         """Changes the local render node's status to online if it was offline,
         goes back to started if it was pending offline."""
-        thisNode = NodeUtils.getThisNodeData()
+        thisNode = NodeUtils.getThisNodeOBJ()
         if thisNode:
-            NodeUtils.onlineNode(thisNode)
+            thisNode.online()
             self.updateStatusBar(thisNode)
             self.initrenderNodeTree()
 
@@ -853,9 +847,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         """Changes the local render node's status to offline if it was idle,
         pending if it was working on something."""
         #Get the most current info from the database
-        thisNode = NodeUtils.getThisNodeData()
+        thisNode = NodeUtils.getThisNodeOBJ()
         if thisNode:
-            NodeUtils.offlineNode(thisNode)
+            thisNode.offline()
             self.updateStatusBar(thisNode)
             self.initrenderNodeTree()
 
@@ -863,30 +857,16 @@ class FarmView(QMainWindow, Ui_FarmView):
         """Offlines the node and sends a message to the render node server
         running on localhost to kill its current task(task will be
         resubmitted)"""
-        thisNode = NodeUtils.getThisNodeData()
+        thisNode = NodeUtils.getThisNodeOBJ()
         if not thisNode:
-            logger.error("This Node could not be found while trying to getOff!")
-            warningBox(self, "Error", "This Node could not be found while trying to getOff!")
             return
 
         choice = yesNoBox(self, "Confirm", Constants.GETOFFLOCAL_STRING)
         if choice == QMessageBox.Yes:
-            NodeUtils.offlineNode(thisNode)
-            if thisNode.task_id:
-                task_id = thisNode.task_id
-                try:
-                    response = TaskUtils.killTask(task_id, READY)
-                    if not response:
-                        logger.warning("Problem killing task durring GetOff")
-                        warningBox(self, "Error",
-                                "There was a problem killing the task during GetOff!")
-                    else:
-                        aboutBox(self, "Success", "Job was reset, node offlined.")
-                except socketerror:
-                    logger.error(socketerror.message)
-                    warningBox(self, "Error", Constants.SOCKETERR_STRING)
-            else:
-                aboutBox(self, "Success", "No job was found on node, node offlined")
+            response = thisNode.getOff()
+            if not response:
+                logger.error("Could not GetOff this node!")
+                warningBox(self, "GetOff Error", "Could not GetOff this node!")
             self.initrenderNodeTree()
             self.updateStatusBar(thisNode)
 

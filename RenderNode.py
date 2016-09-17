@@ -19,7 +19,6 @@ from Setups.MySQLSetup import *
 import Utilities.Utils as Utils
 import Utilities.NodeUtils as NodeUtils
 import Utilities.JobUtils as JobUtils
-import Utilities.TaskUtils as TaskUtils
 
 class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):
@@ -48,8 +47,11 @@ class RenderTCPServer(TCPServer):
             os.makedirs(Constants.RENDERLOGDIR)
 
         #Load executeables from DB
-        execs = hydra_executable.fetch()
-        self.execsDict = {ex.name: ex.path for ex in execs}
+        execs = hydra_executable.fetch(multiReturn = True)
+        if sys.platform == "win32":
+            self.execsDict = {ex.name: ex.win32 for ex in execs}
+        else:
+            self.execsDict = {ex.name: ex.linux for ex in execs}
         logger.debug(self.execsDict)
 
         #Setup Class Variables
@@ -61,7 +63,9 @@ class RenderTCPServer(TCPServer):
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         if self.thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
-            TaskUtils.killTask(self.thisNode.task_id, "C", False)
+            thisTask = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,),
+                                            cols = ["id", "status", "exitCode", "endTime"])
+            thisTask.kill("C", False)
             self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
             self.thisNode.task_id = None
         elif self.thisNode.status in [STARTED, PENDING]:

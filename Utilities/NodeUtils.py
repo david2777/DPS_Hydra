@@ -135,7 +135,7 @@ def calcuateSleepTime(now, dbData):
     """Takes the current datetime and the decoded schedule data from the DB
     and finds the time to sleep until the next event"""
     nextEvent = findNextEvent(now, dbData)
-    
+
     if nextEvent[-1] == None:
         return None, None
 
@@ -170,41 +170,10 @@ def calcuateSleepTimeFromNode(nodeName):
     nowDateTime = datetime.datetime.now().replace(microsecond = 0)
     return calcuateSleepTime(nowDateTime, thisNode.weekSchedule)
 
-def getThisNodeData():
+def getThisNodeOBJ():
     """Returns the current node's info from the DB, None if not found in the DB."""
     try:
         thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),))
     except ValueError:
         thisNode = None
     return thisNode
-
-def resetNode(host):
-    with transaction() as t:
-        host = hydra_rendernode.fetch("WHERE host = %s", (host,),
-                                        cols = ["task_id", "status", "host"],
-                                        explicitTransaction = t)
-        host.task_id = None
-        host.status = newHostStatus
-        host.update(t)
-
-def onlineNode(node):
-    """Sets a node to be online given it's node object"""
-    if node.status == IDLE:
-        return
-    elif node.status == OFFLINE:
-        node.status = IDLE
-    elif node.status == PENDING and node.task_id:
-        node.status = STARTED
-    with transaction() as t:
-        node.update(t)
-
-def offlineNode(node):
-    """Sets a node to be offline given it's node object"""
-    if node.status == OFFLINE:
-            return
-    elif node.task_id:
-        node.status = PENDING
-    else:
-        node.status = OFFLINE
-    with transaction() as t:
-            node.update(t)

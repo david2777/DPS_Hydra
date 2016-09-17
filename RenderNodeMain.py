@@ -3,9 +3,7 @@ import sys
 import os
 import logging
 import traceback
-import functools
 import threading
-import datetime
 import time
 
 #Third Party
@@ -22,10 +20,8 @@ from Dialogs.MessageBoxes import aboutBox, yesNoBox
 import RenderNode
 from Setups.LoggingSetup import logger, outputWindowFormatter
 from Setups.MySQLSetup import *
-from Constants import BASELOGDIR
 from Setups.Threads import stoppableThread, workerSignalThread
 import Utilities.NodeUtils as NodeUtils
-import Utilities.TaskUtils as TaskUtils
 import Utilities.Utils as Utils
 
 class EmittingStream(QObject):
@@ -51,7 +47,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                     "You cannot run more than one RenderNode at the same time. Closing...")
             sys.exit(1)
 
-        self.thisNode = NodeUtils.getThisNodeData()
+        self.thisNode = NodeUtils.getThisNodeOBJ()
 
         if not self.thisNode:
             self.offlineButton.setEnabled(False)
@@ -240,27 +236,28 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.hide()
 
     def onlineThisNodeHandler(self):
-        try:
-            NodeUtils.onlineNode(self.thisNode)
-            self.updateThisNodeInfo()
+        response = self.thisNode.online()
+        self.updateThisNodeInfo()
+        if response:
             logger.info("Node Onlined")
-        except sqlerror as err:
-            logger.error(str(err))
+        else:
+            logger.error("Node could not be Onlined!")
 
     def offlineThisNodeHandler(self):
-       try:
-           NodeUtils.offlineNode(self.thisNode)
-           self.updateThisNodeInfo()
+       response = self.thisNode.offline()
+       self.updateThisNodeInfo()
+       if response:
            logger.info("Node Offlined")
-       except sqlerror as err:
-           logger.error(str(err))
+       else:
+           logger.error("Node could not be Offlined!")
 
     def getOffThisNodeHandler(self):
+        response = self.thisNode.getOff()
         self.updateThisNodeInfo()
-        task_id = self.thisNode.task_id
-        self.offlineThisNodeHandler()
-        if task_id:
-            killed = self.renderServer.killCurrentJob(KILLED)
+        if response:
+            logger.info("Node Offlined and Task Killed")
+        else:
+            logger.error("Node could not be Onlined or the Task could not be killed!")
 
     def clearOutputHandler(self):
         choice = yesNoBox(self, "Confirm", "Really clear output?")

@@ -37,7 +37,8 @@ DROP TABLE IF EXISTS `hydra_executable`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hydra_executable` (
   `name` varchar(45) NOT NULL,
-  `path` varchar(255) NOT NULL,
+  `win32` varchar(255) DEFAULT NULL,
+  `linux` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Lists all executeables that can be run by the farm. This is specified when a job is submitted.';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -65,17 +66,18 @@ CREATE TABLE `hydra_jobboard` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'ID for the job, Auto Increment by DB on  insertion of job, ',
   `niceName` varchar(60) NOT NULL DEFAULT 'HydraJob' COMMENT 'Nice name of the job for display in FarmView',
   `projectName` varchar(60) NOT NULL DEFAULT 'UnknownProject' COMMENT 'Nice name for the project. Helps keep the FarmView JobTree organized. ',
+  `jobType` varchar(45) NOT NULL,
   `owner` varchar(45) NOT NULL DEFAULT 'HydraUser' COMMENT 'User name of the person who submitted the job',
   `status` char(1) NOT NULL DEFAULT 'U' COMMENT 'Status of the job, for more info on this see MySQLSetup.py',
   `creationTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Time the job was created',
   `requirements` varchar(255) NOT NULL DEFAULT '' COMMENT 'Requirements for the job ie. RedShift, Fusion, MentalRay, Power',
   `execName` varchar(20) NOT NULL COMMENT 'Executeable the job needs',
   `baseCMD` varchar(512) NOT NULL COMMENT 'The base CMD, ie. -x 1280 -y 720 -cam "TestCam" etc.',
-  `startFrame` int(6) NOT NULL COMMENT 'The start frame of the job',
-  `endFrame` int(6) NOT NULL COMMENT 'The end frame of the job',
-  `byFrame` int(4) NOT NULL DEFAULT '1' COMMENT 'Render each x frame. Caluclated by SubmitterMain for now so we can append the last frame to the frames. Should be editable in FarmView eventually. ',
-  `renderLayers` varchar(120) NOT NULL COMMENT 'Render layers seperated by commas',
-  `renderLayerTracker` varchar(255) NOT NULL COMMENT 'List of next frame to be rendered for each RenderLayer seperated by commas. MUST be same length and order as renderLayers column.  Default would probably be the start frame for each. ',
+  `startFrame` int(6) DEFAULT NULL COMMENT 'The start frame of the job',
+  `endFrame` int(6) DEFAULT NULL COMMENT 'The end frame of the job',
+  `byFrame` int(4) DEFAULT NULL COMMENT 'Render each x frame. Caluclated by SubmitterMain for now so we can append the last frame to the frames. Should be editable in FarmView eventually. ',
+  `renderLayers` varchar(120) DEFAULT NULL COMMENT 'Render layers seperated by commas',
+  `renderLayerTracker` varchar(255) DEFAULT NULL COMMENT 'List of next frame to be rendered for each RenderLayer seperated by commas. MUST be same length and order as renderLayers column.  Default is 0 for each. ',
   `taskFile` varchar(255) NOT NULL COMMENT 'The task file to be rendered ie. the Maya file or PS file or something',
   `priority` int(4) NOT NULL DEFAULT '50' COMMENT 'Priority of the job, higher priority jobs will be executed first',
   `phase` int(4) NOT NULL DEFAULT '0' COMMENT 'Job phase',
@@ -152,4 +154,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-08-14 23:51:42
+-- Dump completed on 2016-09-16 23:53:24

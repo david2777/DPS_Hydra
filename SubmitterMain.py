@@ -17,7 +17,6 @@ import Constants
 from Setups.MySQLSetup import *
 from Setups.LoggingSetup import logger
 from Dialogs.MessageBoxes import aboutBox, yesNoBox
-import Utilities.JobUtils as JobUtils
 from Utilities.Utils import findResource
 
 class SubmitterMain(QMainWindow, Ui_MainWindow):
@@ -126,7 +125,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
     def populateExecs(self):
         #Get execs
-        execs = hydra_executable.fetch(multiReturn = True)
+        execs = hydra_executable.fetch(multiReturn = True, cols = ["name"])
         execs.reverse()
 
         for execute in execs:
@@ -240,7 +239,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                 compatabilityList, execName, baseCMDOverride,
                                 startFrame, endFrameOverride, byFrame, renderLayers,
                                 taskFile, int(priority * 1.25), phase, maxNodesP1,
-                                timeout, 10)
+                                timeout, 10, "MayaRender")
 
             logger.info("Phase 01 submitted with id: {0}".format(phase01.id))
 
@@ -254,7 +253,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                                 endFrame, byFrameOverride,
                                                 renderLayers, taskFile,
                                                 int(priority * 1.35), phase,
-                                                maxNodesP1, timeout, 10)
+                                                maxNodesP1, timeout, 10, "MayaRender")
 
                 logger.info("Phase 01 final frame workaround submitted with id: {0}".format(phase01FinalFrame.id))
 
@@ -274,7 +273,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                 compatabilityList, execName, baseCMD,
                                 startFrame, endFrame, byFrameOverride,
                                 renderLayers, taskFile, priority, phase,
-                                maxNodesP2, timeout, 10)
+                                maxNodesP2, timeout, 10, "MayaRender")
 
             logger.info("Phase 02 submitted with id: {0}".format(phase02.id))
 
@@ -374,7 +373,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
 def submitJob(niceName, projectName, owner, status, requirements, execName,
                 baseCMD, startFrame, endFrame, byFrame, renderLayers, taskFile,
-                priority, phase, maxNodes, timeout, maxAttempts):
+                priority, phase, maxNodes, timeout, maxAttempts, jobType):
     """A simple function for submitting a job to the jobBoard"""
     #Setup default renderLayerTracker
     renderLayerTracker = ["0" for x in renderLayers.split(",")]
@@ -390,7 +389,7 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
                         renderLayerTracker = renderLayerTracker,
                         taskFile = taskFile, priority = priority,
                         phase = phase, maxNodes = maxNodes, timeout = timeout,
-                        maxAttempts = maxAttempts)
+                        maxAttempts = maxAttempts, jobType = jobType)
 
     with transaction() as t:
         job.insert(transaction=t)
