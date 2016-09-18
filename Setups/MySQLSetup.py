@@ -29,7 +29,7 @@ db_username = Utils.getInfoFromCFG("database", "username")
 autoLogin = Utils.getInfoFromCFG("database", "autologin")
 autoLogin = True if str(autoLogin).lower()[0] == "t" else False
 if autoLogin:
-    _db_password = PasswordStorage.loadPassword(db_username)
+    _db_password = PasswordStorage.loadCredentials(db_username)
     if not _db_password:
         autoLogin = False
 
@@ -179,7 +179,8 @@ class hydraObject:
         returnList = [cls(**dict(zip(names, tup))) for tup in t.cur.fetchall()]
         if multiReturn:
             return returnList
-        return returnList[0] if len(returnList) == 1 else returnList
+        else:
+            return returnList[0] if len(returnList) == 1 else returnList
 
     def attributes(self):
         return filter(Utils.nonFlanged, self.__dict__.keys())
@@ -191,7 +192,7 @@ class hydraObject:
         names = self.attributes()
         values = [getattr(self, name) for name in names]
         nameString = ", ".join(names)
-        valueString = ", ".join(["%s" for x in len(names)])
+        valueString = ", ".join(["%s" for x in range(len(names))])
         query = "INSERT INTO {0} ({1}) VALUES ({2})".format(self.tableName(), nameString, valueString)
 
         transaction.cur.executemany(query, [values])
@@ -231,16 +232,20 @@ class hydra_rendernode(hydraObject):
     primaryKey = "host"
 
     def online(self):
-        self.updateAttr("status", "I")
+        if self.status == "O":
+            return self.updateAttr("status", "I")
+        elif self.status == "P":
+            return self.updateAttr("status", "S")
 
     def offline(self):
         newStatus = "P" if self.status == "S" else "O"
-        self.updateAttr("status", newStatus)
+        return self.updateAttr("status", newStatus)
 
     def getOff(self):
+        response = True
         if self.status == "S":
             task = hydra_taskboard.fetch("WHERE id  = %s", (self.task_id,),
-                                        cols = ["id", "status", "exitCode", "endTime"])
+                                        cols = ["id", "status", "exitCode", "endTime", "host"])
             response = task.kill()
 
             if response:
@@ -256,6 +261,10 @@ class hydra_rendernode(hydraObject):
 
     def isRendering(self):
         #TODO:Open connection to render node and check status of self.childProcess
+        return True
+
+    def resourceCheck(self):
+        #TODO:Check resources on target machine ie RAM/CPU usage
         return True
 
 class hydra_jobboard(hydraObject):
@@ -284,7 +293,7 @@ class hydra_jobboard(hydraObject):
         if not response:
             logger.error("Job Kill was unsuccessful, skipping reset...")
             return False
-        renderLayerTracker = ["0" for x in self.renderLayers]
+        renderLayerTracker = ["0" for x in self.renderLayers.split(",")]
         renderLayerTracker = ",".join(renderLayerTracker)
         with transaction() as t:
             t.cur.execute("UPDATE hydra_jobboard SET renderLayerTracker = %s, failures = '', attempts = '0' WHERE id = %s",
@@ -301,42 +310,42 @@ class hydra_jobboard(hydraObject):
     def prioritize(self, priority):
         return self.updateAttr("priority", priority)
 
-    def createJobCMD(self, platform = "win32"):
+class hydra_taskboard(hydraObject):
+    autoColumn = "id"
+    primaryKey = "id"
+
+    def createTaskCMD(self, hydraJob, platform = "win32"):
         #TODO:Get path with correct platform
         execs = hydra_executable.fetch(multiReturn = True)
         if platform == "win32":
-            self.execsDict = {ex.name: ex.win32 for ex in execs}
+            execsDict = {ex.name: ex.win32 for ex in execs}
         else:
-            self.execsDict = {ex.name: ex.linux for ex in execs}
+            execsDict = {ex.name: ex.linux for ex in execs}
 
         #Not sure if Maya for Linux or Maya 2016 thing but one of the two is
         #   is appending quotes on the file cmd and messing everything up
         if platform == "win32":
-            taskFile = "\"{0}\"".format(self.taskFile)
+            taskFile = "\"{0}\"".format(hydraJob.taskFile)
         else:
-            taskFile = self.taskFile
+            taskFile = hydraJob.taskFile
 
-        baseCMD = shlex.split(self.baseCMD)
+        baseCMD = shlex.split(hydraJob.baseCMD)
 
-        if self.jobType == "MayaRender":
-            renderList = [self.execsDict[self.execName]]
+        if hydraJob.jobType == "MayaRender":
+            renderList = [execsDict[hydraJob.execName]]
             renderList += baseCMD
-            renderList += ["-s", str(self.startFrame), "-e",
-                            str(self.endFrame), "-b", str(self.byFrame),
-                             "-rl", str(self.renderLayers), taskFile]
+            renderList += ["-s", self.currentFrame, "-e", self.endFrame, "-b",
+                            hydraJob.byFrame, "-rl", hydraJob.renderLayers,
+                            taskFile]
 
-        elif self.jopType == "FusionComp":
-            renderList = [self.execsDict[self.execName], taskFile]
+        elif hydraJob.jobType == "FusionComp":
+            renderList = [execsDict[hydraJob.execName], taskFile]
             renderList += baseCMD
             renderList += ["/render", "/frames",
                             "{0}..{1}".format(self.startFrame, self.endFrame),
-                            "/by", str(self.byFrame), "/exit"]
+                            "/by", hydraJob.byFrame, "/exit"]
 
-        return renderList
-
-class hydra_taskboard(hydraObject):
-    autoColumn = "id"
-    primaryKey = "id"
+        return [str(x) for x in renderList]
 
     def sendKillQuestion(self, newStatus):
         """Kill the current task running on the renderhost. Return True if successful,
@@ -372,7 +381,7 @@ class hydra_taskboard(hydraObject):
                                                 cols = ["status", "task_id"])
                 node.status = IDLE if node.status == STARTED else OFFLINE
                 node.task_id = None
-                self.status = newStatus
+                self.status = statusAfterDeath
                 self.exitCode = 1
                 self.endTime = datetime.datetime.now()
                 with transaction() as t:
@@ -382,6 +391,10 @@ class hydra_taskboard(hydraObject):
         else:
             logger.debug("Task Kill is skipping task {0} because of status {1}".format(self.id, self.status))
             return True
+
+    def getUNCLog(self):
+        #TODO:Build UNC path to log
+        return None
 
 class hydra_capabilities(hydraObject):
     autoColumn = None

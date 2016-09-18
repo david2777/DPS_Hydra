@@ -120,14 +120,11 @@ def findNextEvent(now, dbData):
         oldDayOfWeek = newDayOfWeek
         newDayOfWeek += 1
         todaySchedule, newDayOfWeek = findSchedule(newDayOfWeek, dataDict)
-        if newDayOfWeek <= oldDayOfWeek:
-            logger.error("Could not find schedule on second search")
-        else:
-            logger.debug(todaySchedule)
-            sched = todaySchedule[0]
+        sched = todaySchedule[0]
 
     if not sched:
         logger.error("Could not find schedule")
+        return None
 
     return [newDayOfWeek] + sched
 
@@ -136,7 +133,7 @@ def calcuateSleepTime(now, dbData):
     and finds the time to sleep until the next event"""
     nextEvent = findNextEvent(now, dbData)
 
-    if nextEvent[-1] == None:
+    if not nextEvent or nextEvent[-1] == None:
         return None, None
 
     nowDate = now.date()

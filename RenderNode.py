@@ -46,14 +46,6 @@ class RenderTCPServer(TCPServer):
         if not os.path.isdir(Constants.RENDERLOGDIR):
             os.makedirs(Constants.RENDERLOGDIR)
 
-        #Load executeables from DB
-        execs = hydra_executable.fetch(multiReturn = True)
-        if sys.platform == "win32":
-            self.execsDict = {ex.name: ex.win32 for ex in execs}
-        else:
-            self.execsDict = {ex.name: ex.linux for ex in execs}
-        logger.debug(self.execsDict)
-
         #Setup Class Variables
         self.childProcess = None
         self.statusAfterDeath = None
@@ -64,7 +56,7 @@ class RenderTCPServer(TCPServer):
         if self.thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
             thisTask = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,),
-                                            cols = ["id", "status", "exitCode", "endTime"])
+                                            cols = ["id", "status", "exitCode", "endTime", "host"])
             thisTask.kill("C", False)
             self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
             self.thisNode.task_id = None
@@ -94,6 +86,8 @@ class RenderTCPServer(TCPServer):
         self.statusAfterDeath = None
 
         originalCurrentFrame = int(HydraTask.currentFrame)
+        renderTaskCMD = HydraTask.createTaskCMD(HydraJob, sys.platform)
+        logger.debug(renderTaskCMD)
 
         self.purgeFrameLog()
         logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(HydraTask.id))
@@ -101,12 +95,12 @@ class RenderTCPServer(TCPServer):
         log = file(logFile, 'w')
         log.write('Hydra log file {0} on {1}\n'.format(logFile, HydraTask.host))
         log.write('RenderNode is {0}\n'.format(sys.argv))
-        log.write('Command: {0}\n\n'.format(renderCMD))
+        log.write('Command: {0}\n\n'.format(renderTaskCMD))
         Utils.flushOut(log)
 
         try:
             #Run the job and keep track of the process
-            self.childProcess = subprocess.Popen(HydraJob.createJobCMD(),
+            self.childProcess = subprocess.Popen(renderTaskCMD,
                                                 stdout = log, stderr = log,
                                                 **Utils.buildSubprocessArgs(False))
 

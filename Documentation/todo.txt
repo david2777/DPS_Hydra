@@ -2,6 +2,7 @@
 
 -[In Progress]Fix Bugs, Add Features
     -Node Scheduler broken
+    -Add check on online to search for running tasks using lots of RAM or CPU
 
 -[In Progress]Render consecutive frames
     -Track current render frame locally as a fallback

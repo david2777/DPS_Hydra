@@ -19,7 +19,7 @@ def storeCredentials(username, _password):
     keyring.set_password("Hydra", username, _password)
     logger.info("Password Stored in Credentials Vault")
 
-def loadPassword(username):
+def loadCredentials(username):
     logger.info("Fetching login for {0}".format(username))
     return keyring.get_password("Hydra", username)
 
