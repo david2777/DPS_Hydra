@@ -5,9 +5,7 @@
     -Add check on online to search for running tasks using lots of RAM or CPU
 
 -[In Progress]Render consecutive frames
-    -Track current render frame locally as a fallback
-        -FrameUpdater will write data locally as a fallback and will also be
-          able to parse the Maya log as a super fallback.
+    -Switching to log parsing for simplicity and reliability
 
 -[In Progress]Multiple Job types
     -Change TaskTree header based on jobType

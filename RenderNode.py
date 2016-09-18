@@ -16,6 +16,7 @@ import Constants
 from Networking.Servers import TCPServer
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
+import Utilities.LogParsers as LogParsers
 import Utilities.Utils as Utils
 import Utilities.NodeUtils as NodeUtils
 import Utilities.JobUtils as JobUtils
@@ -89,7 +90,6 @@ class RenderTCPServer(TCPServer):
         renderTaskCMD = HydraTask.createTaskCMD(HydraJob, sys.platform)
         logger.debug(renderTaskCMD)
 
-        self.purgeFrameLog()
         logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(HydraTask.id))
         logger.info('Starting render task {0}'.format(HydraTask.id))
         log = file(logFile, 'w')
@@ -122,35 +122,13 @@ class RenderTCPServer(TCPServer):
 
         #Finally, update the DB with the information from the task
         finally:
-            #Get current frame info from DB and local log file
-            updateFrameManually = False
-            newCurrentFrame = hydra_taskboard.fetch("WHERE id = %s", (HydraTask.id,),
-                                                    cols = ["currentFrame"])
-            newCurrentFrame = int(newCurrentFrame.currentFrame)
-
-            if os.path.isfile(Constants.FRAMELOGPATH):
-                with open(Constants.FRAMELOGPATH, "r") as f:
-                    data = f.readline().strip()
-                    try:
-                        logFileFrame = int(data)
-                        if logFileFrame > newCurrentFrame:
-                            logger.warning("Local log file has a higer frame number than the DB value.")
-                            log.write("\nWARNING: Local log file has a higher frame number than the DB value.")
-                            newCurrentFrame = logFileFrame
-                            updateFrameManually = True
-                        elif logFileFrame < newCurrentFrame:
-                            logger.warning("Local log file has a lower frame number than the DB value.")
-                            log.write("\nWARNING: Local log file has a lower frame number than the DB value.")
-                    except ValueError:
-                        logger.critical("Attemtped to read local frame log but data returned was: {}".format(data))
-            else:
-                logger.critical("Could not locate local frame log file @ {}".format(Constants.FRAMELOGPATH))
-
-            currentFrameStatus = True
-            if newCurrentFrame == originalCurrentFrame and newCurrentFrame != int(HydraTask.endFrame):
-                currentFrameStatus = False
-
-            #Get the latest info about this render node
+            HydraLogObject = LogParsers.RedshiftMayaLog(logFile)
+            renderedFrames = HydraLogObject.getSavedFrameNumbers()
+            if renderedFrames == []:
+                renderedFrames = [-1]
+            logger.debug(renderedFrames)
+            newCurrentFrame = max(renderedFrames)
+            logger.debug(newCurrentFrame)
             with transaction() as t:
                 self.thisNode = hydra_rendernode.fetch("WHERE host = %s",
                                                         (self.thisNode.host,),
@@ -159,19 +137,18 @@ class RenderTCPServer(TCPServer):
                 HydraTask.endTime = datetime.datetime.now()
                 HydraTask.exitCode = self.childProcess.returncode if self.childProcess else 1
 
-                if updateFrameManually:
-                    HydraTask.currentFrame = newCurrentFrame
-                    rls = HydraJob.renderLayers.split(",")
-                    idx = rls.index(HydraTask.renderLayer)
-                    rlTracker = HydraJob.renderLayerTracker.split(",")
-                    rlTracker[idx] = str(newCurrentFrame)
-                    HydraJob.renderLayerTracker = ",".join(rlTracker)
+                HydraTask.currentFrame = newCurrentFrame
+                rls = HydraJob.renderLayers.split(",")
+                idx = rls.index(HydraTask.renderLayer)
+                rlTracker = HydraJob.renderLayerTracker.split(",")
+                rlTracker[idx] = str(newCurrentFrame)
+                HydraJob.renderLayerTracker = ",".join(rlTracker)
 
                 if self.childKilled:
                     HydraTask.status = self.statusAfterDeath
                     HydraTask.exitCode = 1
                 else:
-                    if HydraTask.exitCode == 0 and currentFrameStatus:
+                    if HydraTask.exitCode == 0 and newCurrentFrame >= originalCurrentFrame:
                         status = FINISHED
                     else:
                         if HydraTask.exitCode == 0:
@@ -196,16 +173,8 @@ class RenderTCPServer(TCPServer):
                 self.thisNode.update(t)
 
             log.close()
-            self.purgeFrameLog()
             self.childProcess = None
             logger.info("Done with render task {0}".format(HydraTask.id))
-
-    def purgeFrameLog(self):
-        if os.path.isfile(Constants.FRAMELOGPATH):
-            try:
-                os.remove(Constants.FRAMELOGPATH)
-            except IOError:
-                logger.warning("Could not delete local frame log file.")
 
     def killCurrentJob(self, statusAfterDeath):
         """Kills the render node's current job if it's running one."""

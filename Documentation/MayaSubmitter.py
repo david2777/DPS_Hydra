@@ -59,8 +59,6 @@ extraCmdList.append("-r {0}".format(engineCMDDict[currentEngine]))
 
 extraCmdList.append("-cam {0}".format(renderCam))
 
-extraCmdList.append("-postFrame \\\"source FrameUpdater;\\\"")
-
 if extraCmdList != []:
     command += " -m \"{0}\"".format(" ".join(extraCmdList))
 
