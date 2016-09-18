@@ -426,8 +426,8 @@ class schedulerThread(threading.Thread):
             while (not self.stop.wait(1)):
                 self._flag = True
                 self.interval = self.target()
-                hours = int(self.interval/ 60 / 60 )
-                minutes = int(self.interval/ 60 % 60)
+                hours = int(self.interval / 60 / 60)
+                minutes = int(self.interval / 60 % 60)
                 logger.info("Scheduler Sleeping for {0} hours and {1} minutes".format(hours, minutes))
                 self.stop.wait(self.interval)
         finally:
