@@ -31,6 +31,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         self.hookupButtons()
         self.populateReqs()
         self.populateExecs()
+        self.populateJobTypes()
         self.setupForms()
 
     def closeEvent(self, event):
@@ -51,7 +52,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         #Get the -flag args
         try:
-            opts = getopt.getopt(sys.argv[2:],"s:e:n:p:r:x:m:c:q:d:")[0]
+            opts = getopt.getopt(sys.argv[2:],"s:e:n:p:l:x:m:d:c:q:t:")[0]
         except getopt.GetoptError:
             logger.error("Bad Opt!")
             aboutBox(self, title = "Bad Opt!", msg = "One of the command line options you entered was invalid.\n"+
@@ -64,12 +65,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                             "-e":101,       #End Frame (Int)
                             "-n":defName,   #Nice Name (Str)
                             "-p":"",        #Proj (Str)
-                            "-r":"",        #Render Layers (Str,Sep,By,Comma)
+                            "-l":"",        #Render Layers (Str,Sep,By,Comma)
                             "-x":"",        #Executabe (Str)
                             "-m":"",        #CMD (Str)
                             "-d":"",        #RenderDirectory (Str)
                             "-c":"",        #Compatabilities (Str,Sep,By,Comma)
                             "-q":"",        #Project Name (Str)
+                            "-t":"",        #Job Type (Str)
                             }
 
         #Apply the -flag args
@@ -77,17 +79,18 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         keys = list(opts.keys())
         for key in keys:
             self.settingsDict[key] = opts[key]
-            logger.info("Setting Key '{0}' with opt: '{1}'".format(key, str(opts[key])))
+            logger.debug("Setting Key '{0}' with opt: '{1}'".format(key, str(opts[key])))
 
         #Fix paths
         self.settingsDict["-p"] = self.settingsDict["-p"].replace('\\', '/')
-        self.settingsDict["-d"] = self.settingsDict["-d"].replace('\\', '/')
         #Fix Compatabilities
         self.settingsDict["-c"] = self.settingsDict["-c"].split(",")
         #Add underscores to niceName
         self.settingsDict["-n"] = self.settingsDict["-n"].replace(" ", "_")
         #Move RenderDir to Base CMD
-        self.settingsDict["-m"] += " -rd \"{0}\"".format(self.settingsDict["-d"])
+        if self.settingsDict["-d"] != "":
+            self.settingsDict["-d"] = self.settingsDict["-d"].replace('\\', '/')
+            self.settingsDict["-m"] += " -rd \"{0}\"".format(self.settingsDict["-d"])
 
     def hookupButtons(self):
             QObject.connect(self.submitButton, SIGNAL("clicked()"),
@@ -136,13 +139,24 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         if index > 0:
             self.executableComboBox.setCurrentIndex(index)
 
+    def populateJobTypes(self):
+        types = hydra_jobtypes.fetch(multiReturn = True, cols = ["type"])
+        types.reverse()
+
+        for t in types:
+            newItem = self.jobTypeComboBox.addItem(t.type)
+
+        index = self.jobTypeComboBox.findText(self.settingsDict["-t"])
+        if index > 0:
+            self.jobTypeComboBox.setCurrentIndex(index)
+
     def setupForms(self):
         self.sceneLineEdit.setText(self.scene)
         self.projLineEdit.setText(self.settingsDict["-p"])
         self.niceNameLineEdit.setText(self.settingsDict["-n"])
         self.startSpinBox.setValue(int(float(self.settingsDict["-s"])))
         self.endSpinBox.setValue(int(float(self.settingsDict["-e"])))
-        self.renderLayersLineEdit.setText(self.settingsDict["-r"])
+        self.renderLayersLineEdit.setText(self.settingsDict["-l"])
         self.cmdLineEdit.setText(self.settingsDict["-m"])
         self.projectNameLineEdit.setText(self.settingsDict["-q"])
 
@@ -170,6 +184,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         timeout = int(self.timeoutSpinbox.value())
         projectName = str(self.projectNameLineEdit.text())
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
+        jobType = str(self.jobTypeComboBox.currentText())
 
 
         proj = str(self.projLineEdit.text())
@@ -239,7 +254,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                 compatabilityList, execName, baseCMDOverride,
                                 startFrame, endFrameOverride, byFrame, renderLayers,
                                 taskFile, int(priority * 1.25), phase, maxNodesP1,
-                                timeout, 10, "MayaRender")
+                                timeout, 10, jobType)
 
             logger.info("Phase 01 submitted with id: {0}".format(phase01.id))
 
@@ -253,7 +268,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                                 endFrame, byFrameOverride,
                                                 renderLayers, taskFile,
                                                 int(priority * 1.35), phase,
-                                                maxNodesP1, timeout, 10, "MayaRender")
+                                                maxNodesP1, timeout, 10, jobType)
 
                 logger.info("Phase 01 final frame workaround submitted with id: {0}".format(phase01FinalFrame.id))
 
@@ -273,7 +288,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                 compatabilityList, execName, baseCMD,
                                 startFrame, endFrame, byFrameOverride,
                                 renderLayers, taskFile, priority, phase,
-                                maxNodesP2, timeout, 10, "MayaRender")
+                                maxNodesP2, timeout, 10, jobType)
 
             logger.info("Phase 02 submitted with id: {0}".format(phase02.id))
 

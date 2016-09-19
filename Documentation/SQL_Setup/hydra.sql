@@ -87,10 +87,26 @@ CREATE TABLE `hydra_jobboard` (
   `attempts` int(4) NOT NULL DEFAULT '0' COMMENT 'Number of times a job has been attempted and failed.',
   `maxAttempts` int(4) NOT NULL DEFAULT '10' COMMENT 'Maximum attempts before a job is stopped as Error.',
   `archived` int(4) NOT NULL DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
+  `mpf` time DEFAULT NULL COMMENT 'Minute per frame',
   PRIMARY KEY (`id`),
   KEY `exec_idx` (`execName`),
-  CONSTRAINT `exec` FOREIGN KEY (`execName`) REFERENCES `hydra_executable` (`name`) ON UPDATE CASCADE
+  KEY `type_idx` (`jobType`),
+  CONSTRAINT `exec` FOREIGN KEY (`execName`) REFERENCES `hydra_executable` (`name`) ON UPDATE CASCADE,
+  CONSTRAINT `type` FOREIGN KEY (`jobType`) REFERENCES `hydra_jobtypes` (`type`) ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `hydra_jobtypes`
+--
+
+DROP TABLE IF EXISTS `hydra_jobtypes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `hydra_jobtypes` (
+  `type` varchar(64) NOT NULL COMMENT 'Job Type ie RedshiftRender, MentalRayRender, FusionComp',
+  PRIMARY KEY (`type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='A table for storing job types to populate drop down menus and maintain DB integrity. ';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -136,6 +152,7 @@ CREATE TABLE `hydra_taskboard` (
   `currentFrame` int(6) NOT NULL COMMENT 'Current frame being rendered',
   `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',
   `exitCode` int(11) DEFAULT NULL COMMENT 'Exit code from the subprocess',
+  `mpf` time DEFAULT NULL COMMENT 'Minute per frame',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `id_idx` (`job_id`),
@@ -154,4 +171,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-09-16 23:53:24
+-- Dump completed on 2016-09-18 23:29:03

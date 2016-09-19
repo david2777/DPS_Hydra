@@ -48,6 +48,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.setupTables()
         self.connectButtons()
         self.setupHotkeys()
+        self.taskTreeSetup("Default")
         self.setWindowIcon(QIcon(Utils.findResource("Images/FarmView.png")))
 
         #Class Variables
@@ -99,23 +100,6 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTree.setColumnWidth(6, 70)          #Start Frame
         self.jobTree.setColumnWidth(6, 70)          #End Frame
         self.jobTree.setColumnWidth(6, 60)          #Max Nodes
-
-        #taskTree header and column widths
-        taskHeader = QTreeWidgetItem(["RenderLayer", "ID", "Status", "Host",
-                                        "sFrame", "eFrame", "cFrame", "StartTime",
-                                        "EndTime", "Duration", "ExitCode"])
-        self.taskTree.setHeaderItem(taskHeader)
-        self.taskTree.setColumnWidth(0, 130)        #RenderLayer
-        self.taskTree.setColumnWidth(1, 50)         #ID
-        self.taskTree.setColumnWidth(2, 60)         #Status
-        self.taskTree.setColumnWidth(3, 125)        #Host
-        self.taskTree.setColumnWidth(4, 50)         #StartFrame
-        self.taskTree.setColumnWidth(5, 50)         #EndFrame
-        self.taskTree.setColumnWidth(6, 50)         #CurrentFrame
-        self.taskTree.setColumnWidth(7, 110)        #Start Time
-        self.taskTree.setColumnWidth(8, 110)        #End Time
-        self.taskTree.setColumnWidth(9, 75)         #Duration
-
 
         #renderNodeTree column widths
         nodeHeader = QTreeWidgetItem(["Host", "Status", "TaskID", "Version",
@@ -500,6 +484,27 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.currentJobSel = job_id
             self.taskTreeLabel.setText("Task Tree (Job ID: {0})".format(job_id))
 
+    def taskTreeSetup(self, mode = "Default"):
+        if mode in ["Default", "RedshiftRender", "MentalRayRender"]:
+            #taskTree header and column widths
+            taskHeader = QTreeWidgetItem(["RenderLayer", "ID", "Status", "Host",
+                                            "sFrame", "eFrame", "cFrame", "StartTime",
+                                            "EndTime", "Duration", "ExitCode"])
+            self.taskTree.setHeaderItem(taskHeader)
+            self.taskTree.setColumnWidth(0, 130)        #RenderLayer
+            self.taskTree.setColumnWidth(1, 50)         #ID
+            self.taskTree.setColumnWidth(2, 60)         #Status
+            self.taskTree.setColumnWidth(3, 125)        #Host
+            self.taskTree.setColumnWidth(4, 50)         #StartFrame
+            self.taskTree.setColumnWidth(5, 50)         #EndFrame
+            self.taskTree.setColumnWidth(6, 50)         #CurrentFrame
+            self.taskTree.setColumnWidth(7, 110)        #Start Time
+            self.taskTree.setColumnWidth(8, 110)        #End Time
+            self.taskTree.setColumnWidth(9, 75)         #Duration
+
+        elif mode == "FusionComp":
+            pass
+
     def taskTreeEditHandler(self, item):
         pass
 
@@ -510,7 +515,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         job = hydra_jobboard.fetch("WHERE id = %s", (job_id,),
                                     cols = ["id", "renderLayers",
                                             "renderLayerTracker", "startFrame",
-                                            "endFrame", "status"])
+                                            "endFrame", "status", "jobType"])
+        self.taskTreeSetup(job.jobType)
         for rl in job.renderLayers.split(","):
             root = QTreeWidgetItem(self.taskTree, [rl])
             root.setFont(0, QFont('Segoe UI', 10, QFont.DemiBold))

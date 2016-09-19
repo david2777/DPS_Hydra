@@ -315,7 +315,6 @@ class hydra_taskboard(hydraObject):
     primaryKey = "id"
 
     def createTaskCMD(self, hydraJob, platform = "win32"):
-        #TODO:Get path with correct platform
         execs = hydra_executable.fetch(multiReturn = True)
         if platform == "win32":
             execsDict = {ex.name: ex.win32 for ex in execs}
@@ -331,7 +330,7 @@ class hydra_taskboard(hydraObject):
 
         baseCMD = shlex.split(hydraJob.baseCMD)
 
-        if hydraJob.jobType == "MayaRender":
+        if hydraJob.jobType in ["RedshiftRender", "MentalRayRender"]:
             renderList = [execsDict[hydraJob.execName]]
             renderList += baseCMD
             renderList += ["-s", self.currentFrame, "-e", self.endFrame, "-b",
@@ -344,6 +343,10 @@ class hydra_taskboard(hydraObject):
             renderList += ["/render", "/frames",
                             "{0}..{1}".format(self.startFrame, self.endFrame),
                             "/by", hydraJob.byFrame, "/exit"]
+
+        else:
+            logger.error("Bad Job Type!")
+            return None
 
         return [str(x) for x in renderList]
 
@@ -367,7 +370,7 @@ class hydra_taskboard(hydraObject):
     def kill(self, statusAfterDeath = "K", TCPKill = True):
         if self.status == STARTED:
             if TCPKill:
-                killed = self.sendKillQuestion(self.host, statusAfterDeath)
+                killed = self.sendKillQuestion(statusAfterDeath)
                 #If sendKillQuestion returns None the node is probably offline so
                 #we need to mark it as killed on here.
                 if killed == None:
@@ -399,6 +402,10 @@ class hydra_taskboard(hydraObject):
 class hydra_capabilities(hydraObject):
     autoColumn = None
     primaryKey = "name"
+
+class hydra_jobtypes(hydraObject):
+    autoColumn = None
+    primaryKey = "type"
 
 class hydra_executable(hydraObject):
     autoColumn = None

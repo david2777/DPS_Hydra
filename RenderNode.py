@@ -122,13 +122,24 @@ class RenderTCPServer(TCPServer):
 
         #Finally, update the DB with the information from the task
         finally:
-            HydraLogObject = LogParsers.RedshiftMayaLog(logFile)
-            renderedFrames = HydraLogObject.getSavedFrameNumbers()
+            if HydraJob.jobType == "RedshiftRender":
+                HydraLogObject = LogParsers.RedshiftMayaLog(logFile)
+                renderedFrames = HydraLogObject.getSavedFrameNumbers()
+
+            elif HydraJob.jobType == "MentalRayRender":
+                HydraLogObject = LogParsers.MentalRayMayaLog(logFile)
+                renderedFrames = HydraLogObject.getSavedFrameNumbers()
+
+            elif HydraJob.jobType == "FusionComp":
+                renderedFrames = [HydraTask.endFrame]
+
             if renderedFrames == []:
                 renderedFrames = [-1]
+
             logger.debug(renderedFrames)
             newCurrentFrame = max(renderedFrames)
             logger.debug(newCurrentFrame)
+
             with transaction() as t:
                 self.thisNode = hydra_rendernode.fetch("WHERE host = %s",
                                                         (self.thisNode.host,),

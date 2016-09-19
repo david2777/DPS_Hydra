@@ -31,10 +31,19 @@ UNLOCK TABLES;
 
 LOCK TABLES `hydra_executable` WRITE;
 /*!40000 ALTER TABLE `hydra_executable` DISABLE KEYS */;
-INSERT INTO `hydra_executable` VALUES ('maya2014_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe'),('maya2015_Render','C:/Program Files/Autodesk/maya2015/bin/render.exe');
+INSERT INTO `hydra_executable` VALUES ('maya2014_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe',NULL),('maya2015_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe',NULL);
 /*!40000 ALTER TABLE `hydra_executable` ENABLE KEYS */;
 UNLOCK TABLES;
 
+--
+-- Dumping data for table `hydra_jobtypes`
+--
+
+LOCK TABLES `hydra_jobtypes` WRITE;
+/*!40000 ALTER TABLE `hydra_jobtypes` DISABLE KEYS */;
+INSERT INTO `hydra_jobtypes` VALUES ('FusionComp'),('MentalRayRender'),('RedshiftRender');
+/*!40000 ALTER TABLE `hydra_jobtypes` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -45,4 +54,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-02-03 22:50:41
+-- Dump completed on 2016-09-18 18:56:26

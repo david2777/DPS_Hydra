@@ -10,12 +10,17 @@ import maya.mel as mel
 #-----------------Get Data from Maya------------------#
 reqsList = []
 renderLayersList = []
-engineDict = {"redshift":"Redshift", "mentalRay":"MentalRay", "vray":"VRay",
-                "renderMan":"RenderMan", "renderManRIS":"RenderMan",
-                "arnold":"Arnold"}
+engineDict = {"redshift":"Redshift", "mentalRay":"MentalRay"}
+
+typeDict = {"redshift":"RedshiftRender", "mentalRay":"MentalRayRender"}
+
+notYetSupported = {"vray":"VRay", "renderMan":"RenderMan",
+                    "renderManRIS":"RenderMan", "arnold":"Arnold"}
+
 engineCMDDict = {"redshift":"redshift", "mentalRay":"mr", "vray":"vray",
                 "renderMan":"rman", "renderManRIS":"rman", "arnold":"arnold",
                 "mayaHardware2":"hw2", "software":"sw"}
+
 sceneFile = cmds.file(q = True, exn = True)
 sceneName = sceneFile.split("/")[-1]
 projectDir = cmds.workspace(q = True, rd = True)
@@ -50,12 +55,15 @@ for layer in renderLayers:
 renderLayersReturn = ",".join(renderLayersList)
 
 #----------Setup Base Submitter Command Line Args----------#
-command = "python C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py \"{0}\" -s \"{1}\" -e \"{2}\" -p \"{3}\"".format(sceneFile, startFrame, endFrame, projectDir)
+command = "python %USERPROFILE%\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py \"{0}\" -s \"{1}\" -e \"{2}\" -p \"{3}\"".format(sceneFile, startFrame, endFrame, projectDir)
 
 #------------Build Extra Maya Command Line Args------------#
 extraCmdList = []
 
-extraCmdList.append("-r {0}".format(engineCMDDict[currentEngine]))
+try:
+    extraCmdList.append("-r {0}".format(engineCMDDict[currentEngine]))
+except KeyError:
+    cmds.error("Render Engine {} not yet supported!".format(currentEngine))
 
 extraCmdList.append("-cam {0}".format(renderCam))
 
@@ -71,10 +79,13 @@ else:
 
 command += " -q \"{0}\"".format(projectName)
 
+command += " -t {}".format(typeDict[currentEngine])
+
 try:
     renderDir = mel.eval("source GetRenderPath;string $renderDirectory = GetRenderPath();")
     renderDir = os.path.join(renderDir, "mayaRenders")
-    command += " -d \"{0}\"".format(renderDir)
+    if renderDir != "":
+        command += " -d \"{0}\"".format(renderDir)
 except RuntimeError:
     pass
 
@@ -82,7 +93,7 @@ if reqsReturn != "":
     command += " -c \"{0}\"".format(reqsReturn)
 
 if renderLayersReturn != "":
-    command += " -r \"{0}\"".format(renderLayersReturn)
+    command += " -l \"{0}\"".format(renderLayersReturn)
 
 print command
 subprocess.Popen(command, shell = True)
