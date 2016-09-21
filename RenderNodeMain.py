@@ -23,6 +23,7 @@ from Setups.MySQLSetup import *
 from Setups.Threads import stoppableThread, workerSignalThread
 import Utilities.NodeUtils as NodeUtils
 import Utilities.Utils as Utils
+from Setups.SingleInstanceLocker import InstanceLock
 
 class EmittingStream(QObject):
     """For writing text to the console output"""
@@ -35,17 +36,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
-        logger.info('Starting in {0}'.format(os.getcwd()))
-        logger.info('arglist is {0}'.format(sys.argv))
-
         with open(Utils.findResource("styleSheet.css"),"r") as myStyles:
             self.setStyleSheet(myStyles.read())
-
-        inst = RenderNode.checkRenderNodeInstances()
-        if not inst:
-            aboutBox(self, "Error!", "More than one RenderNode found!\n"
-                    "You cannot run more than one RenderNode at the same time. Closing...")
-            sys.exit(1)
 
         self.thisNode = NodeUtils.getThisNodeOBJ()
 
@@ -447,8 +439,21 @@ def pulse():
         logger.error(traceback.format_exc(e))
 
 if __name__ == "__main__":
+    logger.info('Starting in {0}'.format(os.getcwd()))
+    logger.info('arglist is {0}'.format(sys.argv))
+
     app = QApplication(sys.argv)
     app.quitOnLastWindowClosed = False
+
+    lockFile = InstanceLock("HydraRenderNode")
+    lockStatus = lockFile.isLocked()
+    logger.debug("Lock File Status: {}".format(lockStatus))
+    if not lockStatus:
+        logger.critical("Only one RenderNode is allowed to run at a time! Exiting...")
+        aboutBox(None, "ERROR", "Only one RenderNode is allowed to run at a time! Exiting...")
+        sys.exit(-1)
+
     window = RenderNodeMainUI()
     retcode = app.exec_()
+    lockFile.remove()
     sys.exit(retcode)

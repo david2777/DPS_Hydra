@@ -12,6 +12,7 @@ from Networking.Servers import TCPServer
 from Networking.Questions import IsAliveQuestion, StartRenderQuestion
 from Networking.Connections import TCPConnection
 from Utilities.Utils import getInfoFromCFG
+from Setups.SingleInstanceLocker import InstanceLock
 from Setups.MySQLSetup import *
 
 class RenderManagementServer(TCPServer):
@@ -231,8 +232,17 @@ class RenderManagementServer(TCPServer):
         logger.debug("Starting timeout thread for node: {0}".format(node.host))
 
 def main():
-    logger.debug('Starting in {0}'.format(os.getcwd()))
-    logger.debug('arglist {0}'.format(sys.argv))
+    logger.info('Starting in {0}'.format(os.getcwd()))
+    logger.info('arglist {0}'.format(sys.argv))
+
+    #Check for other RenderNode isntances
+    lockFile = InstanceLock("HydraRenderManager")
+    lockStatus = lockFile.isLocked()
+    logger.debug("Lock File Status: {}".format(lockStatus))
+    if not lockStatus:
+        logger.critical("Only one RenderManager is allowed to run at a time! Exiting...")
+        sys.exit(-1)
+
     port = int(getInfoFromCFG("manager", "port"))
     socketServer = RenderManagementServer(port = port)
     socketServer.createIdleLoop(15, socketServer.processRenderTasks)

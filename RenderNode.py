@@ -20,14 +20,10 @@ import Utilities.LogParsers as LogParsers
 import Utilities.Utils as Utils
 import Utilities.NodeUtils as NodeUtils
 import Utilities.JobUtils as JobUtils
+from Setups.SingleInstanceLocker import InstanceLock
 
 class RenderTCPServer(TCPServer):
     def __init__(self, *arglist, **kwargs):
-        #Check for other instances of RenderNode running
-        inst = checkRenderNodeInstances()
-        if not inst:
-            sys.exit(1)
-
         #Startup TCP Server
         self.renderServ = TCPServer.__init__(self, *arglist, **kwargs)
 
@@ -122,16 +118,8 @@ class RenderTCPServer(TCPServer):
 
         #Finally, update the DB with the information from the task
         finally:
-            if HydraJob.jobType == "RedshiftRender":
-                HydraLogObject = LogParsers.RedshiftMayaLog(logFile)
-                renderedFrames = HydraLogObject.getSavedFrameNumbers()
-
-            elif HydraJob.jobType == "MentalRayRender":
-                HydraLogObject = LogParsers.MentalRayMayaLog(logFile)
-                renderedFrames = HydraLogObject.getSavedFrameNumbers()
-
-            elif HydraJob.jobType == "FusionComp":
-                renderedFrames = [HydraTask.endFrame]
+            HydraLogObject = LogParsers.getLog(hydraJob, logFile)
+            renderedFrames = HydraLogObject.getSavedFrameNumbers()
 
             if renderedFrames == []:
                 renderedFrames = [-1]
@@ -240,33 +228,19 @@ def heartbeat(interval = 60):
             logger.error(traceback.format_exc(e))
         time.sleep(interval)
 
-def checkRenderNodeInstances():
-    if sys.platform == "win32":
-        subprocessOutput = subprocess.check_output('tasklist', **Utils.buildSubprocessArgs(False))
-        nInstances = len(filter(lambda line: 'RenderNode' in line,
-                        subprocessOutput.split('\n')))
-    else:
-        subprocessOutput = subprocess.check_output(["ps", "-af"], **Utils.buildSubprocessArgs(False))
-        nInstances = len(filter(lambda line: 'RenderNode' in line,
-                        subprocessOutput.split('\n')))
-    logger.debug("{0} RenderNode instances running.".format(nInstances))
+if __name__ == '__main__':
+    logger.info('Starting in {0}'.format(os.getcwd()))
+    logger.info('arglist {0}'.format(sys.argv))
 
-    if nInstances > 2:
-        logger.critical("Blocked RenderNodeMain from running because another"
-                    " instance already exists.")
-        return False
+    #Check for other RenderNode isntances
+    lockFile = InstanceLock("HydraRenderNode")
+    lockStatus = lockFile.isLocked()
+    logger.debug("Lock File Status: {}".format(lockStatus))
+    if not lockStatus:
+        logger.critical("Only one RenderNode is allowed to run at a time! Exiting...")
+        sys.exit(-1)
 
-    elif nInstances == 0 and not sys.argv[0].endswith('.py'):
-        logger.warning("Can't find running RenderNodeMain.")
-
-    return True
-
-def main():
-    logger.debug('Starting in {0}'.format(os.getcwd()))
-    logger.debug('arglist {0}'.format(sys.argv))
+    #Start the Render Server and Heartbeat Thread
     socketServer = RenderTCPServer()
     pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
     pulseThread.start()
-
-if __name__ == '__main__':
-    main()
