@@ -6,6 +6,15 @@ import datetime
 #Hydra
 from Setups.LoggingSetup import logger
 
+def getLog(hydraJob, logPath):
+    jobType = hydraJob.jobType
+    if jobType == "RedshiftRender":
+        return RedshiftMayaLog(logPath)
+    elif jobType == "MentalRayRender":
+        return MentalRayMayaLog(logPath)
+    else:
+        return None
+
 class Log:
     def __init__(self, filePath):
         self.fp = filePath
@@ -211,3 +220,62 @@ class MentalRayMayaLog(Log):
         timeList = [int(t.total_seconds()) for t in timeList]
         tSecs = sum(timeList) / len(timeList)
         return datetime.timedelta(seconds = tSecs)
+
+class FusionCompLog(Log):
+    """Class for loading Fusion logs. NOTE: getSavedFiles returns a list of
+    frames rather than file names since the Fusion log doesn't say file names.
+    Also there may be duplicates since it lists each frame render for each saver."""
+
+    filterRegex = r".*[\r\n]"
+    savedFileRegex = r"Rendered frame (\d*) "
+
+    def getSavedFrameNumbers(self):
+        """Gets a list of frame numbers assuing name.number.ext naming scheme."""
+        frameNumbers = self.getSavedFiles()
+        uniqueFrames = []
+        for x in frameNumbers:
+            if x not in uniqueFrames:
+                uniqueFrames.append(int(x))
+        return uniqueFrames
+
+    def getTotalFrameCount(self):
+        return len(self.getSavedFrameNumbers())
+
+    def getAverageRenderTime(self):
+        if not self.filteredLines:
+            self.filterLines()
+
+        if len(self.filteredLines) < 1:
+            return None
+
+        reg = re.compile(r"Average: (\d*.\d*) ")
+        for line in self.filteredLines:
+            search = reg.findall(line)
+            if len(search) == 1:
+                return datetime.timedelta(seconds = int(float(search[0])))
+
+    def getTotalRenderTime(self):
+        if not self.filteredLines:
+            self.filterLines()
+
+        if len(self.filteredLines) < 1:
+            return None
+
+        reg = re.compile(r"Total Time: (\d*h) (\d*m) (\d*.\d*s),")
+        matches = []
+        for line in self.filteredLines:
+            matches += reg.findall(line)
+
+        if len(matches) == 1:
+            match = matches[0]
+        else:
+            return None
+
+        hour = int(match[0][:-1])
+        minute = int(match[1][:-1])
+        second = int(float(match[2][:-1]))
+
+        second += hour * 60 * 60
+        second += minute * 60
+
+        return datetime.timedelta(seconds = second)
