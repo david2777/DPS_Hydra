@@ -278,15 +278,13 @@ class hydra_jobboard(hydraObject):
         return self.updateAttr("status", "U")
 
     def kill(self, statusAfterDeath = "K", TCPKill = True):
-        #TODO: Better exception handling for killing in general
         subTasks = hydra_taskboard.fetch("WHERE job_id = %s AND status = 'S'", (self.id,),
                                         cols = ["id", "status", "exitCode", "endTime"],
                                         multiReturn = True)
         responses = [task.kill() for task in subTasks]
-        #logger.debug(responses)
 
         responses += [self.updateAttr("status", statusAfterDeath)]
-        return all(responses)
+        return responses
 
     def reset(self):
         response = self.kill("U")
@@ -358,27 +356,25 @@ class hydra_taskboard(hydraObject):
         answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
         if answer is None:
             logger.debug("{0} appears to be offline or unresponsive. Treating as dead.".format(self.host))
-            return None
         else:
-            logger.debug("Child killed: {0}".format(answer.childKilled))
-            if not answer:
+            logger.debug("Child killed return code '{0}' for node '{1}'".format(answer, self.node))
+            if answer < 0:
                 logger.warning("{0} tried to kill its job but failed for some reason.".format(self.host))
-                return False
-            else:
-                return True
+
+        return answer
+
 
     def kill(self, statusAfterDeath = "K", TCPKill = True):
         if self.status == STARTED:
+            killed = None
             if TCPKill:
                 killed = self.sendKillQuestion(statusAfterDeath)
-                #If sendKillQuestion returns None the node is probably offline so
-                #we need to mark it as killed on here.
-                if killed == None:
-                    TCPKill = False
-                else:
-                    return killed
+                #If killed returns None then the node is probably offline
+                if killed:
+                    return True if killed > 0 else False
 
-            if not TCPKill:
+            #If it was not killed by the node then we need to mark it as dead here instead
+            if not killed:
                 logger.debug("TCPKill recived None, marking task as killed")
                 node = hydra_rendernode.fetch("WHERE host = %s", (self.host,),
                                                 cols = ["status", "task_id"])

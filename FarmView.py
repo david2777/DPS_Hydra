@@ -413,17 +413,30 @@ class FarmView(QMainWindow, Ui_FarmView):
                 return
 
             if mode == "kill":
-                responses = [job.kill() for job in jobOBJs]
+                rawResponses = [job.kill() for job in jobOBJs]
+                responses = [all(res) for res in rawResponses]
             else:
-                responses = [job.reset() for job in jobOBJs]
+                rawResponses = [job.reset() for job in jobOBJs]
+                responses = rawResponses
 
             self.populateJobTree()
 
+            respString = "Job Kill returned the following errors:\n"
             if not all(responses):
                 failureIDXes = [i for i, x in enumerate(responses) if not x]
-                failureIDs = [jobIDs[i] for i in failureIDXes]
-                warningBox(self, "Job Kill Error!",
-                            "Warning! Job kill returned at least one error on tasks under the following jobs: {}".format(failureIDs))
+                for idx in failureIDXes:
+                    taskString = "\t"
+                    taskFailures = [i for i, x in enumerate(rawResponses[i]) if not x]
+                    statusSuccess = taskFailures[-1]
+                    taskSuccess = taskFailures[:-1]
+                    taskString += "Job '{}' had ".format(jobIDs[i])
+                    if not statusSuccess:
+                        taskString += "an error changing its status and "
+                    taskString += "{} errors killing subtasks.\n".format(len(taskSuccess))
+                    respString += taskString
+
+                logger.error(respString)
+                warningBox(self, "Job Kill Errors!", respString)
 
         #Toggle Archive on Job
         elif mode in ["archive", "unarchive"]:

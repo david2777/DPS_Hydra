@@ -6,7 +6,6 @@ import threading
 import datetime
 import traceback
 import subprocess
-import signal
 
 #Third Party
 import psutil
@@ -45,8 +44,9 @@ class RenderTCPServer(TCPServer):
 
         #Setup Class Variables
         self.childProcess = None
+        self.PSUtilProc = None
         self.statusAfterDeath = None
-        self.childKilled = False
+        self.childKilled = 0
         self.thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),))
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
@@ -79,8 +79,10 @@ class RenderTCPServer(TCPServer):
 
     def launchRenderTask(self, HydraJob, HydraTask):
         logger.info("Starting task with id {0} on job with id {1}".format(HydraTask.id, HydraJob.id))
-        self.childKilled = False
+        self.childKilled = 0
         self.statusAfterDeath = None
+        self.childProcess = None
+        self.PSUtilProc = None
 
         originalCurrentFrame = int(HydraTask.currentFrame)
         renderTaskCMD = HydraTask.createTaskCMD(HydraJob, sys.platform)
@@ -88,7 +90,12 @@ class RenderTCPServer(TCPServer):
 
         logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(HydraTask.id))
         logger.info('Starting render task {0}'.format(HydraTask.id))
-        log = file(logFile, 'w')
+        try:
+            log = file(logFile, 'w')
+        except (IOError, OSError, WindowsError) as e:
+            logger.error(e)
+            self.thisNode.getOff()
+            return
         log.write('Hydra log file {0} on {1}\n'.format(logFile, HydraTask.host))
         log.write('RenderNode is {0}\n'.format(sys.argv))
         log.write('Command: {0}\n\n'.format(renderTaskCMD))
@@ -102,6 +109,8 @@ class RenderTCPServer(TCPServer):
 
             logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
                                                                 HydraTask.id))
+
+            self.PSUtilProc = psutil.Process(self.childProcess.pid)
             #Wait for task to finish
             self.childProcess.communicate()
 
@@ -143,7 +152,7 @@ class RenderTCPServer(TCPServer):
                 rlTracker[idx] = str(newCurrentFrame)
                 HydraJob.renderLayerTracker = ",".join(rlTracker)
 
-                if self.childKilled:
+                if self.childKilled == 1:
                     HydraTask.status = self.statusAfterDeath
                     HydraTask.exitCode = 1
                 else:
@@ -173,49 +182,50 @@ class RenderTCPServer(TCPServer):
 
             log.close()
             self.childProcess = None
+            self.PSUtilProc = None
             logger.info("Done with render task {0}".format(HydraTask.id))
 
     def killCurrentJob(self, statusAfterDeath):
-        """Kills the render node's current job if it's running one."""
-        self.childKilled = True
+        """Kills the render node's current job if it's running one.
+        Return Codes: 1 = process killed, -1 = parent could not be killed,
+        -9 = child could not be killed, -10 = child and parent could not be killed"""
         self.statusAfterDeath = statusAfterDeath
-        #Gather subprocesses just in case
-        if not self.childProcess:
+        self.childKilled = 1
+        if not self.childProcess or self.PSUtilProc:
             logger.info("No task is running!")
             return
-        children_procs = []
-        if psutil.pid_exists(self.childProcess.pid):
-            psutil_proc = psutil.Process(self.childProcess.pid)
-            children_procs = psutil_proc.children(recursive=True)
+
+        #Gather subprocesses just in case
+        if self.PSUtilProc.is_running():
+            childrenProcs = psutil_proc.children(recursive=True)
+            allProcs = [self.PSUtilProc] + childrenProcs
         else:
-            logger.info("PID {0} could not be found! Task is probably already dead.".format(self.childProcess.pid))
+            logger.info("PID '{0}' could not be found! Task is probably already dead.".format(self.childProcess.pid))
             return
 
         #Try to kill the main process
-        try:
-            logger.info("Killing main task with PID {0}".format(self.childProcess.pid))
-            os.kill(self.childProcess.pid, signal.SIGTERM)
-        except WindowsError as err:
-            logger.error("Could not kill PID {0} due to a WindowsError".format(self.childProcess.pid))
-            logger.error(str(err))
-            self.childKilled = False
+        #terminate() = SIGTERM, kill() = SIGKILL
+        logger.info("Killing main task with PID {0}".format(self.PSUtilProc.pid))
+        self.PSUtilProc.terminate()
+        gone, alive = psutil.wait_procs([self.PSUtilProc], timeout = 15)
+        if len(alive) > 0:
+            self.PSUtilProc.kill()
+            gone, alive = psutil.wait_procs([self.PSUtilProc], timeout = 15)
+            if len(alive) > 0:
+                logger.error("Could not kill PID {0}".format(self.PSUtilProc.pid))
+                logger.error(err)
+                self.childKilled = -1
 
-        #Kill the children if they still exist
-        for proc in children_procs:
-            if psutil.pid_exists(proc.pid):
-                try:
-                    logger.info("Killing subtask with PID of {0}".format(proc.pid))
-                    os.kill(proc.pid, signal.SIGTERM)
-                except WindowsError as err:
-                    #Logging this errors as debug since it probably means they're already dead
-                    logger.debug("Could not kill PID {0} due to a WindowsError".format(proc.pid))
-                    logger.debug(str(err))
-            else:
-                logger.debug("Skipping PID {0} because it is probably already dead.".format(proc.pid))
+        #Try to kill the children if they are still running
+        [proc.terminate() for proc in childrenProcs if proc.is_running()]
+        dead, alive = psutil.wait_procs(childrenProcs, timeout = 15)
+        if len(alive) > 0:
+            [proc.kill() for proc in alive]
+            dead, alive = psutil.wait_procs(alive, timeout = 15)
 
-        if any(psutil.pid_exists(proc.pid) for proc in children_procs):
-            logger.error("Could not kill all render processes for some reason!")
-            self.childKilled = False
+        if len(alive) > 0:
+            #ADD negative 10 to the return code
+            self.childKilled += -10
 
 def heartbeat(interval = 60):
     host = Utils.myHostName()

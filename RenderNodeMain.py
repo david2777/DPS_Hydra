@@ -277,7 +277,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.pulseThreadStatus = True
             self.pulseThreadPixmap.setPixmap(self.donePixmap)
             logger.info("Pulse Thread started!")
-        except Exception, e:
+        except Exception as e:
             logger.error("Exception: {0}".format(traceback.format_exc()))
             self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
 
@@ -287,7 +287,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.renderServerStatus = True
             self.renderServerPixmap.setPixmap(self.donePixmap)
             logger.info("Render Server Started!")
-        except Exception, e:
+        except Exception as e:
             logger.error("Exception: {0}".format(traceback.format_exc()))
             self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
 
@@ -302,7 +302,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 self.schedThreadStatus = True
                 self.scheduleThreadPixmap.setPixmap(self.donePixmap)
                 logger.info("Schedule Thread started!")
-            except Exception, e:
+            except Exception as e:
                 logger.error("Exception: {0}".format(traceback.format_exc()))
                 self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
         else:
@@ -435,7 +435,7 @@ def pulse():
         with transaction() as t:
             t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
                         "WHERE host = '{0}'".format(host))
-    except Exception, e:
+    except Exception as e:
         logger.error(traceback.format_exc(e))
 
 if __name__ == "__main__":

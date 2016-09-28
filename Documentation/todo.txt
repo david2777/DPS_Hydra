@@ -1,6 +1,7 @@
 -[In Progress]Work on Maya Submitter Script
 
 -[In Progress]Fix Bugs, Add Features
+    -Test Job/Task Kill errors
     -Node Scheduler broken
     -Add check on online to search for running tasks using lots of RAM or CPU
 
