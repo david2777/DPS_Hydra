@@ -30,8 +30,8 @@ class Log:
         Requires a filterRegex to be defined in the target class."""
         reg = re.compile(self.filterRegex)
         lines = reg.findall(self.logFileContents)
-        if lines == []:
-            logger.critical("Could not find any redshift lines in {}".format(self.fp))
+        if not lines:
+            logger.critical("Could not find any filtered lines in {}".format(self.fp))
             return None
         self.filteredLines = lines
         return lines
@@ -53,12 +53,15 @@ class Log:
         if not fullPath:
             matches = [os.path.split(m)[-1] for m in matches]
 
-        return matches
+        uniqueMatches = [m for m in matches if m not in uniqueMatches]
+
+        return uniqueMatches
 
     def getSavedFrameNumbers(self):
         """Gets a list of frame numbers assuing name.number.ext naming scheme."""
-        fileNames = self.getSavedFiles()
-        return [int(f.split(".")[-2]) for f in fileNames]
+        frameNumbers = [int(f.split(".")[-2]) for f in self.getSavedFiles()]
+        uniqueFrames = [f for f in frameNumbers if f not in uniqueFrames]
+        return uniqueFrames
 
 
 class RedshiftMayaLog(Log):
@@ -148,6 +151,9 @@ class RedshiftMayaLog(Log):
             logger.critical("More than one total time found in {}".format(self.fp))
             return None
 
+        elif len(matches) < 1:
+            matches = [max(self.getSavedFrameNumbers())]
+
         return int(matches[0])
 
     def getAverageRenderTime(self):
@@ -159,7 +165,7 @@ class RedshiftMayaLog(Log):
 
         else:
             frameTimes = self.getEachFrameRenderTime()
-            if frameTimes == []:
+            if not frameTimes:
                 logger.info("Could not find any frame render times in {}".format(self.fp))
                 return None
             #Add up seconds, divide by frame count
@@ -175,7 +181,7 @@ class MentalRayMayaLog(Log):
     savedFileRegex = r"to image file (.*)\s\(frame"
 
     def getTotalFrameCount(self):
-        return len(self.getSavedFiles())
+        return len(self.getSavedFrameNumbers())
 
     def getEachFrameRenderTime(self, returnDateTime = True):
         if not self.filteredLines:
@@ -221,22 +227,18 @@ class MentalRayMayaLog(Log):
         tSecs = sum(timeList) / len(timeList)
         return datetime.timedelta(seconds = tSecs)
 
+    def getTotalRenderTime(self):
+        timeList = self.getEachFrameRenderTime()
+        timeList = [int(t.total_seconds()) for t in timeList]
+        tSecs = sum(timeList)
+        return datetime.timedelta(seconds = tSecs)
+
 class FusionCompLog(Log):
     """Class for loading Fusion logs. NOTE: getSavedFiles returns a list of
-    frames rather than file names since the Fusion log doesn't say file names.
-    Also there may be duplicates since it lists each frame render for each saver."""
+    frames rather than file names since the Fusion log doesn't say file names."""
 
     filterRegex = r".*[\r\n]"
     savedFileRegex = r"Rendered frame (\d*) "
-
-    def getSavedFrameNumbers(self):
-        """Gets a list of frame numbers assuing name.number.ext naming scheme."""
-        frameNumbers = self.getSavedFiles()
-        uniqueFrames = []
-        for x in frameNumbers:
-            if x not in uniqueFrames:
-                uniqueFrames.append(int(x))
-        return uniqueFrames
 
     def getTotalFrameCount(self):
         return len(self.getSavedFrameNumbers())

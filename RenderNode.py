@@ -15,7 +15,7 @@ import Constants
 from Networking.Servers import TCPServer
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
-import Utilities.LogParsers as LogParsers
+import Setups.LogParsers as LogParsers
 import Utilities.Utils as Utils
 import Utilities.NodeUtils as NodeUtils
 import Utilities.JobUtils as JobUtils
@@ -88,7 +88,7 @@ class RenderTCPServer(TCPServer):
         renderTaskCMD = HydraTask.createTaskCMD(HydraJob, sys.platform)
         logger.debug(renderTaskCMD)
 
-        logFile = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(HydraTask.id))
+        logFile = HydraTask.getLogPath()
         logger.info('Starting render task {0}'.format(HydraTask.id))
         try:
             log = file(logFile, 'w')
@@ -130,7 +130,7 @@ class RenderTCPServer(TCPServer):
             HydraLogObject = LogParsers.getLog(hydraJob, logFile)
             renderedFrames = HydraLogObject.getSavedFrameNumbers()
 
-            if renderedFrames == []:
+            if not renderedFrames:
                 renderedFrames = [-1]
 
             logger.debug(renderedFrames)

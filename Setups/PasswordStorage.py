@@ -4,6 +4,7 @@ import sys
 from getpass import getpass
 
 #Third Party
+import MySQLdb
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 import keyring
@@ -28,11 +29,27 @@ def updateAutologinUser(newUsername):
         return Utils.writeInfoToCFG("database", "username", newUsername)
 
 def consolePrompt():
+    print "\n\nStore Auto Login information?"
+    #Get Login Information
     username = raw_input("Username: ")
     _password = getpass("Password: ")
-    #TODO: Make sure login is valid
-    storeCredentials(username, _password)
-    updateAutologinUser(username)
+    #Get DB Info
+    host = Utils.getInfoFromCFG("database", "host")
+    domain = Utils.getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
+    if domain != "" and host != "localhost":
+        host += ".{}".format(domain)
+    databaseName = Utils.getInfoFromCFG("database", "db")
+    port = int(Utils.getInfoFromCFG("database", "port"))
+
+    #Check  if login is valid
+    try:
+        MySQLdb.connect(host = host, user = username, passwd = _password,
+                        db = databaseName, port = port)
+        storeCredentials(username, _password)
+        updateAutologinUser(username)
+
+    except MySQLdb.Error:
+        print "Login information was invalid!"
 
 def qtPrompt():
     app = QApplication(sys.argv)
@@ -40,10 +57,9 @@ def qtPrompt():
     loginWin.show()
     retcode = app.exec_()
     username, _password = loginWin.getValues()
-    if username:
+    autoLogin = Utils.getInfoFromCFG("database", "autologin")
+    autoLogin = True if str(autoLogin).lower().startswith("t") else False
+    if username and autoLogin:
         updateAutologinUser(username)
         storeCredentials(username, _password)
     return username, _password
-
-if __name__ == "__main__":
-    consolePrompt()

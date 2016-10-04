@@ -58,7 +58,7 @@ def writeInfoToCFG(section, option, value):
     config.read(Constants.SETTINGS)
     #Make sure it exists
     if not os.path.exists(Constants.SETTINGS):
-        return None
+        return
 
     config.set(section, option, value)
 
@@ -72,7 +72,8 @@ def myHostName():
     domain = getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
     if domain != "":
         return "{0}.{1}".format(baseName, domain)
-    return baseName
+    else:
+        return baseName
 
 def getRedshiftPreference(attribute):
     """Return an attribute from the Redshift preferences.xml file"""
@@ -81,29 +82,27 @@ def getRedshiftPreference(attribute):
             tree = ET.parse("C:\\ProgramData\\Redshift\\preferences.xml")
         except IOError:
             logger.error("Could not find Redshift Preferences!")
-            return
+            return None
     else:
         #TODO:Other platforms
-        return
+        return None
     root = tree.getroot()
     perfDict = {c.attrib["name"]:c.attrib["value"] for c in root}
     try:
-        returnVal = perfDict[attribute]
+        return perfDict[attribute]
     except KeyError:
-        returnVal = None
         logger.error("Could not find {0} in Redshift Preferences!".format(attribute))
-    return returnVal
+        return None
 
 def flanged(name):
-    return name.startswith ('__') and name.endswith ('__')
+    return name.startswith('__') and name.endswith('__')
 
 def nonFlanged(name):
     return not flanged(name)
 
 def sockRecvAll(sock):
     """Receive all bytes from a socket, with no buffer size limit"""
-    receivedStrings  = (sock.recv(Constants.MANYBYTES)
-                        for i in itertools.count(0))
+    receivedStrings  = (sock.recv(Constants.MANYBYTES) for i in itertools.count(0))
     #Concatenate the nonempty ones
     return ''.join(itertools.takewhile(len, receivedStrings))
 

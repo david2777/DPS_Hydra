@@ -374,7 +374,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.trayIcon.showMessage(title, msg)
 
     def schedulerMain(self):
-        #TODO: Make schedule work with holidays somehow
         if not self.thisNode:
             self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
             logger.error("Node OBJ not found by schedulerMain! Checking again in 24 hours.")

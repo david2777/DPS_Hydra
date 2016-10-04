@@ -21,7 +21,7 @@ class DatabaseLogin(QWidget, Ui_Login):
         self.setupUi(self)
 
         self.host = getInfoFromCFG("database", "host")
-        self.databseName = getInfoFromCFG("database", "db")
+        self.databaseName = getInfoFromCFG("database", "db")
         self.port = int(getInfoFromCFG("database", "port"))
 
         QObject.connect(self.loginButton, SIGNAL("clicked()"),
@@ -56,7 +56,7 @@ class DatabaseLogin(QWidget, Ui_Login):
             MySQLdb.connect(host = self.host,
                                 user = self.db_username,
                                 passwd = self._db_password,
-                                db = self.databseName,
+                                db = self.databaseName,
                                 port = self.port)
             self.loginSuccess = True
             self.close()

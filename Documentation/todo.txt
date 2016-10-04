@@ -9,7 +9,6 @@
     -Switching to log parsing for simplicity and reliability
 
 -[In Progress]Multiple Job types
-    -Change TaskTree header based on jobType
 
 -[In Progress]Render Manager
 
@@ -19,7 +18,6 @@
 
 -[Todo]Cleanup WidgetFactories
     -General Cleanup
-    -Make a Smart TableWidgetItem
 
 -[Todo]System for versioning up automatically
 

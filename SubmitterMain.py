@@ -165,7 +165,6 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
     #------------------------------------------------------------------------#
 
     def submitButtonHandler(self):
-        #TODO:Error check this data!
         #Getting data in same order as JobTicket
         execName = str(self.executableComboBox.currentText())
         baseCMD = str(self.cmdLineEdit.text())

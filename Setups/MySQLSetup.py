@@ -3,6 +3,7 @@
 import sys
 import shlex
 import datetime
+import os
 
 #Third Party
 import MySQLdb
@@ -10,37 +11,12 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra
+import Constants
 from Setups.LoggingSetup import logger
 from Setups import PasswordStorage
 from Networking.Questions import KillCurrentTaskQuestion
 from Networking.Connections import TCPConnection
 import Utilities.Utils as Utils
-
-#Get databse information
-host = Utils.getInfoFromCFG("database", "host")
-domain = Utils.getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
-if domain != "" and host != "localhost":
-    host += ".{}".format(domain)
-databaseName = Utils.getInfoFromCFG("database", "db")
-port = int(Utils.getInfoFromCFG("database", "port"))
-db_username = Utils.getInfoFromCFG("database", "username")
-
-#Get login information
-autoLogin = Utils.getInfoFromCFG("database", "autologin")
-autoLogin = True if str(autoLogin).lower()[0] == "t" else False
-if autoLogin:
-    _db_password = PasswordStorage.loadCredentials(db_username)
-    if not _db_password:
-        autoLogin = False
-
-if not autoLogin:
-    returnValues = PasswordStorage.qtPrompt()
-    if not returnValues[0] or returnValues[1]:
-        logger.error("Could not login!")
-        sys.exit(1)
-    else:
-        db_username = returnValues[0]
-        _db_password = returnValues[1]
 
 #Statuses for either jobs/tasks or render nodes
 STARTED = 'S'               #Working on a job/job in progress
@@ -76,18 +52,45 @@ niceNames = {STARTED: 'Started',
 
 niceNamesRev = {v: k for k, v in niceNames.items()}
 
+def getDatabaseInfo():
+    logger.debug("Finding login information...")
+
+    #Get databse information
+    host = Utils.getInfoFromCFG("database", "host")
+    domain = Utils.getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
+    if domain != "" and host != "localhost":
+        host += ".{}".format(domain)
+    databaseName = Utils.getInfoFromCFG("database", "db")
+    port = int(Utils.getInfoFromCFG("database", "port"))
+    db_username = Utils.getInfoFromCFG("database", "username")
+
+    #Get login information
+    autoLogin = Utils.getInfoFromCFG("database", "autologin")
+    autoLogin = True if str(autoLogin).lower()[0] == "t" else False
+    if autoLogin:
+        _db_password = PasswordStorage.loadCredentials(db_username)
+        if not _db_password:
+            autoLogin = False
+
+    if not autoLogin:
+        returnValues = PasswordStorage.qtPrompt()
+        if not returnValues[0] or not returnValues[1]:
+            logger.error("Could not login!")
+            sys.exit(1)
+        else:
+            db_username = returnValues[0]
+            _db_password = returnValues[1]
+
+    return host, db_username, _db_password, databaseName, port
+
 class transaction:
-    global host
-    global db_username
-    global _db_password
-    global databaseName
-    global port
+    host, db_username, _db_password, databaseName, port = getDatabaseInfo()
 
     def __init__(self):
         #Open DB Connection
-        self.db = MySQLdb.connect(host = host, user = db_username,
-                                    passwd = _db_password, db = databaseName,
-                                    port = port)
+        self.db = MySQLdb.connect(host = self.host, user = self.db_username,
+                                    passwd = self._db_password, db = self.databaseName,
+                                    port = self.port)
         self.cur = self.db.cursor()
         self.cur.execute("SET autocommit = 1")
 
@@ -391,9 +394,20 @@ class hydra_taskboard(hydraObject):
             logger.debug("Task Kill is skipping task {0} because of status {1}".format(self.id, self.status))
             return True
 
-    def getUNCLog(self):
-        #TODO:Build UNC path to log
-        return None
+    def getLogPath(self):
+        thisHost = Utils.myHostName()
+        path = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
+        if thisHost == self.host:
+            return path
+        else:
+            drive,shortPath = os.path.splitdrive(path)
+            newPath = os.path.join("\\\\{}".format(self.host), shortPath)
+            newPath = os.path.normpath(newPath)
+            if sys.platform == "win32":
+                return "\\{}".format(newPath)
+            else:
+                #TODO:Test this
+                return newPath
 
 class hydra_capabilities(hydraObject):
     autoColumn = None
