@@ -15,6 +15,7 @@ import Constants
 from Networking.Servers import TCPServer
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
+from Setups import Threads as Threads
 import Setups.LogParsers as LogParsers
 import Utilities.Utils as Utils
 import Utilities.NodeUtils as NodeUtils
@@ -227,16 +228,11 @@ class RenderTCPServer(TCPServer):
             #ADD negative 10 to the return code
             self.childKilled += -10
 
-def heartbeat(interval = 60):
+def heartbeat():
     host = Utils.myHostName()
-    while True:
-        try:
-            with transaction() as t:
-                t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = %s",
-                            (host,))
-        except Exception as e:
-            logger.error(traceback.format_exc(e))
-        time.sleep(interval)
+    with transaction() as t:
+        t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = %s",
+                    (host,))
 
 if __name__ == '__main__':
     logger.info('Starting in {0}'.format(os.getcwd()))
@@ -252,5 +248,6 @@ if __name__ == '__main__':
 
     #Start the Render Server and Heartbeat Thread
     socketServer = RenderTCPServer()
-    pulseThread = threading.Thread(target = heartbeat, name = "heartbeat", args = (60,))
+    pulseThread = threading.Timer(60, heartbeat)
+    pulseThread.deamon = True
     pulseThread.start()

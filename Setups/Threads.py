@@ -15,22 +15,17 @@ class stoppableThread(threading.Thread):
         self.targetFunction = targetFunction
         self.interval = interval
         self.tName = tName
-        self._flag = False
-        self.stop = threading.Event()
+        self.stopEvent = threading.Event()
         threading.Thread.__init__(self, target = self.tgt)
 
     def tgt(self):
-        try:
-            while (not self.stop.wait(1)):
-                self._flag = True
-                self.targetFunction()
-                self.stop.wait(self.interval)
-        finally:
-            self._flag = False
+        while not self.stopEvent.is_set():
+            self.targetFunction()
+            self.stopEvent.wait(self.interval)
 
     def terminate(self):
         logger.info("Killing {0} Thread...".format(self.tName))
-        self.stop.set()
+        self.stopEvent.set()
 
 class workerSignalThread(QThread):
     def __init__(self, target, interval):

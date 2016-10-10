@@ -239,6 +239,9 @@ class hydra_rendernode(hydraObject):
             return self.updateAttr("status", "I")
         elif self.status == "P":
             return self.updateAttr("status", "S")
+        else:
+            logger.debug("No status changes made to {}".format(self.host))
+            return True
 
     def offline(self):
         newStatus = "P" if self.status == "S" else "O"

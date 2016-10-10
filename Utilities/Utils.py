@@ -8,16 +8,65 @@ import shutil
 import socket
 import subprocess
 import xml.etree.ElementTree as ET
+import subprocess
 
 #Hydra
 from Setups.LoggingSetup import logger
 import Constants
 
+def changeHydraEnviron(newEnviron):
+    if sys.platform == "win32":
+        logger.info("Changing Hydra Environ to {}".format(newEnviron))
+        response = subprocess.call(["setx", "HYDRA", newEnviron])
+        if response.startswith("SUCCESS"):
+            return True
+        else:
+            logger.critical("Could not change enviromental variable!")
+            return False
+    else:
+        raise "Not Implemented!"
+
+def launchHydraApp(app, wait=0):
+    """Primarily for killing the app and restarting it"""
+    hydraPath = os.getenv("HYDRA")
+    if not hydraPath:
+        logger.error("HYDRA enviromental variable does not exit!")
+        return None
+    if sys.platform == "win32":
+        execs = os.path.listdir(hydraPath)
+        if not any([x.startswith(app) for x in execs]):
+            logger.error("{} is not a vaild Hydra Win32 App".format(app))
+            return None
+    shortcutPath = os.path.join(hydraPath, "_shortcuts")
+    ext = ".bat" if sys.platform == "win32" else ".sh"
+    script = "StartHydraApp{}".format(ext)
+    scriptPath = os.path.join(shortcutPath, script)
+
+    command = [scriptPath, app]
+    if wait > 0:
+        command += [str(int(wait))]
+    subprocess.Popen(command, stdout=False)
+
+def versionCheck(currentVersion):
+    hydraPath = os.getenv("HYDRA")
+    versions = os.listdir(hydraPath)
+    versions = [float(x.split("_")[-1]) for x in versions if x.startswith("dist_")]
+    highestVersion = max(versions)
+    if highestVersion > currentVersion:
+        head,tail  = os.path.split(hydraPath)
+        newPath = os.path.join(head, "dist_{}".format(highestVersion))
+        response = changeHydraEnviron(newPath)
+        if not response:
+            logger.critical("Could not update to newest environ for some reason!")
+        return response
+    else:
+        return False
+
 def findResource(relativePath):
     basePath = getattr(sys, "_MEIPASS", os.path.abspath("."))
     return os.path.join(basePath, relativePath)
 
-def buildSubprocessArgs(include_stdout = False):
+def buildSubprocessArgs(include_stdout=False):
     if hasattr(subprocess, 'STARTUPINFO'):
         si = subprocess.STARTUPINFO()
         si.dwFlags |= subprocess.STARTF_USESHOWWINDOW

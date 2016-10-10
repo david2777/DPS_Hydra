@@ -173,32 +173,32 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def closeEvent(self, event):
         choice = yesNoBox(self, "Confirm", "Really exit the RenderNodeMain server?")
         if choice == QMessageBox.Yes:
-            logger.info("Shutting down...")
-            #Force update UI
-            self.autoUpdateThread.terminate()
-            app.processEvents()
-            if self.schedThreadStatus:
-                self.schedThread.terminate()
-            app.processEvents()
-            if self.pulseThreadStatus:
-                self.pulseThread.terminate()
-            self.updateThisNodeInfo()
-            app.processEvents()
-            isTask = False
-            if self.thisNode.task_id:
-                isTask = True
-                self.getOffThisNodeHandler()
-            if self.renderServerStatus:
-                self.renderServer.shutdownCMD()
-                #Wait to make sure the render server is dead
-                time.sleep(1)
-            if isTask:
-                self.onlineThisNodeHandler()
-            self.trayIcon.hide()
-            event.accept()
-            sys.exit(0)
+            self.doExit()
         else:
             event.ignore()
+
+    def doExit(self):
+        logger.info("Shutting down...")
+        #Force update UI
+        self.autoUpdateThread.terminate()
+        app.processEvents()
+        if self.schedThreadStatus:
+            self.schedThread.terminate()
+        app.processEvents()
+        if self.pulseThreadStatus:
+            self.pulseThread.terminate()
+        self.updateThisNodeInfo()
+        app.processEvents()
+        if self.thisNode.task_id:
+            self.getOffThisNodeHandler()
+        if self.renderServerStatus:
+            self.renderServer.shutdownCMD()
+            #Wait to make sure the render server is dead
+            time.sleep(1)
+        self.trayIcon.hide()
+        app.processEvents()
+        event.accept()
+        sys.exit(0)
 
     def autoUpdateHandler(self):
         """Toggles Auto Updater
@@ -266,6 +266,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             logger.info("No changes detected. Nothing was changed.")
 
     def startupServers(self):
+        logger.debug("Firing up main threads")
         #Startup Pulse thread
         self.pulseThreadStatus = False
         self.renderServerStatus = False
@@ -295,9 +296,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.startScheduleThread()
 
     def startScheduleThread(self):
-        if int(self.currentScheduleEnabled) == 1 and self.currentSchedule:
+        if bool(self.currentScheduleEnabled) and self.currentSchedule:
             try:
-                self.schedThread = schedulerThread(900, self.schedulerMain)
+                self.schedThread = schedulerThread(self.schedulerMain)
+                self.schedThread.deamon = True
                 self.schedThread.start()
                 self.schedThreadStatus = True
                 self.scheduleThreadPixmap.setPixmap(self.donePixmap)
@@ -404,38 +406,31 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.offlineThisNodeHandler()
 
 class schedulerThread(threading.Thread):
-    def __init__(self, interval, target):
-        self.interval = interval
-        self._flag = False
-        self.tName = "Scheduler Thread"
-        self.stop = threading.Event()
+    """Modified version of the stoppableThread"""
+    def __init__(self, target):
+        self.threadName = "Scheduler_Thread"
+        self.stopEvent = threading.Event()
         self.target = target
         threading.Thread.__init__(self, target = self.tgt)
 
     def tgt(self):
-        try:
-            while (not self.stop.wait(1)):
-                self._flag = True
-                self.interval = self.target()
-                hours = int(self.interval / 60 / 60)
-                minutes = int(self.interval / 60 % 60)
-                logger.info("Scheduler Sleeping for {0} hours and {1} minutes".format(hours, minutes))
-                self.stop.wait(self.interval)
-        finally:
-            self._flag = False
+        while not self.stopEvent.is_set():
+            #target = schedulerMain from the RenderNodeMainUI class
+            self.interval = self.target()
+            hours = int(self.interval / 60 / 60)
+            minutes = int(self.interval / 60 % 60)
+            logger.info("Scheduler Sleeping for {0} hours and {1} minutes".format(hours, minutes))
+            self.stopEvent.wait(self.interval)
 
     def terminate(self):
-        logger.info("Killing {0}...".format(self.tName))
-        self.stop.set()
+        logger.info("Killing {0}...".format(self.threadName))
+        self.stopEvent.set()
 
 def pulse():
     host = Utils.myHostName()
-    try:
-        with transaction() as t:
-            t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
-                        "WHERE host = '{0}'".format(host))
-    except Exception as e:
-        logger.error(traceback.format_exc(e))
+    with transaction() as t:
+        t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
+                    "WHERE host = '{0}'".format(host))
 
 if __name__ == "__main__":
     logger.info('Starting in {0}'.format(os.getcwd()))
