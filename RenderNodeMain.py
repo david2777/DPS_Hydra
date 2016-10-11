@@ -20,7 +20,7 @@ from Dialogs.MessageBoxes import aboutBox, yesNoBox
 import RenderNode
 from Setups.LoggingSetup import logger, outputWindowFormatter
 from Setups.MySQLSetup import *
-from Setups.Threads import stoppableThread, workerSignalThread
+from Setups.Threads import *
 import Utilities.NodeUtils as NodeUtils
 import Utilities.Utils as Utils
 from Setups.SingleInstanceLocker import InstanceLock
@@ -58,13 +58,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.buildUI()
         self.connectButtons()
         self.updateThisNodeInfo()
-        #Note: sys.exit calls after this might not kill the server threads
-        #TODO: Fix that
         self.startupServers()
 
-        self.autoUpdateThread = workerSignalThread("run", 15)
-        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.updateThisNodeInfo)
-        self.autoUpdateThread.start()
+        self.autoUpdateThread = stoppableThread(self.updateThisNodeInfo, 15,
+                                                "AutoUpdate_Thread")
 
         logger.info("Render Node Main is live! Waiting for tasks...")
 
@@ -179,22 +176,23 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
     def doExit(self):
         logger.info("Shutting down...")
-        #Force update UI
         self.autoUpdateThread.terminate()
         app.processEvents()
         if self.schedThreadStatus:
+            logger.info("Killing Scheduler Thread")
             self.schedThread.terminate()
         app.processEvents()
         if self.pulseThreadStatus:
+            logger.info("Killing Pulse Thread")
             self.pulseThread.terminate()
         self.updateThisNodeInfo()
         app.processEvents()
         if self.thisNode.task_id:
+            logger.info("Killing Current Task")
             self.getOffThisNodeHandler()
         if self.renderServerStatus:
-            self.renderServer.shutdownCMD()
-            #Wait to make sure the render server is dead
-            time.sleep(1)
+            logger.info("Killing RenderServer Thread")
+            self.renderServer.shutdown()
         self.trayIcon.hide()
         app.processEvents()
         event.accept()
@@ -207,7 +205,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         if not self.autoUpdateCheckBox.isChecked():
             self.autoUpdateThread.terminate()
         else:
-            self.autoUpdateThread.start()
+            self.autoUpdateThread.restart()
 
     def showWindowHandler(self):
         self.isVisable = True
@@ -272,9 +270,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.renderServerStatus = False
         self.schedThreadStatus = False
 
-        self.pulseThread = stoppableThread(pulse, 60, "Pulse")
         try:
-            self.pulseThread.start()
+            self.pulseThread = stoppableThread(pulse, 60, "Pulse_Thread")
             self.pulseThreadStatus = True
             self.pulseThreadPixmap.setPixmap(self.donePixmap)
             logger.info("Pulse Thread started!")
@@ -298,9 +295,8 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def startScheduleThread(self):
         if bool(self.currentScheduleEnabled) and self.currentSchedule:
             try:
-                self.schedThread = schedulerThread(self.schedulerMain)
-                self.schedThread.deamon = True
-                self.schedThread.start()
+                self.schedThread = schedulerThread(self.schedulerMain,
+                                                    "Schedule_Thread", None)
                 self.schedThreadStatus = True
                 self.scheduleThreadPixmap.setPixmap(self.donePixmap)
                 logger.info("Schedule Thread started!")
@@ -405,26 +401,16 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         logger.info("Triggering Shutdown Event")
         self.offlineThisNodeHandler()
 
-class schedulerThread(threading.Thread):
+class schedulerThread(stoppableThread):
     """Modified version of the stoppableThread"""
-    def __init__(self, target):
-        self.threadName = "Scheduler_Thread"
-        self.stopEvent = threading.Event()
-        self.target = target
-        threading.Thread.__init__(self, target = self.tgt)
-
     def tgt(self):
         while not self.stopEvent.is_set():
             #target = schedulerMain from the RenderNodeMainUI class
-            self.interval = self.target()
+            self.interval = self.targetFunction()
             hours = int(self.interval / 60 / 60)
             minutes = int(self.interval / 60 % 60)
             logger.info("Scheduler Sleeping for {0} hours and {1} minutes".format(hours, minutes))
             self.stopEvent.wait(self.interval)
-
-    def terminate(self):
-        logger.info("Killing {0}...".format(self.threadName))
-        self.stopEvent.set()
 
 def pulse():
     host = Utils.myHostName()

@@ -26,7 +26,7 @@ from Dialogs.MessageBoxes import *
 import Constants
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
-from Setups.Threads import workerSignalThread
+from Setups.Threads import *
 import Utilities.Utils as Utils
 import Utilities.NodeUtils as NodeUtils
 
@@ -62,9 +62,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.thisNodeExists = self.findThisNode()
 
         #Start autoUpdater and then fetch data from DB
-        self.autoUpdateThread = workerSignalThread("run", 10)
-        QObject.connect(self.autoUpdateThread, SIGNAL("run"), self.doUpdate)
-        self.autoUpdateThread.start()
+        self.autoUpdateThread = stoppableThread(self.doUpdate, 10, "AutoUpdate_Thread")
         self.doFetch()
 
     def addItem(self, menu, name, handler, statusTip, hotkey=None):
@@ -852,7 +850,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not self.autoUpdateCheckbox.isChecked():
             self.autoUpdateThread.terminate()
         else:
-            self.autoUpdateThread.start()
+            self.autoUpdateThread.restart()
 
     def onlineThisNodeHandler(self):
         """Changes the local render node's status to online if it was offline,

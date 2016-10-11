@@ -1,4 +1,3 @@
-"""Some generic Threads all together in one happy file"""
 #Standard
 import threading
 import time
@@ -11,12 +10,14 @@ from PyQt4.QtCore import *
 from Setups.LoggingSetup import logger
 
 class stoppableThread(threading.Thread):
-    def __init__(self, targetFunction, interval, tName):
+    def __init__(self, targetFunction, interval, threadName):
         self.targetFunction = targetFunction
         self.interval = interval
-        self.tName = tName
+        self.threadName = threadName
         self.stopEvent = threading.Event()
-        threading.Thread.__init__(self, target = self.tgt)
+        self.threadOBJ = threading.Thread(target=self.tgt, name=self.threadName)
+        self.threadOBJ.deamon = True
+        self.threadOBJ.start()
 
     def tgt(self):
         while not self.stopEvent.is_set():
@@ -24,20 +25,12 @@ class stoppableThread(threading.Thread):
             self.stopEvent.wait(self.interval)
 
     def terminate(self):
-        logger.info("Killing {0} Thread...".format(self.tName))
+        logger.debug("Killing {0}".format(self.threadName))
         self.stopEvent.set()
 
-class workerSignalThread(QThread):
-    def __init__(self, target, interval):
-        QThread.__init__(self)
-        self.target = target
-        self.interval = interval
-
-    def __del__(self):
-        self.wait()
-
-    def run(self):
-        while True:
-            #logger.info("Running...")
-            self.emit(SIGNAL(self.target))
-            time.sleep(self.interval)
+    def restart(self):
+        logger.debug("Restarting {0}".format(self.threadName))
+        self.stopEvent = threading.Event()
+        self.threadOBJ = threading.Thread(target=self.tgt, name=self.threadName)
+        self.threadOBJ.deamon = True
+        self.threadOBJ.start()

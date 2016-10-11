@@ -12,51 +12,49 @@ from Setups.LoggingSetup import logger
 from Utilities.Utils import getInfoFromCFG
 
 class Server:
-    def createIdleLoop(self, interval, function):
-        self.idleThread = threading.Thread(target = self.idleLoop,
-                                            name = "Idle Thread",
-                                            args = (interval, function))
+    def createIdleLoop(self, threadName, targetFunction, interval=None):
+        self.targetFunction = targetFunction
+        self.interval = interval
+        self.threadName = threadName
+        self.stopEvent = threading.Event()
+        self.threadOBJ = threading.Thread(target = self.tgt,
+                                            name = self.threadName)
+        self.threadOBJ.deamon = True
+        self.threadOBJ.start()
 
-        self.idleThread.start()
-        #Without this sleep it returns True even if the server isn't started
-        time.sleep(.1)
-        if not self.idleThread.isAlive():
-            self.threadVar = False
-            logger.critical("Server apprears to have failed.")
+    def tgt(self):
+        if self.interval:
+            while not self.stopEvent.is_set():
+                self.targetFunction()
+                self.stopEvent.wait(self.interval)
+        else:
+            while not self.stopEvent.is_set():
+                self.targetFunction()
 
-    def idleLoop(self, interval, function):
-        """Class calling this must have self.threadVar set to True"""
-        while self.threadVar:
-            function()
-            time.sleep(interval)
+    def shutdown(self):
+        logger.info("Killing {0} Thread...".format(self.threadName))
+        self.stopEvent.set()
 
 class MySocketServer(SocketServer.TCPServer):
     allow_reuse_address = True
 
 class TCPServer(Server):
-    def __init__(self, port = None):
+    def __init__(self, port=None):
         if not port:
             port = int(getInfoFromCFG("network", "port"))
         HydraTCPHandler.TCPserver = self
         logger.debug('Open TCPServer Socket @ Port {0}'.format(port))
-        self.threadVar = True
         self.serverObject = MySocketServer(("", port), HydraTCPHandler)
-        self.serverThread = threading.Thread(target = runTheServer,
-                                              name = "Server Thread",
-                                              args = (self.serverObject,))
-        self.serverThread.start()
-        if not self.serverThread.isAlive():
-            raise
-        return self
+        self.serverThread = self.createIdleLoop("TCP_Server_Thread",
+                                                self.runTheServer)
+
+    def runTheServer(self):
+        self.serverObject.serve_forever()
 
     def shutdown(self):
-        logger.debug("Shutting down TCPServer...")
-        self.threadVar = False
+        logger.info("Killing {0} Thread...".format(self.threadName))
+        self.stopEvent.set()
         self.serverObject.shutdown()
-
-def runTheServer(serverObject):
-    logger.debug("Off to the races!")
-    serverObject.serve_forever()
 
 class HydraTCPHandler(SocketServer.StreamRequestHandler):
     TCPserver = None

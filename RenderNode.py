@@ -15,7 +15,7 @@ import Constants
 from Networking.Servers import TCPServer
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
-from Setups import Threads as Threads
+from Setups.Threads import *
 import Setups.LogParsers as LogParsers
 import Utilities.Utils as Utils
 import Utilities.NodeUtils as NodeUtils
@@ -23,9 +23,9 @@ import Utilities.JobUtils as JobUtils
 from Setups.SingleInstanceLocker import InstanceLock
 
 class RenderTCPServer(TCPServer):
-    def __init__(self, *arglist, **kwargs):
+    def __init__(self):
         #Startup TCP Server
-        self.renderServ = TCPServer.__init__(self, *arglist, **kwargs)
+        self.renderServ = TCPServer()
 
         #Detect RedShift GPUs
         self.rsGPUs = Utils.getRedshiftPreference("SelectedCudaDevices")
@@ -69,7 +69,7 @@ class RenderTCPServer(TCPServer):
         with transaction() as t:
             self.thisNode.update(t)
 
-    def shutdownCMD(self):
+    def shutdown(self):
         self.renderServ.shutdown()
 
     def startRenderTask(self, HydraJob, HydraTask):
@@ -248,6 +248,4 @@ if __name__ == '__main__':
 
     #Start the Render Server and Heartbeat Thread
     socketServer = RenderTCPServer()
-    pulseThread = threading.Timer(60, heartbeat)
-    pulseThread.deamon = True
-    pulseThread.start()
+    pulseThread = stoppableThread(heartbeat, 60, "Pulse_Thread")
