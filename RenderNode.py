@@ -234,6 +234,21 @@ def heartbeat():
         t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = %s",
                     (host,))
 
+def softwareUpdaterLoop():
+    logger.debug("Checking for updates...")
+    updateAnswer = Utils.softwareUpdater()
+    if updateAnswer:
+        #Don't really like using Globals but this seems like the easiest way for now.
+        global socketServer
+        global pulseThread
+        global updaterThread
+        logger.info("Update found!")
+        socketServer.shutdown()
+        pulseThread.terminate()
+        Utils.launchHydraApp("RenderNodeConsole")
+        updaterThread.terminate()
+        sys.exit(0)
+
 if __name__ == '__main__':
     logger.info('Starting in {0}'.format(os.getcwd()))
     logger.info('arglist {0}'.format(sys.argv))
@@ -249,3 +264,6 @@ if __name__ == '__main__':
     #Start the Render Server and Heartbeat Thread
     socketServer = RenderTCPServer()
     pulseThread = stoppableThread(heartbeat, 60, "Pulse_Thread")
+    #If this is an exe, start the software updater thread
+    if sys.argv[0].endswith(".exe") and os.getenv("HYDRA"):
+        updaterThread = stoppableThread(softwareUpdaterLoop, 900, "Updater_Thread")

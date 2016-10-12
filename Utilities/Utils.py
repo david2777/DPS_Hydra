@@ -17,8 +17,9 @@ import Constants
 def changeHydraEnviron(newEnviron):
     if sys.platform == "win32":
         logger.info("Changing Hydra Environ to {}".format(newEnviron))
-        response = subprocess.call(["setx", "HYDRA", newEnviron])
-        if response.startswith("SUCCESS"):
+        proc = subprocess.Popen(["setx", "HYDRA", newEnviron], stdout=subprocess.PIPE)
+        out,error = proc.communicate()
+        if out.find("SUCCESS") > 0:
             return True
         else:
             logger.critical("Could not change enviromental variable!")
@@ -29,15 +30,19 @@ def changeHydraEnviron(newEnviron):
 def launchHydraApp(app, wait=0):
     """Primarily for killing the app and restarting it"""
     hydraPath = os.getenv("HYDRA")
+
     if not hydraPath:
         logger.error("HYDRA enviromental variable does not exit!")
         return None
+
     if sys.platform == "win32":
-        execs = os.path.listdir(hydraPath)
+        execs = os.listdir(hydraPath)
         if not any([x.startswith(app) for x in execs]):
             logger.error("{} is not a vaild Hydra Win32 App".format(app))
             return None
-    shortcutPath = os.path.join(hydraPath, "_shortcuts")
+
+    distFolder,tail = os.path.split(hydraPath)
+    shortcutPath = os.path.join(distFolder, "_shortcuts")
     ext = ".bat" if sys.platform == "win32" else ".sh"
     script = "StartHydraApp{}".format(ext)
     scriptPath = os.path.join(shortcutPath, script)
@@ -47,14 +52,29 @@ def launchHydraApp(app, wait=0):
         command += [str(int(wait))]
     subprocess.Popen(command, stdout=False)
 
-def versionCheck(currentVersion):
+def softwareUpdater():
+    return True
     hydraPath = os.getenv("HYDRA")
+
+    if not hydraPath:
+        logger.error("HYDRA enviromental variable does not exit!")
+        return False
+
+    hydraPath,thisVersion = os.path.split(hydraPath)
+    try:
+        currentVersion = float(thisVersion.split("_")[-1])
+    except ValueError:
+        logger.warning("Unable to obtain version number from file path. Assuming version number from Constants")
+        currentVersion = Constants.VERSION
+
     versions = os.listdir(hydraPath)
     versions = [float(x.split("_")[-1]) for x in versions if x.startswith("dist_")]
+    if len(versions) == 0:
+        return False
     highestVersion = max(versions)
     if highestVersion > currentVersion:
-        head,tail  = os.path.split(hydraPath)
-        newPath = os.path.join(head, "dist_{}".format(highestVersion))
+        logger.info("Update found! Current Version is {0} / New Version is {1}".format(currentVersion, highestVersion))
+        newPath = os.path.join(hydraPath, "dist_{}".format(highestVersion))
         response = changeHydraEnviron(newPath)
         if not response:
             logger.critical("Could not update to newest environ for some reason!")
