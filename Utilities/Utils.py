@@ -20,6 +20,7 @@ def changeHydraEnviron(newEnviron):
         proc = subprocess.Popen(["setx", "HYDRA", newEnviron], stdout=subprocess.PIPE)
         out,error = proc.communicate()
         if out.find("SUCCESS") > 0:
+            os.environ["HYDRA"] = newEnviron
             return True
         else:
             logger.critical("Could not change enviromental variable!")
@@ -53,7 +54,6 @@ def launchHydraApp(app, wait=0):
     subprocess.Popen(command, stdout=False)
 
 def softwareUpdater():
-    return True
     hydraPath = os.getenv("HYDRA")
 
     if not hydraPath:
@@ -69,9 +69,10 @@ def softwareUpdater():
 
     versions = os.listdir(hydraPath)
     versions = [float(x.split("_")[-1]) for x in versions if x.startswith("dist_")]
-    if len(versions) == 0:
+    if not versions:
         return False
     highestVersion = max(versions)
+    logger.debug("Comparing versions. Env: {0} Latest: {1}".format(currentVersion, highestVersion))
     if highestVersion > currentVersion:
         logger.info("Update found! Current Version is {0} / New Version is {1}".format(currentVersion, highestVersion))
         newPath = os.path.join(hydraPath, "dist_{}".format(highestVersion))

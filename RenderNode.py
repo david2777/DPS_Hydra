@@ -238,16 +238,14 @@ def softwareUpdaterLoop():
     logger.debug("Checking for updates...")
     updateAnswer = Utils.softwareUpdater()
     if updateAnswer:
-        #Don't really like using Globals but this seems like the easiest way for now.
-        global socketServer
-        global pulseThread
-        global updaterThread
-        logger.info("Update found!")
+        logger.debug("Update found!")
         socketServer.shutdown()
         pulseThread.terminate()
         Utils.launchHydraApp("RenderNodeConsole")
         updaterThread.terminate()
         sys.exit(0)
+    else:
+        logger.debug("No updates found.")
 
 if __name__ == '__main__':
     logger.info('Starting in {0}'.format(os.getcwd()))
