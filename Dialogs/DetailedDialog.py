@@ -10,6 +10,9 @@ from CompiledUI.UI_DetailedDialog import Ui_detailedDialog
 #Hydra
 from Setups.WidgetFactories import labelFactory, clearLayout, setupDataGrid
 
+#Doesn't like Qt classes
+#pylint: disable=E0602,E1101,C0302
+
 class DetailedDialog(QDialog, Ui_detailedDialog):
     def __init__(self, data, parent=None):
         QDialog.__init__(self, parent)

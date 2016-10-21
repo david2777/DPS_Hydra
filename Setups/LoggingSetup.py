@@ -18,7 +18,7 @@ logger.setLevel(logging.NOTSET)
 try:
     config = ConfigParser.RawConfigParser()
     config.read(SETTINGS)
-    debugMode = config.get(section = "hydra", option = "debug")
+    debugMode = config.get(section="hydra", option="debug")
     debugMode = True if str(debugMode).lower() == "true" else False
     configErr = False
 except ConfigParser.NoSectionError:
@@ -65,8 +65,8 @@ if not os.path.isdir(BASELOGDIR):
 logfileName = os.path.join(BASELOGDIR, appname + '.txt')
 
 fileLogger = logging.handlers.TimedRotatingFileHandler(logfileName,
-                                                        when = 'midnight',
-                                                        backupCount = 7)
+                                                        when="midnight",
+                                                        backupCount=7)
 fileLogger.setLevel(logging.DEBUG if debugMode else logging.INFO)
 fileLogger.setFormatter(fileFormatter)
 logger.addHandler(fileLogger)

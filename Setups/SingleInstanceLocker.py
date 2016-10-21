@@ -6,25 +6,28 @@ import sys
 from Setups.LoggingSetup import logger
 from Constants import BASEDIR
 
-class InstanceLock:
+#Fix pylint issues from importing based on platform and catch-all exception handling
+#pylint: disable=W0703,E1101,E0602,E0401
+
+class InstanceLock(object):
     def __init__(self, name):
         self.locked = False
         self.name = name
         self.tempFilePath = os.path.join(BASEDIR, "{}.lock".format(self.name))
-        self.tempFilePath =  os.path.abspath(self.tempFilePath)
-        logger.info("Temp File: {}".format(self.tempFilePath))
+        self.tempFilePath = os.path.abspath(self.tempFilePath)
+        logger.info("Temp File: %s", self.tempFilePath)
 
         #Windows
         if sys.platform == "win32":
             try:
                 if os.path.exists(self.tempFilePath):
                     os.unlink(self.tempFilePath)
-                    logger.debug("Unlink {}".format(self.tempFilePath))
+                    logger.debug("Unlink %s", self.tempFilePath)
                 self.tempFile = os.open(self.tempFilePath, os.O_CREAT | os.O_EXCL | os.O_RDWR)
                 self.locked = True
             except Exception as e:
                 if e.errno == 13:
-                    logger.error("Another Instance of {} is already running!".format(self.name))
+                    logger.error("Another Instance of %s is already running!", self.name)
                 else:
                     logger.error(e)
         #Linux
@@ -36,7 +39,7 @@ class InstanceLock:
                 fcntl.lockf(self.tempFile, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 self.locked = True
             except IOError:
-                logger.error("Another Instance of {} is already running".format(self.name))
+                logger.error("Another Instance of %s is already running", self.name)
 
     def isLocked(self):
         return self.locked
@@ -53,7 +56,7 @@ class InstanceLock:
                 except Exception as e:
                     logger.error(e)
             else:
-                logger.warning("No temp file found for {}".format(self.name))
+                logger.warning("No temp file found for %s", self.name)
         else:
             try:
                 fnctl.lockf(self.tempFile, fcntl.LOCK_UN)

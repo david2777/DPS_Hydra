@@ -13,6 +13,9 @@ from Dialogs.NodeSchedulerDialog import NodeSchedulerDialog
 #Hydra
 from Setups.MySQLSetup import *
 
+#Doesn't like Qt classes
+#pylint: disable=E0602,E1101,C0302
+
 class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
     def __init__(self, defaults, parent=None):
         QDialog.__init__(self, parent)
@@ -79,7 +82,7 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
 
     def schedulerEditButtonHandler(self):
         edits = NodeSchedulerDialog.create(self.defaults)
-        if edits == None:
+        if edits is None:
             return
 
         #An empty list will return boolean False

@@ -1,13 +1,9 @@
 """Useful utilities to get info on or modify nodes listed on the database."""
 #Standard
 import datetime
-import re
-
-#Third Party
-from MySQLdb import Error as sqlerror
 
 #Hydra
-from Constants import TIMEDICT, TIMEDICT_REV, DAYDICT, EVENTDICT
+from Constants import TIMEDICT, TIMEDICT_REV
 from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
 
@@ -81,7 +77,6 @@ def findSchedule(dayOfWeek, dataDict):
 def findNextEvent(now, dbData):
     """Take the current datetime and the decoded schedule data from the DB and
     find the next scheduling event"""
-    nowDate = now.date()
     nowDayOfWeek = now.isoweekday()
     nowTime = now.time()
 
@@ -111,13 +106,12 @@ def findNextEvent(now, dbData):
     #   then this schedule will work for today
     for schedItem in todaySchedule:
         if schedItem[0] > nowTime:
-            logger.debug("Schedule Found: {}".format(sched))
+            logger.debug("Schedule Found: %s", sched)
             sched = schedItem
 
     #If not then the next schdule item is probably on a date later in the week.
     #Iterate the day of week and look again.
     if not sched:
-        oldDayOfWeek = newDayOfWeek
         newDayOfWeek += 1
         todaySchedule, newDayOfWeek = findSchedule(newDayOfWeek, dataDict)
         sched = todaySchedule[0]
@@ -133,12 +127,11 @@ def calcuateSleepTime(now, dbData):
     and finds the time to sleep until the next event"""
     nextEvent = findNextEvent(now, dbData)
 
-    if not nextEvent or nextEvent[-1] == None:
+    if not nextEvent or nextEvent[-1] is None:
         return None, None
 
     nowDate = now.date()
     nowDayOfWeek = now.isoweekday()
-    nowTime = now.time()
 
     if nowDayOfWeek <= nextEvent[0]:
         #Next event is in this week
@@ -163,8 +156,8 @@ def calcuateSleepTime(now, dbData):
 def calcuateSleepTimeFromNode(nodeName):
     """A convience function that does calcuateSleepTime given a host name"""
     thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
-                                        cols = ["weekSchedule", "host"])
-    nowDateTime = datetime.datetime.now().replace(microsecond = 0)
+                                        cols=["weekSchedule", "host"])
+    nowDateTime = datetime.datetime.now().replace(microsecond=0)
     return calcuateSleepTime(nowDateTime, thisNode.weekSchedule)
 
 def getThisNodeOBJ():

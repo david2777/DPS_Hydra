@@ -8,7 +8,6 @@ import shutil
 import socket
 import subprocess
 import xml.etree.ElementTree as ET
-import subprocess
 
 #Hydra
 from Setups.LoggingSetup import logger
@@ -16,9 +15,9 @@ import Constants
 
 def changeHydraEnviron(newEnviron):
     if sys.platform == "win32":
-        logger.info("Changing Hydra Environ to {}".format(newEnviron))
+        logger.info("Changing Hydra Environ to %s", newEnviron)
         proc = subprocess.Popen(["setx", "HYDRA", newEnviron], stdout=subprocess.PIPE)
-        out,error = proc.communicate()
+        out, _ = proc.communicate()
         if out.find("SUCCESS") > 0:
             os.environ["HYDRA"] = newEnviron
             return True
@@ -39,10 +38,10 @@ def launchHydraApp(app, wait=0):
     if sys.platform == "win32":
         execs = os.listdir(hydraPath)
         if not any([x.startswith(app) for x in execs]):
-            logger.error("{} is not a vaild Hydra Win32 App".format(app))
+            logger.error("%s is not a vaild Hydra Win32 App", app)
             return None
 
-    distFolder,tail = os.path.split(hydraPath)
+    distFolder, _ = os.path.split(hydraPath)
     shortcutPath = os.path.join(distFolder, "_shortcuts")
     ext = ".bat" if sys.platform == "win32" else ".sh"
     script = "StartHydraApp{}".format(ext)
@@ -60,7 +59,7 @@ def softwareUpdater():
         logger.error("HYDRA enviromental variable does not exit!")
         return False
 
-    hydraPath,thisVersion = os.path.split(hydraPath)
+    hydraPath, thisVersion = os.path.split(hydraPath)
     try:
         currentVersion = float(thisVersion.split("_")[-1])
     except ValueError:
@@ -72,9 +71,9 @@ def softwareUpdater():
     if not versions:
         return False
     highestVersion = max(versions)
-    logger.debug("Comparing versions. Env: {0} Latest: {1}".format(currentVersion, highestVersion))
+    logger.debug("Comparing versions. Env: %s Latest: %s", currentVersion, highestVersion)
     if highestVersion > currentVersion:
-        logger.info("Update found! Current Version is {0} / New Version is {1}".format(currentVersion, highestVersion))
+        logger.info("Update found! Current Version is %s / New Version is %s", currentVersion, highestVersion)
         newPath = os.path.join(hydraPath, "dist_{}".format(highestVersion))
         response = changeHydraEnviron(newPath)
         if not response:
@@ -97,7 +96,7 @@ def buildSubprocessArgs(include_stdout=False):
         env = None
 
     ret = {'stdin': subprocess.PIPE,
-            'startupinfo': si, 'env': env }
+            'startupinfo': si, 'env': env}
 
     if include_stdout:
         ret.update({'stdout:': subprocess.PIPE})
@@ -110,18 +109,18 @@ def getInfoFromCFG(section, option):
     #Create a copy if it doesn't exist
     if not os.path.exists(Constants.SETTINGS):
         folder = os.path.dirname(Constants.SETTINGS)
-        logger.info('Check for folder {0}'.format(folder))
+        logger.info("Check for folder %s", folder)
         if os.path.exists(folder):
-            logger.info('{0} Exists'.format(folder))
+            logger.info("%s Exists", folder)
         else:
-            logger.info('Make {0}'.format(folder))
+            logger.info("Make %s", folder)
             os.mkdir(folder)
         cfgFile = findResource(os.path.basename(Constants.SETTINGS))
-        logger.info('Copy {0}'.format(cfgFile))
+        logger.info("Copy %s", cfgFile)
         shutil.copyfile(cfgFile, Constants.SETTINGS)
 
     config.read(Constants.SETTINGS)
-    return config.get(section = section, option = option)
+    return config.get(section=section, option=option)
 
 def writeInfoToCFG(section, option, value):
     config = ConfigParser.RawConfigParser()
@@ -161,7 +160,7 @@ def getRedshiftPreference(attribute):
     try:
         return perfDict[attribute]
     except KeyError:
-        logger.error("Could not find {0} in Redshift Preferences!".format(attribute))
+        logger.error("Could not find %s in Redshift Preferences!", attribute)
         return None
 
 def flanged(name):
@@ -172,7 +171,7 @@ def nonFlanged(name):
 
 def sockRecvAll(sock):
     """Receive all bytes from a socket, with no buffer size limit"""
-    receivedStrings  = (sock.recv(Constants.MANYBYTES) for i in itertools.count(0))
+    receivedStrings = (sock.recv(Constants.MANYBYTES) for i in itertools.count(0))
     #Concatenate the nonempty ones
     return ''.join(itertools.takewhile(len, receivedStrings))
 

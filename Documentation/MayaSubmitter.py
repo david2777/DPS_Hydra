@@ -4,6 +4,8 @@ import re
 import os
 
 #Third Party
+#Fix can't import maya
+#pylint: disable=E0401
 import maya.cmds as cmds
 import maya.mel as mel
 
@@ -21,32 +23,32 @@ engineCMDDict = {"redshift":"redshift", "mentalRay":"mr", "vray":"vray",
                 "renderMan":"rman", "renderManRIS":"rman", "arnold":"arnold",
                 "mayaHardware2":"hw2", "software":"sw"}
 
-sceneFile = cmds.file(q = True, exn = True)
+sceneFile = cmds.file(q=True, exn=True)
 sceneName = sceneFile.split("/")[-1]
-projectDir = cmds.workspace(q = True, rd = True)
-startFrame = cmds.playbackOptions(q = True, minTime = True)
-endFrame = cmds.playbackOptions(q = True, maxTime = True)
+projectDir = cmds.workspace(q=True, rd=True)
+startFrame = cmds.playbackOptions(q=True, minTime=True)
+endFrame = cmds.playbackOptions(q=True, maxTime=True)
 camList = [x for x in cmds.ls(type="camera") if cmds.getAttr(x+".renderable")]
 try:
     renderCam = camList[0]
     msgString = "Is this the correct render camera?\n\n{0}"
     response = cmds.confirmDialog(title='Confirm',
-                                    message= msgString.format(renderCam),
-                                    button=["Yes","No"],
-                                    defaultButton= "Yes",
-                                    cancelButton= "No",
-                                    dismissString= "No")
+                                    message=msgString.format(renderCam),
+                                    button=["Yes", "No"],
+                                    defaultButton="Yes",
+                                    cancelButton="No",
+                                    dismissString="No")
     if response == "No":
-        raise
+        cmds.error("Please change render cam and try again.")
 except IndexError:
-    cmds.confirmDialog(title = "Error",
-                        message = "No Renderable Cameras were found! Aborting...")
+    cmds.confirmDialog(title="Error",
+                        message="No Renderable Cameras were found! Aborting...")
     raise
 
 currentEngine = mel.eval("currentRenderer")
 if currentEngine in engineDict.keys():
     reqsList.append(engineDict[currentEngine])
-reqsReturn  = ",".join(reqsList)
+reqsReturn = ",".join(reqsList)
 
 renderLayers = cmds.listConnections("renderLayerManager")
 for layer in renderLayers:
@@ -96,4 +98,4 @@ if renderLayersReturn != "":
     command += " -l \"{0}\"".format(renderLayersReturn)
 
 print command
-subprocess.Popen(command, shell = True)
+subprocess.Popen(command, shell=True)

@@ -1,6 +1,5 @@
 #Standard
 import threading
-import time
 
 #Third Party
 from PyQt4.QtGui import *
@@ -25,11 +24,11 @@ class stoppableThread(threading.Thread):
             self.stopEvent.wait(self.interval)
 
     def terminate(self):
-        logger.debug("Killing {0}".format(self.threadName))
+        logger.debug("Killing %s", self.threadName)
         self.stopEvent.set()
 
     def restart(self):
-        logger.debug("Restarting {0}".format(self.threadName))
+        logger.debug("Restarting %s", self.threadName)
         self.stopEvent = threading.Event()
         self.threadOBJ = threading.Thread(target=self.tgt, name=self.threadName)
         self.threadOBJ.deamon = True

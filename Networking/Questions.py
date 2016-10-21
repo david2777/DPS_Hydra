@@ -2,21 +2,17 @@
 of legacy stuff that isn't used anymore."""
 #Standard
 import subprocess
-import exceptions
 
-class Question:
-    """Interface for Question objects."""
-    def computeAnswer(self, server):
-        """ Override this method when creating a Question subclass code in this
-        method will be run by the server"""
-        raise exceptions.NotImplementedError
+#pylint: disable=R0903,W0613
+#TODO:Remove uneeded server variables
 
-class IsAliveQuestion(Question):
+class IsAliveQuestion(object):
     """A simple Question for checking if a server is alive"""
-    def computeAnswer(self, server):
+    @staticmethod
+    def computeAnswer(server):
         return True
 
-class StartRenderQuestion(Question):
+class StartRenderQuestion(object):
     def __init__(self, job, task):
         self.job = job
         self.task = task
@@ -24,7 +20,7 @@ class StartRenderQuestion(Question):
         response = server.startRenderTask(self.job, self.task)
         return response
 
-class CMDQuestion(Question):
+class CMDQuestion(object):
     """A Question for running arbitrary commands on a server."""
     def __init__(self, args):
         self.args = args
@@ -32,7 +28,7 @@ class CMDQuestion(Question):
         output = subprocess.check_output(self.args, stderr=subprocess.STDOUT)
         return output
 
-class KillCurrentTaskQuestion(Question):
+class KillCurrentTaskQuestion(object):
     def __init__(self, statusAfterDeath):
         self.statusAfterDeath = statusAfterDeath
     def computeAnswer(self, server):

@@ -1,4 +1,6 @@
 """A dialog for searching for a task."""
+#Doesn't like Qt classes
+#pylint: disable=E0602,E1101,C0302,E0611
 #Third Party
 from PyQt4.QtGui import QDialog
 from PyQt4.QtCore import QObject, SIGNAL

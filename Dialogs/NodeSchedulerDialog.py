@@ -13,6 +13,9 @@ from Utilities.Utils import findResource
 #Hydra Qt
 from CompiledUI.UI_NodeScheduler import Ui_nodeSchedulerDialog
 
+#Doesn't like Qt classes
+#pylint: disable=E0602,E1101,C0302
+
 class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
     def __init__(self, defaults, parent=None):
         QDialog.__init__(self, parent)
@@ -30,13 +33,13 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
 
     def buildUI(self):
         #Load style sheet
-        with open(findResource("styleSheet.css"),"r") as myStyles:
+        with open(findResource("styleSheet.css"), "r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
         #Global colors
-        self.onlineColor = QColor(200,240,200)
-        self.offlineColor = QColor(240,200,200)
-        self.whiteColor = QColor(255,255,255)
+        self.onlineColor = QColor(200, 240, 200)
+        self.offlineColor = QColor(240, 200, 200)
+        self.whiteColor = QColor(255, 255, 255)
 
         #Connect Buttons
         self.cancelButton.clicked.connect(self.cancelButtonHandler)
@@ -72,9 +75,9 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
                     endCol = 48
                 if endRow > startRow:
                     for j in range(startRow, endRow):
-                        schedList += [action for x in range(0,(48 - startCol))]
+                        schedList += [action for _ in range(0, (48 - startCol))]
                         startCol = 0
-                schedList += [action for x in range(startCol, endCol)]
+                schedList += [action for _ in range(startCol, endCol)]
 
             row = 0
             col = 0

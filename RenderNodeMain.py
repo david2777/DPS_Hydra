@@ -2,12 +2,8 @@
 import sys
 import os
 import logging
-import traceback
-import threading
-import time
 
 #Third Party
-from MySQLdb import Error as sqlerror
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
@@ -21,9 +17,12 @@ import RenderNode
 from Setups.LoggingSetup import logger, outputWindowFormatter
 from Setups.MySQLSetup import *
 from Setups.Threads import *
+from Setups.SingleInstanceLocker import InstanceLock
 import Utilities.NodeUtils as NodeUtils
 import Utilities.Utils as Utils
-from Setups.SingleInstanceLocker import InstanceLock
+
+#Doesn't like Qt classes
+#pylint: disable=E0602
 
 class EmittingStream(QObject):
     """For writing text to the console output"""
@@ -36,10 +35,11 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
-        with open(Utils.findResource("styleSheet.css"),"r") as myStyles:
+        with open(Utils.findResource("styleSheet.css"), "r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
         self.thisNode = NodeUtils.getThisNodeOBJ()
+        self.isVisable = True
 
         if not self.thisNode:
             self.offlineButton.setEnabled(False)
@@ -123,7 +123,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.setWindowIcon(self.RIcon)
 
         #Setup tray icon
-        self.trayIcon=QSystemTrayIcon()
+        self.trayIcon = QSystemTrayIcon()
         self.trayIconBool = self.trayIcon.isSystemTrayAvailable()
         if self.trayIconBool:
             self.trayIcon.setIcon(self.RIcon)
@@ -213,7 +213,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.updateThisNodeInfo()
 
     def activate(self, reason):
-        if reason==2:
+        if reason == 2:
             self.showWindowHandler()
 
     def __icon_activated(self, reason):
@@ -234,12 +234,12 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             logger.error("Node could not be Onlined!")
 
     def offlineThisNodeHandler(self):
-       response = self.thisNode.offline()
-       self.updateThisNodeInfo()
-       if response:
-           logger.info("Node Offlined")
-       else:
-           logger.error("Node could not be Offlined!")
+        response = self.thisNode.offline()
+        self.updateThisNodeInfo()
+        if response:
+            logger.info("Node Offlined")
+        else:
+            logger.error("Node could not be Offlined!")
 
     def getOffThisNodeHandler(self):
         response = self.thisNode.getOff()
@@ -265,6 +265,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
     def startupServers(self):
         logger.debug("Firing up main threads")
+        #pylint: disable=W0703
         #Startup Pulse thread
         self.pulseThreadStatus = False
         self.renderServerStatus = False
@@ -276,7 +277,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.pulseThreadPixmap.setPixmap(self.donePixmap)
             logger.info("Pulse Thread started!")
         except Exception as e:
-            logger.error("Exception: {0}".format(traceback.format_exc()))
+            logger.error("Exception: %s", e)
             self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
 
         #Start Render Server
@@ -286,13 +287,14 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.renderServerPixmap.setPixmap(self.donePixmap)
             logger.info("Render Server Started!")
         except Exception as e:
-            logger.error("Exception: {0}".format(traceback.format_exc()))
+            logger.error("Exception: %s", e)
             self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
 
         #Start Schedule Thread
         self.startScheduleThread()
 
     def startScheduleThread(self):
+        #pylint: disable=W0703,W0201
         if bool(self.currentScheduleEnabled) and self.currentSchedule:
             try:
                 self.schedThread = schedulerThread(self.schedulerMain,
@@ -301,7 +303,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                 self.scheduleThreadPixmap.setPixmap(self.donePixmap)
                 logger.info("Schedule Thread started!")
             except Exception as e:
-                logger.error("Exception: {0}".format(traceback.format_exc()))
+                logger.error("Exception: %s", e)
                 self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
         else:
             logger.info("Schedule disabled. Running in manual control mode.")
@@ -409,7 +411,7 @@ class schedulerThread(stoppableThread):
             self.interval = self.targetFunction()
             hours = int(self.interval / 60 / 60)
             minutes = int(self.interval / 60 % 60)
-            logger.info("Scheduler Sleeping for {0} hours and {1} minutes".format(hours, minutes))
+            logger.info("Scheduler Sleeping for %d hours and %d minutes", hours, minutes)
             self.stopEvent.wait(self.interval)
 
 def pulse():
@@ -419,15 +421,15 @@ def pulse():
                     "WHERE host = '{0}'".format(host))
 
 if __name__ == "__main__":
-    logger.info('Starting in {0}'.format(os.getcwd()))
-    logger.info('arglist is {0}'.format(sys.argv))
+    logger.info("Starting in %s", os.getcwd())
+    logger.info("arglist is %s", sys.argv)
 
     app = QApplication(sys.argv)
     app.quitOnLastWindowClosed = False
 
     lockFile = InstanceLock("HydraRenderNode")
     lockStatus = lockFile.isLocked()
-    logger.debug("Lock File Status: {}".format(lockStatus))
+    logger.debug("Lock File Status: %s", lockStatus)
     if not lockStatus:
         logger.critical("Only one RenderNode is allowed to run at a time! Exiting...")
         aboutBox(None, "ERROR", "Only one RenderNode is allowed to run at a time! Exiting...")

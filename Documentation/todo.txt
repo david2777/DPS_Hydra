@@ -3,6 +3,7 @@
 -[In Progress]Auto Updater
 
 -[In Progress]Fix Bugs, Add Features
+    -Group class/static methods?
     -Test Job/Task Kill errors
     -Node Scheduler broken
     -Fix all the Threading setups
@@ -18,6 +19,8 @@
 -[In Progress]Cleanup
     -FarmView Functions
     -Schedule Functions
+
+-[Todo]Max Subtask System?
 
 -[Todo]Cleanup WidgetFactories
     -General Cleanup

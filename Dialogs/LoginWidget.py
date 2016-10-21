@@ -14,6 +14,9 @@ from Utilities.Utils import getInfoFromCFG
 from Setups.LoggingSetup import logger
 from Dialogs.MessageBoxes import aboutBox
 
+#Doesn't like Qt classes
+#pylint: disable=E0602,E1101,C0302
+
 class DatabaseLogin(QWidget, Ui_Login):
     #Set autoLogin and get default DB info from .cfg
     def __init__(self):
@@ -53,15 +56,13 @@ class DatabaseLogin(QWidget, Ui_Login):
             pass
 
         try:
-            MySQLdb.connect(host = self.host,
-                                user = self.db_username,
-                                passwd = self._db_password,
-                                db = self.databaseName,
-                                port = self.port)
+            MySQLdb.connect(host=self.host, user=self.db_username,
+                            passwd=self._db_password, db=self.databaseName,
+                            port=self.port)
             self.loginSuccess = True
             self.close()
 
         except MySQLdb.Error:
-            aboutBox(self,
-            "Could Not Login",
+            logger.error("Could not login!")
+            aboutBox(self, "Could Not Login",
             "Invalid username/password or server is down...")

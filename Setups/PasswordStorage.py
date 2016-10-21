@@ -1,5 +1,4 @@
 #Strandard
-import os
 import sys
 from getpass import getpass
 
@@ -16,12 +15,15 @@ import Utilities.Utils as Utils
 #Hydra Qt
 from Dialogs.LoginWidget import DatabaseLogin
 
+#Doesn't like Qt classes
+#pylint: disable=E0602,E1101,C0302
+
 def storeCredentials(username, _password):
     keyring.set_password("Hydra", username, _password)
     logger.info("Password Stored in Credentials Vault")
 
 def loadCredentials(username):
-    logger.info("Fetching login for {0}".format(username))
+    logger.info("Fetching login for %s", username)
     return keyring.get_password("Hydra", username)
 
 def updateAutologinUser(newUsername):
@@ -43,8 +45,8 @@ def consolePrompt():
 
     #Check  if login is valid
     try:
-        MySQLdb.connect(host = host, user = username, passwd = _password,
-                        db = databaseName, port = port)
+        MySQLdb.connect(host=host, user=username, passwd=_password,
+                        db=databaseName, port=port)
         storeCredentials(username, _password)
         updateAutologinUser(username)
 
@@ -55,7 +57,7 @@ def qtPrompt():
     app = QApplication(sys.argv)
     loginWin = DatabaseLogin()
     loginWin.show()
-    retcode = app.exec_()
+    app.exec_()
     username, _password = loginWin.getValues()
     autoLogin = Utils.getInfoFromCFG("database", "autologin")
     autoLogin = True if str(autoLogin).lower().startswith("t") else False

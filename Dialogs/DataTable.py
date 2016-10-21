@@ -5,6 +5,9 @@ from PyQt4.QtCore import *
 #Hydra Qt
 from CompiledUI.UI_DataTableDialog import Ui_DataTableWidget
 
+#Doesn't like Qt classes
+#pylint: disable=E0602,E1101,C0302
+
 class DataTableDialog(QDialog, Ui_DataTableWidget):
     def __init__(self, data, parent=None):
         QDialog.__init__(self, parent)

@@ -265,6 +265,10 @@ class hydra_rendernode(hydraObject):
 
         return response
 
+    def killTask(self, statusAfterDeath=KILLED):
+        #TODO:Kill the task currently running on the node, if one exists
+        return True
+
     def isRendering(self):
         #TODO:Open connection to render node and check status of self.childProcess
         return True

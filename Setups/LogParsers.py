@@ -15,12 +15,15 @@ def getLog(hydraJob, logPath):
     else:
         return None
 
-class Log:
+class Log(object):
     def __init__(self, filePath):
         self.fp = filePath
         with open(self.fp, "r") as f:
             self.logFileContents = f.read()
             self.filteredLines = None
+        #Placeholders
+        self.filterRegex = None
+        self.savedFileRegex = None
 
     def __repr__(self):
         return "Hydra Log File @ {}".format(self.fp)
@@ -31,12 +34,12 @@ class Log:
         reg = re.compile(self.filterRegex)
         lines = reg.findall(self.logFileContents)
         if not lines:
-            logger.critical("Could not find any filtered lines in {}".format(self.fp))
+            logger.critical("Could not find any filtered lines in %s", self.fp)
             return None
         self.filteredLines = lines
         return lines
 
-    def getSavedFiles(self, fullPath = False):
+    def getSavedFiles(self, fullPath=False):
         """Gets a list of files from the log. Requires a savedFileRegex to be
         defined in the target class."""
         if not self.filteredLines:
@@ -52,7 +55,7 @@ class Log:
 
         if not fullPath:
             matches = [os.path.split(m)[-1] for m in matches]
-
+        #pylint: disable=E0601
         uniqueMatches = [m for m in matches if m not in uniqueMatches]
 
         return uniqueMatches
@@ -60,6 +63,7 @@ class Log:
     def getSavedFrameNumbers(self):
         """Gets a list of frame numbers assuing name.number.ext naming scheme."""
         frameNumbers = [int(f.split(".")[-2]) for f in self.getSavedFiles()]
+        #pylint: disable=E0601
         uniqueFrames = [f for f in frameNumbers if f not in uniqueFrames]
         return uniqueFrames
 
@@ -69,7 +73,7 @@ class RedshiftMayaLog(Log):
     filterRegex = r"\[Redshift\]\s.*[\r\n]"
     savedFileRegex = r"Saved file '(.*)'"
 
-    def getEachFrameRenderTime(self, returnDateTime = True):
+    def getEachFrameRenderTime(self, returnDateTime=True):
         if not self.filteredLines:
             self.filterLines()
 
@@ -90,13 +94,13 @@ class RedshiftMayaLog(Log):
                 s = timeDict["s"] if "s" in timeDict.keys() else 0
                 m = timeDict["m"] if "m" in timeDict.keys() else 0
                 h = timeDict["h"] if "h" in timeDict.keys() else 0
-                timeMatches.append(datetime.timedelta(hours = h, minutes = m, seconds = s))
+                timeMatches.append(datetime.timedelta(hours=h, minutes=m, seconds=s))
             else:
-                timeMatches.append(str(datetime.timedelta(hours = h, minutes = m, seconds = s)))
+                timeMatches.append(str(datetime.timedelta(hours=h, minutes=m, seconds=s)))
 
         return timeMatches
 
-    def getTotalRenderTime(self, returnDateTime = True):
+    def getTotalRenderTime(self, returnDateTime=True):
         if not self.filteredLines:
             self.filterLines()
 
@@ -109,18 +113,18 @@ class RedshiftMayaLog(Log):
             matches += reg.findall(line)
 
         if len(matches) > 1:
-            logger.critical("More than one total time found in {}".format(self.fp))
+            logger.critical("More than one total time found in %s", self.fp)
             return None
 
         elif len(matches) < 1:
-            logger.info("No total frame time found in {}".format(self.fp))
+            logger.info("No total frame time found in %s", self.fp)
             return None
 
         line = matches[0].strip()
 
         reg = re.compile(r"(\d+[hms])")
-        timeMatches = []
         tm = reg.findall(line)
+        #pylint: disable=R0204
         if returnDateTime:
             timeDict = {x[-1] : int(x[:-1]) for x in tm}
             s = timeDict["s"] if "s" in timeDict.keys() else 0
@@ -129,7 +133,7 @@ class RedshiftMayaLog(Log):
             if h > 24:
                 logger.critical("Critical! Log Parser is not setup to handle times longer than 24 hours yet...")
                 return None
-            totalTime = datetime.timedelta(hours = h, minutes = m, seconds = s)
+            totalTime = datetime.timedelta(hours=h, minutes=m, seconds=s)
         else:
             totalTime = ":".join(tm)
 
@@ -148,7 +152,7 @@ class RedshiftMayaLog(Log):
             matches += reg.findall(line)
 
         if len(matches) > 1:
-            logger.critical("More than one total time found in {}".format(self.fp))
+            logger.critical("More than one total time found in %s", self.fp)
             return None
 
         elif len(matches) < 1:
@@ -166,12 +170,12 @@ class RedshiftMayaLog(Log):
         else:
             frameTimes = self.getEachFrameRenderTime()
             if not frameTimes:
-                logger.info("Could not find any frame render times in {}".format(self.fp))
+                logger.info("Could not find any frame render times in %s", self.fp)
                 return None
             #Add up seconds, divide by frame count
             seconds = sum([int(ft.total_seconds()) for ft in frameTimes]) / len(frameTimes)
 
-        frameTime = datetime.timedelta(seconds = seconds)
+        frameTime = datetime.timedelta(seconds=seconds)
 
         return frameTime
 
@@ -183,7 +187,7 @@ class MentalRayMayaLog(Log):
     def getTotalFrameCount(self):
         return len(self.getSavedFrameNumbers())
 
-    def getEachFrameRenderTime(self, returnDateTime = True):
+    def getEachFrameRenderTime(self, returnDateTime=True):
         if not self.filteredLines:
             self.filterLines()
 
@@ -214,10 +218,10 @@ class MentalRayMayaLog(Log):
         returnList = []
         if returnDateTime:
             for frame in timePerFrame:
-                returnList.append(datetime.timedelta(seconds = frame))
+                returnList.append(datetime.timedelta(seconds=frame))
         else:
             for frame in timePerFrame:
-                returnList.append(str(datetime.timedelta(seconds = frame)))
+                returnList.append(str(datetime.timedelta(seconds=frame)))
 
         return returnList
 
@@ -225,13 +229,13 @@ class MentalRayMayaLog(Log):
         timeList = self.getEachFrameRenderTime()
         timeList = [int(t.total_seconds()) for t in timeList]
         tSecs = sum(timeList) / len(timeList)
-        return datetime.timedelta(seconds = tSecs)
+        return datetime.timedelta(seconds=tSecs)
 
     def getTotalRenderTime(self):
         timeList = self.getEachFrameRenderTime()
         timeList = [int(t.total_seconds()) for t in timeList]
         tSecs = sum(timeList)
-        return datetime.timedelta(seconds = tSecs)
+        return datetime.timedelta(seconds=tSecs)
 
 class FusionCompLog(Log):
     """Class for loading Fusion logs. NOTE: getSavedFiles returns a list of
@@ -254,7 +258,7 @@ class FusionCompLog(Log):
         for line in self.filteredLines:
             search = reg.findall(line)
             if len(search) == 1:
-                return datetime.timedelta(seconds = int(float(search[0])))
+                return datetime.timedelta(seconds=int(float(search[0])))
 
     def getTotalRenderTime(self):
         if not self.filteredLines:
@@ -280,4 +284,4 @@ class FusionCompLog(Log):
         second += hour * 60 * 60
         second += minute * 60
 
-        return datetime.timedelta(seconds = second)
+        return datetime.timedelta(seconds=second)

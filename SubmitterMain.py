@@ -13,11 +13,13 @@ from PyQt4.QtCore import *
 from CompiledUI.UI_Submitter import Ui_MainWindow
 
 #Hydra
-import Constants
 from Setups.MySQLSetup import *
 from Setups.LoggingSetup import logger
-from Dialogs.MessageBoxes import aboutBox, yesNoBox
+from Dialogs.MessageBoxes import aboutBox
 from Utilities.Utils import findResource
+
+#Doesn't like Qt classes
+#pylint: disable=E0602,E1101,C0302
 
 class SubmitterMain(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -34,7 +36,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         self.populateJobTypes()
         self.setupForms()
 
-    def closeEvent(self, event):
+    @staticmethod
+    def closeEvent(event):
         event.accept()
         sys.exit(0)
 
@@ -52,10 +55,10 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         #Get the -flag args
         try:
-            opts = getopt.getopt(sys.argv[2:],"s:e:n:p:l:x:m:d:c:q:t:")[0]
+            opts = getopt.getopt(sys.argv[2:], "s:e:n:p:l:x:m:d:c:q:t:")[0]
         except getopt.GetoptError:
             logger.error("Bad Opt!")
-            aboutBox(self, title = "Bad Opt!", msg = "One of the command line options you entered was invalid.\n"+
+            aboutBox(self, "Bad Opt!", "One of the command line options you entered was invalid.\n"+
                 "\nPlease remove any unkown opts and try again.")
             sys.exit(2)
 
@@ -75,11 +78,11 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                             }
 
         #Apply the -flag args
-        opts = dict(opts)
-        keys = list(opts.keys())
+        optsDict = dict(opts)
+        keys = list(optsDict.keys())
         for key in keys:
-            self.settingsDict[key] = opts[key]
-            logger.debug("Setting Key '{0}' with opt: '{1}'".format(key, str(opts[key])))
+            self.settingsDict[key] = optsDict[key]
+            logger.debug("Setting Key '%s' with opt: '%s'", key, str(opts[key]))
 
         #Fix paths
         self.settingsDict["-p"] = self.settingsDict["-p"].replace('\\', '/')
@@ -93,20 +96,15 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             self.settingsDict["-m"] += " -rd \"{0}\"".format(self.settingsDict["-d"])
 
     def hookupButtons(self):
-            QObject.connect(self.submitButton, SIGNAL("clicked()"),
-                            self.submitButtonHandler)
-            QObject.connect(self.testCheckBox, SIGNAL("stateChanged(int)"),
-                            self.toggleTestBoxes)
-            QObject.connect(self.finalCheckBox, SIGNAL("stateChanged(int)"),
-                            self.toggleFinalBoxes)
-            QObject.connect(self.sceneButton, SIGNAL("clicked()"),
-                            self.sceneButtonHandler)
-            QObject.connect(self.projButton, SIGNAL("clicked()"),
-                            self.projButtonHandler)
+        QObject.connect(self.submitButton, SIGNAL("clicked()"), self.submitButtonHandler)
+        QObject.connect(self.testCheckBox, SIGNAL("stateChanged(int)"), self.toggleTestBoxes)
+        QObject.connect(self.finalCheckBox, SIGNAL("stateChanged(int)"), self.toggleFinalBoxes)
+        QObject.connect(self.sceneButton, SIGNAL("clicked()"), self.sceneButtonHandler)
+        QObject.connect(self.projButton, SIGNAL("clicked()"), self.projButtonHandler)
 
     def populateReqs(self):
         #Get requirements master list from the DB
-        requirements = hydra_capabilities.fetch(multiReturn = True)
+        requirements = hydra_capabilities.fetch(multiReturn=True)
         requirements = [req.name for req in requirements]
         self.reqChecks = []
         col = 0
@@ -128,11 +126,11 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
     def populateExecs(self):
         #Get execs
-        execs = hydra_executable.fetch(multiReturn = True, cols = ["name"])
+        execs = hydra_executable.fetch(multiReturn=True, cols=["name"])
         execs.reverse()
 
         for execute in execs:
-            newItem = self.executableComboBox.addItem(execute.name)
+            self.executableComboBox.addItem(execute.name)
 
         #Set the executeable to the value passed from Maya
         index = self.executableComboBox.findText(self.settingsDict["-x"])
@@ -140,11 +138,11 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             self.executableComboBox.setCurrentIndex(index)
 
     def populateJobTypes(self):
-        types = hydra_jobtypes.fetch(multiReturn = True, cols = ["type"])
+        types = hydra_jobtypes.fetch(multiReturn=True, cols=["type"])
         types.reverse()
 
         for t in types:
-            newItem = self.jobTypeComboBox.addItem(t.type)
+            self.jobTypeComboBox.addItem(t.type)
 
         index = self.jobTypeComboBox.findText(self.settingsDict["-t"])
         if index > 0:
@@ -188,7 +186,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         proj = str(self.projLineEdit.text())
         if len(proj) < 5:
-            aboutBox(self, title = "Please set Project Directory!", msg = "Project Directory must be more than 5 characters long.")
+            aboutBox(self, "Please set Project Directory!", "Project Directory must be more than 5 characters long.")
             logger.error("Please set Project Directory! Project Directory must be more than 5 characters long.")
             return
         else:
@@ -196,39 +194,39 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         #Error Checking
         if len(baseCMD) > 1000:
-            aboutBox(self, title = "baseCMD too long!", msg = "baseCMD must be less than 1000 characters!")
+            aboutBox(self, "baseCMD too long!", "baseCMD must be less than 1000 characters!")
             logger.error("baseCMD too long! baseCMD must be less than 1000 characters!")
             return
         if startFrame > endFrame:
-            aboutBox(self, title = "startFrame is greater than endFrame!", msg = "startFrame must be less than the endFrame!")
+            aboutBox(self, "startFrame is greater than endFrame!", "startFrame must be less than the endFrame!")
             logger.error("startFrame is greater than endFrame!")
             return
         if startFrame > 65535 or endFrame > 65535 or startFrame < 0 or endFrame < 0:
-            aboutBox(self, title = "Frame range out of range!", msg = "Start/End frames must be between 0 and 65535!")
+            aboutBox(self, "Frame range out of range!", "Start/End frames must be between 0 and 65535!")
             logger.error("Frame range out of range! Start/End frames must be between 0 and 65535!")
             return
         if byFrame > 255 or byFrame < 0:
-            aboutBox(self, title = "byFrame out of range!", msg = "byFrame must be between 0 and 255!")
+            aboutBox(self, "byFrame out of range!", "byFrame must be between 0 and 255!")
             logger.error("byFrame out of range! byFrame must be between 0 and 255!")
             return
         if len(taskFile) > 255 or len(taskFile) < 5:
-            aboutBox(self, title = "taskFile out of range!", msg = "taskFile must be greater than 5 and less than 255 characters")
+            aboutBox(self, "taskFile out of range!", "taskFile must be greater than 5 and less than 255 characters")
             logger.error("taskFile out of range! taskFile path must be greater than 5 and less than 255 characters!")
             return
         if priority > 255 or priority < 0:
-            aboutBox(self, title = "Priority out of range!", msg = "Priority must be between 0 and 255!")
+            aboutBox(self, "Priority out of range!", "Priority must be between 0 and 255!")
             logger.error("Priority out of range! Priority must be between 0 and 255!")
             return
         if len(niceName) > 60 or len(niceName) < 1:
-            aboutBox(self, title = "NiceName out of range!", msg = "NiceName must be more than 1 and less than 60 characters!")
+            aboutBox(self, "NiceName out of range!", "NiceName must be more than 1 and less than 60 characters!")
             logger.error("NiceName out of range! NiceName must be more than 1 and less than 60 characters!")
             return
         if len(owner) > 45:
-            aboutBox(self, title = "Owner out of range!", msg = "Owner must be less than 45 characters!")
+            aboutBox(self, "Owner out of range!", "Owner must be less than 45 characters!")
             logger.error("Owner out of range! Owner must be less than 45 characters!")
             return
         if len(projectName) > 60:
-            aboutBox(self, title = "Project Name out of range!", msg = "Project name must be less than 60 characters!")
+            aboutBox(self, "Project Name out of range!", "Project name must be less than 60 characters!")
             return
 
         if projectName == "":
@@ -255,12 +253,12 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                 taskFile, int(priority * 1.25), phase, maxNodesP1,
                                 timeout, 10, jobType)
 
-            logger.info("Phase 01 submitted with id: {0}".format(phase01.id))
+            logger.info("Phase 01 submitted with id: %s", phase01.id)
 
             if phase01FinalFrame:
                 niceNameOverride = "{0}_FinalFrame".format(niceName)
                 byFrameOverride = 1
-                phase01FinalFrame = submitJob(niceNameOverride, projectName,
+                phase01FinalFrameJob = submitJob(niceNameOverride, projectName,
                                                 owner, jobStatus,
                                                 compatabilityList, execName,
                                                 baseCMDOverride, endFrame,
@@ -269,7 +267,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                                 int(priority * 1.35), phase,
                                                 maxNodesP1, timeout, 10, jobType)
 
-                logger.info("Phase 01 final frame workaround submitted with id: {0}".format(phase01FinalFrame.id))
+                logger.info("Phase 01 final frame workaround submitted with id: %s", phase01FinalFrameJob.id)
 
             phase01Status = True
 
@@ -289,18 +287,15 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                                 renderLayers, taskFile, priority, phase,
                                 maxNodesP2, timeout, 10, jobType)
 
-            logger.info("Phase 02 submitted with id: {0}".format(phase02.id))
+            logger.info("Phase 02 submitted with id: %s", phase02.id)
 
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")
-        #aboutBox(self, title = "Submitted!", msg = "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
+        #aboutBox(self, "Submitted!", "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
 
     def browseFileButtonHandler(self, QTTarget, startDir, caption, fileFilter):
-        returnDir = QFileDialog.getOpenFileName(
-            parent = self,
-            caption = caption,
-            directory = startDir,
-            filter = fileFilter)
+        returnDir = QFileDialog.getOpenFileName(parent=self, caption=caption,
+            directory=startDir, filter=fileFilter)
         if returnDir:
             if fileFilter == "workspace.mel;;All Files(*)":
                 # remove "workspace.mel" from the end of the path
@@ -390,20 +385,20 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
                 priority, phase, maxNodes, timeout, maxAttempts, jobType):
     """A simple function for submitting a job to the jobBoard"""
     #Setup default renderLayerTracker
-    renderLayerTracker = ["0" for x in renderLayers.split(",")]
+    renderLayerTracker = ["0" for _ in renderLayers.split(",")]
     renderLayerTracker = ",".join(renderLayerTracker)
     niceName = "{0}_PHASE{1:02d}".format(niceName, phase)
 
-    job = hydra_jobboard(niceName = niceName, projectName = projectName,
-                        owner = owner, status = status,
-                        requirements = requirements, execName = execName,
-                        baseCMD = baseCMD, startFrame = startFrame,
-                        endFrame = endFrame, byFrame = byFrame,
-                        renderLayers = renderLayers,
-                        renderLayerTracker = renderLayerTracker,
-                        taskFile = taskFile, priority = priority,
-                        phase = phase, maxNodes = maxNodes, timeout = timeout,
-                        maxAttempts = maxAttempts, jobType = jobType)
+    job = hydra_jobboard(niceName=niceName, projectName=projectName,
+                        owner=owner, status=status,
+                        requirements=requirements, execName=execName,
+                        baseCMD=baseCMD, startFrame=startFrame,
+                        endFrame=endFrame, byFrame=byFrame,
+                        renderLayers=renderLayers,
+                        renderLayerTracker=renderLayerTracker,
+                        taskFile=taskFile, priority=priority,
+                        phase=phase, maxNodes=maxNodes, timeout=timeout,
+                        maxAttempts=maxAttempts, jobType=jobType)
 
     with transaction() as t:
         job.insert(transaction=t)

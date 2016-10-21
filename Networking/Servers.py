@@ -3,22 +3,18 @@
 import SocketServer
 import threading
 import pickle
-import traceback
-import time
 
 #Hydra
-import Constants
 from Setups.LoggingSetup import logger
 from Utilities.Utils import getInfoFromCFG
 
-class Server:
+class Server(object):
     def createIdleLoop(self, threadName, targetFunction, interval=None):
         self.targetFunction = targetFunction
         self.interval = interval
         self.threadName = threadName
         self.stopEvent = threading.Event()
-        self.threadOBJ = threading.Thread(target = self.tgt,
-                                            name = self.threadName)
+        self.threadOBJ = threading.Thread(target=self.tgt, name=self.threadName)
         self.threadOBJ.deamon = True
         self.threadOBJ.start()
 
@@ -32,7 +28,7 @@ class Server:
                 self.targetFunction()
 
     def shutdown(self):
-        logger.info("Killing {0} Thread...".format(self.threadName))
+        logger.info("Killing %s Thread...", self.threadName)
         self.stopEvent.set()
 
 class MySocketServer(SocketServer.TCPServer):
@@ -43,7 +39,7 @@ class TCPServer(Server):
         if not port:
             port = int(getInfoFromCFG("network", "port"))
         HydraTCPHandler.TCPserver = self
-        logger.debug('Open TCPServer Socket @ Port {0}'.format(port))
+        logger.debug("Open TCPServer Socket @ Port %s", port)
         self.serverObject = MySocketServer(("", port), HydraTCPHandler)
         self.serverThread = self.createIdleLoop("TCP_Server_Thread",
                                                 self.runTheServer)
@@ -52,18 +48,15 @@ class TCPServer(Server):
         self.serverObject.serve_forever()
 
     def shutdown(self):
-        logger.info("Killing {0} Thread...".format(self.threadName))
+        logger.info("Killing %s Thread...", self.threadName)
         self.stopEvent.set()
         self.serverObject.shutdown()
 
 class HydraTCPHandler(SocketServer.StreamRequestHandler):
     TCPserver = None
     def handle(self):
-        try:
-            questionBytes = self.rfile.read()
-            question = pickle.loads(questionBytes)
-            answer = question.computeAnswer(self.TCPserver)
-            answerBytes = pickle.dumps(answer)
-            self.wfile.write(answerBytes)
-        except:
-            logger.error("Exception caught in Servers: {0}".format(traceback.format_exc()))
+        questionBytes = self.rfile.read()
+        question = pickle.loads(questionBytes)
+        answer = question.computeAnswer(self.TCPserver)
+        answerBytes = pickle.dumps(answer)
+        self.wfile.write(answerBytes)

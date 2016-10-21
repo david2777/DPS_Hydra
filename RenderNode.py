@@ -1,7 +1,6 @@
 #Standard
 import os
 import sys
-import time
 import threading
 import datetime
 import traceback
@@ -17,10 +16,8 @@ from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
 from Setups.Threads import *
 import Setups.LogParsers as LogParsers
-import Utilities.Utils as Utils
-import Utilities.NodeUtils as NodeUtils
-import Utilities.JobUtils as JobUtils
 from Setups.SingleInstanceLocker import InstanceLock
+import Utilities.Utils as Utils
 
 class RenderTCPServer(TCPServer):
     def __init__(self):
@@ -34,8 +31,8 @@ class RenderTCPServer(TCPServer):
             self.rsGPUids = [x.split(":")[0] for x in self.rsGPUs]
             if len(self.rsGPUs) != len(self.rsGPUids):
                 logger.warning("Problems parsing Redshift Preferences")
-            logger.info("{0} Redshift Enabled GPU(s) found on this node".format(len(self.rsGPUs)))
-            logger.debug("GPUs available for rendering are {0}".format(self.rsGPUs))
+            logger.info("%s Redshift Enabled GPU(s) found on this node", len(self.rsGPUs))
+            logger.debug("GPUs available for rendering are %s", self.rsGPUs)
         else:
             logger.warning("Could not find available Redshift GPUs")
 
@@ -44,6 +41,7 @@ class RenderTCPServer(TCPServer):
             os.makedirs(Constants.RENDERLOGDIR)
 
         #Setup Class Variables
+        self.renderThread = None
         self.childProcess = None
         self.PSUtilProc = None
         self.statusAfterDeath = None
@@ -54,12 +52,12 @@ class RenderTCPServer(TCPServer):
         if self.thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
             thisTask = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,),
-                                            cols = ["id", "status", "exitCode", "endTime", "host"])
+                                            cols=["id", "status", "exitCode", "endTime", "host"])
             thisTask.kill("C", False)
             self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
             self.thisNode.task_id = None
         elif self.thisNode.status in [STARTED, PENDING]:
-            logger.warning("Reseting bad status, node set {0} but no task found!".format(self.thisNode.status))
+            logger.warning("Reseting bad status, node set %s but no task found!", self.thisNode.status)
             self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
 
         #Update self.thisNode software_version
@@ -73,13 +71,13 @@ class RenderTCPServer(TCPServer):
         self.renderServ.shutdown()
 
     def startRenderTask(self, HydraJob, HydraTask):
-        self.renderThread = threading.Thread(target = self.launchRenderTask,
-                                                args = (HydraJob, HydraTask))
+        self.renderThread = threading.Thread(target=self.launchRenderTask,
+                                                args=(HydraJob, HydraTask))
         self.renderThread.start()
         return self.renderThread.isAlive()
 
     def launchRenderTask(self, HydraJob, HydraTask):
-        logger.info("Starting task with id {0} on job with id {1}".format(HydraTask.id, HydraJob.id))
+        logger.info("Starting task with id %s on job with id %s", HydraTask.id, HydraJob.id)
         self.childKilled = 0
         self.statusAfterDeath = None
         self.childProcess = None
@@ -90,7 +88,7 @@ class RenderTCPServer(TCPServer):
         logger.debug(renderTaskCMD)
 
         logFile = HydraTask.getLogPath()
-        logger.info('Starting render task {0}'.format(HydraTask.id))
+        logger.info("Starting render task %s", HydraTask.id)
         try:
             log = file(logFile, 'w')
         except (IOError, OSError, WindowsError) as e:
@@ -105,11 +103,10 @@ class RenderTCPServer(TCPServer):
         try:
             #Run the job and keep track of the process
             self.childProcess = subprocess.Popen(renderTaskCMD,
-                                                stdout = log, stderr = log,
+                                                stdout=log, stderr=log,
                                                 **Utils.buildSubprocessArgs(False))
 
-            logger.info('Started PID {0} to do Task {1}'.format(self.childProcess.pid,
-                                                                HydraTask.id))
+            logger.info("Started PID %s to do Task %s", self.childProcess.pid, HydraTask.id)
 
             self.PSUtilProc = psutil.Process(self.childProcess.pid)
             #Wait for task to finish
@@ -117,7 +114,7 @@ class RenderTCPServer(TCPServer):
 
             #Record the results
             logString = "\nProcess exited with code {0} at {1} on {2}\n"
-            nowTime = datetime.datetime.now().replace(microsecond = 0)
+            nowTime = datetime.datetime.now().replace(microsecond=0)
             log.write(logString.format(self.childProcess.returncode, nowTime,
                                         self.thisNode.host))
 
@@ -128,7 +125,7 @@ class RenderTCPServer(TCPServer):
 
         #Finally, update the DB with the information from the task
         finally:
-            HydraLogObject = LogParsers.getLog(hydraJob, logFile)
+            HydraLogObject = LogParsers.getLog(HydraJob, logFile)
             renderedFrames = HydraLogObject.getSavedFrameNumbers()
 
             if not renderedFrames:
@@ -141,7 +138,7 @@ class RenderTCPServer(TCPServer):
             with transaction() as t:
                 self.thisNode = hydra_rendernode.fetch("WHERE host = %s",
                                                         (self.thisNode.host,),
-                                                        explicitTransaction = t)
+                                                        explicitTransaction=t)
 
                 HydraTask.endTime = datetime.datetime.now()
                 HydraTask.exitCode = self.childProcess.returncode if self.childProcess else 1
@@ -174,7 +171,7 @@ class RenderTCPServer(TCPServer):
 
                 status = IDLE if self.thisNode.status == STARTED else OFFLINE
                 self.thisNode.status = status
-                logger.debug("New Node Status: {0}".format(self.thisNode.status))
+                logger.debug("New Node Status: %s", self.thisNode.status)
                 self.thisNode.task_id = None
 
                 HydraTask.update(t)
@@ -184,7 +181,7 @@ class RenderTCPServer(TCPServer):
             log.close()
             self.childProcess = None
             self.PSUtilProc = None
-            logger.info("Done with render task {0}".format(HydraTask.id))
+            logger.info("Done with render task %s", HydraTask.id)
 
     def killCurrentJob(self, statusAfterDeath):
         """Kills the render node's current job if it's running one.
@@ -198,31 +195,29 @@ class RenderTCPServer(TCPServer):
 
         #Gather subprocesses just in case
         if self.PSUtilProc.is_running():
-            childrenProcs = psutil_proc.children(recursive=True)
-            allProcs = [self.PSUtilProc] + childrenProcs
+            childrenProcs = self.PSUtilProc.children(recursive=True)
         else:
-            logger.info("PID '{0}' could not be found! Task is probably already dead.".format(self.childProcess.pid))
+            logger.info("PID '%s' could not be found! Task is probably already dead.", self.childProcess.pid)
             return
 
         #Try to kill the main process
         #terminate() = SIGTERM, kill() = SIGKILL
-        logger.info("Killing main task with PID {0}".format(self.PSUtilProc.pid))
+        logger.info("Killing main task with PID %s", self.PSUtilProc.pid)
         self.PSUtilProc.terminate()
-        gone, alive = psutil.wait_procs([self.PSUtilProc], timeout = 15)
+        _, alive = psutil.wait_procs([self.PSUtilProc], timeout=15)
         if len(alive) > 0:
             self.PSUtilProc.kill()
-            gone, alive = psutil.wait_procs([self.PSUtilProc], timeout = 15)
+            _, alive = psutil.wait_procs([self.PSUtilProc], timeout=15)
             if len(alive) > 0:
-                logger.error("Could not kill PID {0}".format(self.PSUtilProc.pid))
-                logger.error(err)
+                logger.error("Could not kill PID %s", self.PSUtilProc.pid)
                 self.childKilled = -1
 
         #Try to kill the children if they are still running
         [proc.terminate() for proc in childrenProcs if proc.is_running()]
-        dead, alive = psutil.wait_procs(childrenProcs, timeout = 15)
+        _, alive = psutil.wait_procs(childrenProcs, timeout=15)
         if len(alive) > 0:
             [proc.kill() for proc in alive]
-            dead, alive = psutil.wait_procs(alive, timeout = 15)
+            _, alive = psutil.wait_procs(alive, timeout=15)
 
         if len(alive) > 0:
             #ADD negative 10 to the return code
@@ -247,14 +242,14 @@ def softwareUpdaterLoop():
     else:
         logger.debug("No updates found.")
 
-if __name__ == '__main__':
-    logger.info('Starting in {0}'.format(os.getcwd()))
-    logger.info('arglist {0}'.format(sys.argv))
+if __name__ == "__main__":
+    logger.info("Starting in %s", os.getcwd())
+    logger.info("arglist %s", sys.argv)
 
     #Check for other RenderNode isntances
     lockFile = InstanceLock("HydraRenderNode")
     lockStatus = lockFile.isLocked()
-    logger.debug("Lock File Status: {}".format(lockStatus))
+    logger.debug("Lock File Status: %s", lockStatus)
     if not lockStatus:
         logger.critical("Only one RenderNode is allowed to run at a time! Exiting...")
         sys.exit(-1)
