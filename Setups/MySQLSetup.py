@@ -18,6 +18,8 @@ from Networking.Questions import KillCurrentTaskQuestion
 from Networking.Connections import TCPConnection
 import Utilities.Utils as Utils
 
+#pylint: disable=E1101,E0203
+
 #Statuses for either jobs/tasks or render nodes
 STARTED = 'S'               #Working on a job/job in progress
 
@@ -83,14 +85,15 @@ def getDatabaseInfo():
 
     return host, db_username, _db_password, databaseName, port
 
-class transaction:
+class transaction(object):
+    #pylint: disable=R0903
     host, db_username, _db_password, databaseName, port = getDatabaseInfo()
 
     def __init__(self):
         #Open DB Connection
-        self.db = MySQLdb.connect(host = self.host, user = self.db_username,
-                                    passwd = self._db_password, db = self.databaseName,
-                                    port = self.port)
+        self.db = MySQLdb.connect(host=self.host, user=self.db_username,
+                                    passwd=self._db_password, db=self.databaseName,
+                                    port=self.port)
         self.cur = self.db.cursor()
         self.cur.execute("SET autocommit = 1")
 
@@ -109,7 +112,7 @@ class transaction:
         #logger.debug("exit transaction %s", self)
         self.db.close()
 
-class hydraObject:
+class hydraObject(object):
     def __init__(self, **kwargs):
         self.__dict__['__dirty__'] = set()
         for k, v in kwargs.iteritems():
@@ -129,8 +132,8 @@ class hydraObject:
         return cls.__name__
 
     @classmethod
-    def fetch(cls, whereClause = "", whereTuple = None, cols = None,
-                    orderTuples = None, limit = None, multiReturn = False,
+    def fetch(cls, whereClause="", whereTuple=None, cols=None,
+                    orderTuples=None, limit=None, multiReturn=False,
                     explicitTransaction=None):
         """A fetch function with paramater binding.
         ie. thisNode = hydra_rendernode.fetch("WHERE host = %s", ("test",))
@@ -164,9 +167,9 @@ class hydraObject:
 
         #Build Select Statement
         select = "SELECT {0} FROM {1} {2} {3} {4}"
-        select =  select.format(colStatement, cls.tableName(), whereClause,
+        select = select.format(colStatement, cls.tableName(), whereClause,
                                 orderClause, limitClause)
-        logger.debug(select % queryTuple)
+        logger.debug(select, queryTuple)
 
         #Fetch the data
         if explicitTransaction:
@@ -191,35 +194,35 @@ class hydraObject:
     def vals(self):
         return self.__dict__
 
-    def insert(self, transaction):
+    def insert(self, trans):
         names = self.attributes()
         values = [getattr(self, name) for name in names]
         nameString = ", ".join(names)
-        valueString = ", ".join(["%s" for x in range(len(names))])
+        valueString = ", ".join(["%s" for _ in range(len(names))])
         query = "INSERT INTO {0} ({1}) VALUES ({2})".format(self.tableName(), nameString, valueString)
 
-        transaction.cur.executemany(query, [values])
+        trans.cur.executemany(query, [values])
         if self.autoColumn:
-            transaction.cur.execute("SELECT last_insert_id()")
-            [insert_id] = transaction.cur.fetchone()
+            trans.cur.execute("SELECT last_insert_id()")
+            [insert_id] = trans.cur.fetchone()
             self.__dict__[self.autoColumn] = insert_id
 
-    def update(self, transaction):
+    def update(self, trans):
         names = list(self.__dirty__)
         if not names:
-            logger.info("Nothing to update on {}".format(self.tableName()))
+            logger.info("Nothing to update on %s", self.tableName())
             return
 
         values = ([getattr(self, n) for n in names] + [getattr(self, self.primaryKey)])
         assignments = ", ".join(["{} = %s".format(n) for n in names])
         query = "UPDATE {0} SET {1} WHERE {2} = %s".format(self.tableName(), assignments, self.primaryKey)
         logger.debug((query, values))
-        transaction.cur.executemany(query, [values])
+        trans.cur.executemany(query, [values])
         return True
 
     def updateAttr(self, attr, value):
         if attr not in self.attributes():
-            logger.error("Attr {0} not found in {1}".format(attr, self.tableName()))
+            logger.error("Attr %s not found in %s", attr, self.tableName())
             return
 
         with transaction() as t:
@@ -240,7 +243,7 @@ class hydra_rendernode(hydraObject):
         elif self.status == "P":
             return self.updateAttr("status", "S")
         else:
-            logger.debug("No status changes made to {}".format(self.host))
+            logger.debug("No status changes made to %s", self.host)
             return True
 
     def offline(self):
@@ -251,7 +254,7 @@ class hydra_rendernode(hydraObject):
         response = True
         if self.status == "S":
             task = hydra_taskboard.fetch("WHERE id  = %s", (self.task_id,),
-                                        cols = ["id", "status", "exitCode", "endTime", "host"])
+                                        cols=["id", "status", "exitCode", "endTime", "host"])
             response = task.kill()
 
             if response:
@@ -266,14 +269,23 @@ class hydra_rendernode(hydraObject):
         return response
 
     def killTask(self, statusAfterDeath=KILLED):
-        #TODO:Kill the task currently running on the node, if one exists
-        return True
+        if self.status == "S" and self.task_id:
+            taskOBJ = hydra_taskboard.fetch("WHERE id = %s", self.task_id,
+                                            cols=["host", "status", "exitCode",
+                                                    "endTime"])
+            logger.debug("Killing task %d on %s", self.task_id, self.host)
+            return taskOBJ.kill(statusAfterDeath, True)
+        else:
+            logger.info("No task to kill on %s", self.host)
+            return True
 
-    def isRendering(self):
+    @staticmethod
+    def isRendering():
         #TODO:Open connection to render node and check status of self.childProcess
         return True
 
-    def resourceCheck(self):
+    @staticmethod
+    def resourceCheck():
         #TODO:Check resources on target machine ie RAM/CPU usage
         return True
 
@@ -287,11 +299,11 @@ class hydra_jobboard(hydraObject):
     def pause(self):
         return self.updateAttr("status", "U")
 
-    def kill(self, statusAfterDeath = "K", TCPKill = True):
+    def kill(self, statusAfterDeath="K", TCPKill=True):
         subTasks = hydra_taskboard.fetch("WHERE job_id = %s AND status = 'S'", (self.id,),
-                                        cols = ["id", "status", "exitCode", "endTime"],
-                                        multiReturn = True)
-        responses = [task.kill() for task in subTasks]
+                                        cols=["id", "status", "exitCode", "endTime"],
+                                        multiReturn=True)
+        responses = [task.kill(statusAfterDeath, TCPKill) for task in subTasks]
 
         responses += [self.updateAttr("status", statusAfterDeath)]
         return responses
@@ -301,7 +313,7 @@ class hydra_jobboard(hydraObject):
         if not response:
             logger.error("Job Kill was unsuccessful, skipping reset...")
             return False
-        renderLayerTracker = ["0" for x in self.renderLayers.split(",")]
+        renderLayerTracker = ["0" for _ in self.renderLayers.split(",")]
         renderLayerTracker = ",".join(renderLayerTracker)
         with transaction() as t:
             t.cur.execute("UPDATE hydra_jobboard SET renderLayerTracker = %s, failures = '', attempts = '0' WHERE id = %s",
@@ -311,7 +323,7 @@ class hydra_jobboard(hydraObject):
     def archive(self, mode):
         """Function for archiving/unarchiveing job. Accepts binary ints, booleans,
         or case insensitive true or false strings."""
-        if type(mode) != int:
+        if isinstance(mode, int):
             mode = 1 if str(mode)[0].lower() == "t" else 0
         return self.updateAttr("archived", mode)
 
@@ -322,8 +334,8 @@ class hydra_taskboard(hydraObject):
     autoColumn = "id"
     primaryKey = "id"
 
-    def createTaskCMD(self, hydraJob, platform = "win32"):
-        execs = hydra_executable.fetch(multiReturn = True)
+    def createTaskCMD(self, hydraJob, platform="win32"):
+        execs = hydra_executable.fetch(multiReturn=True)
         if platform == "win32":
             execsDict = {ex.name: ex.win32 for ex in execs}
         else:
@@ -361,20 +373,20 @@ class hydra_taskboard(hydraObject):
     def sendKillQuestion(self, newStatus):
         """Kill the current task running on the renderhost. Return True if successful,
         else False"""
-        logger.debug('Kill task on {0}'.format(self.host))
-        connection = TCPConnection(hostname = self.host)
+        logger.debug('Kill task on %s', self.host)
+        connection = TCPConnection(hostname=self.host)
         answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
         if answer is None:
-            logger.debug("{0} appears to be offline or unresponsive. Treating as dead.".format(self.host))
+            logger.debug("%s appears to be offline or unresponsive. Treating as dead.", self.host)
         else:
-            logger.debug("Child killed return code '{0}' for node '{1}'".format(answer, self.node))
+            logger.debug("Child killed return code '%s' for node '%s'", answer, self.node)
             if answer < 0:
-                logger.warning("{0} tried to kill its job but failed for some reason.".format(self.host))
+                logger.warning("%s tried to kill its job but failed for some reason.", self.host)
 
         return answer
 
 
-    def kill(self, statusAfterDeath = "K", TCPKill = True):
+    def kill(self, statusAfterDeath="K", TCPKill=True):
         if self.status == STARTED:
             killed = None
             if TCPKill:
@@ -387,7 +399,7 @@ class hydra_taskboard(hydraObject):
             if not killed:
                 logger.debug("TCPKill recived None, marking task as killed")
                 node = hydra_rendernode.fetch("WHERE host = %s", (self.host,),
-                                                cols = ["status", "task_id"])
+                                                cols=["status", "task_id"])
                 node.status = IDLE if node.status == STARTED else OFFLINE
                 node.task_id = None
                 self.status = statusAfterDeath
@@ -398,7 +410,7 @@ class hydra_taskboard(hydraObject):
                     node.update(t)
                 return True
         else:
-            logger.debug("Task Kill is skipping task {0} because of status {1}".format(self.id, self.status))
+            logger.debug("Task Kill is skipping task %s because of status %s", self.id, self.status)
             return True
 
     def getLogPath(self):
@@ -407,7 +419,7 @@ class hydra_taskboard(hydraObject):
         if thisHost == self.host:
             return path
         else:
-            drive,shortPath = os.path.splitdrive(path)
+            _, shortPath = os.path.splitdrive(path)
             newPath = os.path.join("\\\\{}".format(self.host), shortPath)
             newPath = os.path.normpath(newPath)
             if sys.platform == "win32":

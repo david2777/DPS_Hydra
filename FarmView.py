@@ -644,7 +644,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 choice = yesNoBox(self, "Confirm", "You have {0} tasks selected. Are you sure you want to open {0} logs?".format(len(taskIDs)))
                 if choice == QMessageBox.No:
                     return None
-            map(openLogFile, taskIDs)
+            map(self.openLogFile, taskIDs)
 
         elif mode == "data":
             if len(taskIDs) == 1:
@@ -661,6 +661,16 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def taskDetailedData(self):
         self.taskActionHandler("data")
+
+    @staticmethod
+    def openLogFile(taskID):
+        taskOBJ = hydra_taskboard.fetch("WHERE id =  %s", (taskID,),
+                                        cols=["id", "host"])
+        logPath = taskOBJ.getLogPath()
+        if os.path.isfile(logPath):
+            webbrowser.open(logPath)
+        else:
+            logger.warning("Log file does not exist or is unreachable.")
 
     #---------------------------------------------------------------------#
     #---------------------------NODE HANDLERS-----------------------------#
@@ -999,7 +1009,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.getOffThisNodeButton.setEnabled(choice)
         self.thisNodeButtonsEnabled = choice
 
-    def doNothing(self):
+    @staticmethod
+    def doNothing():
         pass
 
 #This is at the bottom for a specific reason I can't remember
@@ -1021,16 +1032,6 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
 #------------------------------------------------------------------------#
 #----------------------------------MAIN----------------------------------#
 #------------------------------------------------------------------------#
-
-#TODO:Move this somewhere else
-def openLogFile(taskID):
-    taskOBJ = hydra_taskboard.fetch("WHERE id =  %s", (taskID,),
-                                    cols=["id", "host"])
-    logPath = taskOBJ.getLogPath()
-    if os.path.isfile(logPath):
-        webbrowser.open(logPath)
-    else:
-        logger.warning("Log file does not exist or is unreachable.")
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
