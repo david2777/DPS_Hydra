@@ -61,8 +61,12 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.thisNodeButtonsEnabled = True
         self.thisNodeExists = self.findThisNode()
 
+        #Setup Signals
+        SIGNAL("doUpdate")
+        QObject.connect(self, SIGNAL("doUpdate"), self.doUpdate)
+
         #Start autoUpdater and then fetch data from DB
-        self.autoUpdateThread = stoppableThread(self.doUpdate, 10, "AutoUpdate_Thread")
+        self.autoUpdateThread = stoppableThread(self.doUpdateSignaler, 10, "AutoUpdate_Thread")
         self.doFetch()
 
     def addItem(self, menu, name, handler, statusTip, hotkey=None):
@@ -917,6 +921,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         if self.currentJobSel:
             self.loadTaskTree(self.currentJobSel, True)
 
+    def doUpdateSignaler(self):
+        """Setup a signaler for updating so that we don't modify the GUI in another thread"""
+        self.emit(SIGNAL("doUpdate"))
+
     def doUpdate(self):
         """Smart updater that updates information the current tab on the main
         tabWidget"""
@@ -1029,4 +1037,5 @@ if __name__ == '__main__':
     window = FarmView()
     window.show()
     retcode = app.exec_()
+    window.autoUpdateThread.terminate()
     sys.exit(retcode)

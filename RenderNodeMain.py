@@ -22,7 +22,7 @@ import Utilities.NodeUtils as NodeUtils
 import Utilities.Utils as Utils
 
 #Doesn't like Qt classes
-#pylint: disable=E0602
+#pylint: disable=E0602,E1101
 
 class EmittingStream(QObject):
     """For writing text to the console output"""
@@ -60,7 +60,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.updateThisNodeInfo()
         self.startupServers()
 
-        self.autoUpdateThread = stoppableThread(self.updateThisNodeInfo, 15,
+        SIGNAL("updateThisNodeInfo")
+        QObject.connect(self, SIGNAL("updateThisNodeInfo"), self.updateThisNodeInfo)
+
+        self.autoUpdateThread = stoppableThread(self.updateThisNodeInfoSignaler, 15,
                                                 "AutoUpdate_Thread")
 
         logger.info("Render Node Main is live! Waiting for tasks...")
@@ -333,6 +336,9 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             return True
         else:
             return False
+
+    def updateThisNodeInfoSignaler(self):
+        self.emit(SIGNAL("updateThisNodeInfo"))
 
     def updateThisNodeInfo(self):
         self.thisNode = hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
