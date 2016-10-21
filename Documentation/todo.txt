@@ -6,7 +6,6 @@
     -Group class/static methods?
     -Test Job/Task Kill errors
     -Node Scheduler broken
-    -Fix all the Threading setups
     -Add check on online to search for running tasks using lots of RAM or CPU
 
 -[In Progress]Render consecutive frames

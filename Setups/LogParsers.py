@@ -67,6 +67,18 @@ class Log(object):
         uniqueFrames = [f for f in frameNumbers if f not in uniqueFrames]
         return uniqueFrames
 
+    def getNewCurrentFrame(self):
+        renderedFrames = self.getSavedFrameNumbers()
+
+        if not renderedFrames:
+            logger.debug("No renderedFrames found")
+            return None
+
+        logger.debug(renderedFrames)
+        newCurrentFrame = max(renderedFrames)
+        logger.debug("New currentFrame is: %s", newCurrentFrame)
+        return newCurrentFrame
+
 
 class RedshiftMayaLog(Log):
     """A class for parsing Maya Render logs when rendering with Redshift4Maya"""
