@@ -16,14 +16,14 @@ def getLog(hydraJob, logPath):
         return None
 
 class Log(object):
+    filterRegex = None
+    savedFileRegex = None
+
     def __init__(self, filePath):
         self.fp = filePath
         with open(self.fp, "r") as f:
             self.logFileContents = f.read()
             self.filteredLines = None
-        #Placeholders
-        self.filterRegex = None
-        self.savedFileRegex = None
 
     def __repr__(self):
         return "Hydra Log File @ {}".format(self.fp)
@@ -55,17 +55,16 @@ class Log(object):
 
         if not fullPath:
             matches = [os.path.split(m)[-1] for m in matches]
-        #pylint: disable=E0601
-        uniqueMatches = [m for m in matches if m not in uniqueMatches]
 
-        return uniqueMatches
+        #Get unique values via a set, make into a list again, sort, return
+        return sorted(list(set(matches)))
 
     def getSavedFrameNumbers(self):
         """Gets a list of frame numbers assuing name.number.ext naming scheme."""
         frameNumbers = [int(f.split(".")[-2]) for f in self.getSavedFiles()]
-        #pylint: disable=E0601
-        uniqueFrames = [f for f in frameNumbers if f not in uniqueFrames]
-        return uniqueFrames
+
+        #Get unique values via a set, make into a list again, sort, return
+        return sorted(list(set(frameNumbers)))
 
     def getNewCurrentFrame(self):
         renderedFrames = self.getSavedFrameNumbers()
@@ -76,6 +75,8 @@ class Log(object):
 
         logger.debug(renderedFrames)
         newCurrentFrame = max(renderedFrames)
+        #Since we want it to start on the next frame after the last one saved
+        newCurrentFrame += 1
         logger.debug("New currentFrame is: %s", newCurrentFrame)
         return newCurrentFrame
 
@@ -212,6 +213,10 @@ class MentalRayMayaLog(Log):
             matches += reg.findall(line)
 
         frameCount = self.getTotalFrameCount()
+
+        if len(matches) < 1 or len(frameCount) < 1:
+            return None
+
         clockPerFrame = len(matches) / frameCount
         matches = matches[:(clockPerFrame * frameCount)]
         matchSplit = [matches[i:i + clockPerFrame] for i in xrange(0, len(matches), clockPerFrame)]
@@ -239,6 +244,8 @@ class MentalRayMayaLog(Log):
 
     def getAverageRenderTime(self):
         timeList = self.getEachFrameRenderTime()
+        if not timeList:
+            return None
         timeList = [int(t.total_seconds()) for t in timeList]
         tSecs = sum(timeList) / len(timeList)
         return datetime.timedelta(seconds=tSecs)
@@ -271,6 +278,8 @@ class FusionCompLog(Log):
             search = reg.findall(line)
             if len(search) == 1:
                 return datetime.timedelta(seconds=int(float(search[0])))
+            else:
+                return None
 
     def getTotalRenderTime(self):
         if not self.filteredLines:

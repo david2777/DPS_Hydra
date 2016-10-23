@@ -6,14 +6,15 @@ import pickle
 
 #Hydra
 from Setups.LoggingSetup import logger
-from Utilities.Utils import getInfoFromCFG
 
 class Server(object):
+    allThreads = {}
     def createIdleLoop(self, threadName, targetFunction, interval=None):
         self.targetFunction = targetFunction
         self.interval = interval
         self.threadName = threadName
         self.stopEvent = threading.Event()
+        self.allThreads[threadName] = self.stopEvent
         self.threadOBJ = threading.Thread(target=self.tgt, name=self.threadName)
         self.threadOBJ.deamon = True
         self.threadOBJ.start()
@@ -28,29 +29,24 @@ class Server(object):
                 self.targetFunction()
 
     def shutdown(self):
-        logger.info("Killing %s Thread...", self.threadName)
-        self.stopEvent.set()
-
-class MySocketServer(SocketServer.TCPServer):
-    allow_reuse_address = True
+        for threadName, stopEvent in self.allThreads.iteritems():
+            logger.info("Killing %s Thread...", threadName)
+            stopEvent.set()
 
 class TCPServer(Server):
-    def __init__(self, port=None):
-        if not port:
-            port = int(getInfoFromCFG("network", "port"))
+    def startServerThread(self, port):
         HydraTCPHandler.TCPserver = self
         logger.debug("Open TCPServer Socket @ Port %s", port)
         self.serverObject = MySocketServer(("", port), HydraTCPHandler)
         self.serverThread = self.createIdleLoop("TCP_Server_Thread",
-                                                self.runTheServer)
-
-    def runTheServer(self):
-        self.serverObject.serve_forever()
+                                                self.serverObject.serve_forever)
 
     def shutdown(self):
-        logger.info("Killing %s Thread...", self.threadName)
-        self.stopEvent.set()
         self.serverObject.shutdown()
+        Server.shutdown(self)
+
+class MySocketServer(SocketServer.TCPServer):
+    allow_reuse_address = True
 
 class HydraTCPHandler(SocketServer.StreamRequestHandler):
     TCPserver = None

@@ -82,7 +82,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         keys = list(optsDict.keys())
         for key in keys:
             self.settingsDict[key] = optsDict[key]
-            logger.debug("Setting Key '%s' with opt: '%s'", key, str(opts[key]))
+            logger.debug("Setting Key '%s' with opt: '%s'", key, str(optsDict[key]))
 
         #Fix paths
         self.settingsDict["-p"] = self.settingsDict["-p"].replace('\\', '/')
@@ -174,7 +174,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         phase = 0 #Placeholder, set this later when building the commands
         jobStatus = self.getJobStatus()
         niceName = str(self.niceNameLineEdit.text())
-        owner = db_username
+        owner = transaction().db_username
         compatabilityList = self.getReqs()
         maxNodesP1 = int(self.maxNodesP1SpinBox.value())
         maxNodesP2 = int(self.maxNodesP2SpinBox.value())
@@ -401,7 +401,7 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
                         maxAttempts=maxAttempts, jobType=jobType)
 
     with transaction() as t:
-        job.insert(transaction=t)
+        job.insert(trans=t)
 
     return job
 

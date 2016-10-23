@@ -17,9 +17,7 @@ from Utilities.Utils import getInfoFromCFG
 #pylint: disable=C0200
 
 class RenderManagementServer(TCPServer):
-    def __init__(self, *arglist, **kwargs):
-        self.managmentServer = TCPServer.__init__(self, *arglist, **kwargs)
-
+    def __init__(self):
         self.allJobs = {}
         self.renderJobs = []
         self.runningTasks = {}
@@ -28,6 +26,9 @@ class RenderManagementServer(TCPServer):
         self.timeouts = {}
         self.nowTime = datetime.datetime.now()
         self.lastTimeoutCheck = None
+
+        port = int(getInfoFromCFG("manager", "port"))
+        self.startServerThread(port)
 
     def processRenderTasks(self):
         logger.debug("Processing Render Tasks")
@@ -190,7 +191,7 @@ class RenderManagementServer(TCPServer):
         return frame
 
     def shutdownCMD(self):
-        self.managmentServer.shutdown()
+        self.shutdown()
 
     @staticmethod
     def assignTask(node, task, job):
@@ -256,9 +257,10 @@ def main():
         logger.critical("Only one RenderManager is allowed to run at a time! Exiting...")
         sys.exit(-1)
 
-    port = int(getInfoFromCFG("manager", "port"))
-    socketServer = RenderManagementServer(port=port)
-    socketServer.createIdleLoop(15, socketServer.processRenderTasks)
+    socketServer = RenderManagementServer()
+    socketServer.createIdleLoop("Process_Render_Tasks_Thread",
+                                socketServer.processRenderTasks,
+                                interval=15)
 
 if __name__ == "__main__":
     main()

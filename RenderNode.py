@@ -10,20 +10,16 @@ import subprocess
 import psutil
 
 #Hydra
-import Constants
-from Networking.Servers import TCPServer
-from Setups.LoggingSetup import logger
 from Setups.MySQLSetup import *
-from Setups.Threads import *
+from Setups.LoggingSetup import logger
 import Setups.LogParsers as LogParsers
 from Setups.SingleInstanceLocker import InstanceLock
+import Constants
+from Networking.Servers import TCPServer
 import Utilities.Utils as Utils
 
-class RenderTCPServer(object):
+class RenderTCPServer(TCPServer):
     def __init__(self):
-        #Startup TCP Server
-        self.renderServ = TCPServer()
-
         #Detect RedShift GPUs
         self.rsGPUs = Utils.getRedshiftPreference("SelectedCudaDevices")
         if self.rsGPUs:
@@ -47,30 +43,50 @@ class RenderTCPServer(object):
         self.statusAfterDeath = None
         self.childKilled = 0
         self.thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),))
+        logger.debug(self.thisNode)
 
         #Cleanup job if we start with it assigned to us (Like if the node crashed/restarted)
         self.unstickTask()
 
+        #Run The Server
+        port = int(Utils.getInfoFromCFG("network", "port"))
+        self.startServerThread(port)
+
     def shutdown(self):
-        self.renderServ.shutdown()
+        #Offline, Kill current job, shutdown servers, online again
+        currentStatus = self.thisNode.status
+        self.thisNode.offline()
+        if currentStatus in [STARTED, PENDING]:
+            logger.info("Attempting to kill current job.")
+            self.killCurrentJob(KILLED)
+            logger.info("Kill Response Code: %s", self.childKilled)
+        TCPServer.shutdown(self)
+        #Online AFTER servers are shutdown
+        if currentStatus == STARTED:
+            self.thisNode.online()
+        logger.info("RenderNode Servers Shutdown")
 
     def unstickTask(self):
+        #TODO:Update MPF
         updateTaskJob = False
         if self.thisNode.task_id:
             logger.warning("Rouge task discovered. Unsticking...")
-            self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
-            self.thisNode.task_id = None
 
             thisTask = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,),
                                             cols=["id", "job_id", "renderLayer",
                                                     "status", "exitCode",
                                                     "endTime", "host",
-                                                    "currentFrame"])
+                                                    "currentFrame"],
+                                            multiReturn=False)
 
-            thisJob = hydra_jobboard.fetch("WHERE id = %s", (thisTask.job_id),
-                                            cols=["jobType", "renderLayerTracker"])
+            thisJob = hydra_jobboard.fetch("WHERE id = %s", (thisTask.job_id,),
+                                            cols=["jobType", "renderLayerTracker"],
+                                            multiReturn=False)
 
             thisTask.kill(CRASHED, False)
+
+            self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
+            self.thisNode.task_id = None
 
             logFile = thisTask.getLogPath()
             if os.path.isfile(logFile):
@@ -163,6 +179,8 @@ class RenderTCPServer(object):
             if not newCurrentFrame:
                 newCurrentFrame = HydraTask.currentFrame
 
+            mpf = HydraLogObject.getAverageRenderTime()
+
             with transaction() as t:
                 #EndTime, ExitCode
                 HydraTask.endTime = datetime.datetime.now()
@@ -172,6 +190,14 @@ class RenderTCPServer(object):
                 HydraTask.currentFrame = newCurrentFrame
                 HydraJob.renderLayerTracker = self.getNewRLTracker(HydraJob,
                                                                     HydraTask)
+                #MintuesPerFrame
+                if mpf:
+                    HydraTask.mpf = mpf
+                    if HydraJob.mpf:
+                        tSecs = int((HydraJob.mpf.total_seconds() + mpf.total_seconds()) / 2)
+                        HydraJob.mpf = datetime.timedelta(seconds=tSecs)
+                    else:
+                        HydraJob.mpf = mpf
 
                 #Status, Attempts. Failures
                 if self.childKilled == 1:
@@ -229,7 +255,7 @@ class RenderTCPServer(object):
         -9 = child could not be killed, -10 = child and parent could not be killed"""
         self.statusAfterDeath = statusAfterDeath
         self.childKilled = 1
-        if not self.childProcess or self.PSUtilProc:
+        if not self.childProcess or not self.PSUtilProc:
             logger.info("No task is running!")
             return
 
@@ -253,7 +279,7 @@ class RenderTCPServer(object):
                 self.childKilled = -1
 
         #Try to kill the children if they are still running
-        _ =[proc.terminate() for proc in childrenProcs if proc.is_running()]
+        _ = [proc.terminate() for proc in childrenProcs if proc.is_running()]
         _, alive = psutil.wait_procs(childrenProcs, timeout=15)
         if len(alive) > 0:
             _ = [proc.kill() for proc in alive]
@@ -274,10 +300,8 @@ def softwareUpdaterLoop():
     updateAnswer = Utils.softwareUpdater()
     if updateAnswer:
         logger.debug("Update found!")
+        Utils.launchHydraApp("RenderNodeConsole", 10)
         socketServer.shutdown()
-        pulseThread.terminate()
-        Utils.launchHydraApp("RenderNodeConsole")
-        updaterThread.terminate()
         sys.exit(0)
     else:
         logger.debug("No updates found")
@@ -296,7 +320,7 @@ if __name__ == "__main__":
 
     #Start the Render Server and Heartbeat Thread
     socketServer = RenderTCPServer()
-    pulseThread = stoppableThread(heartbeat, 60, "Pulse_Thread")
+    socketServer.createIdleLoop("Pulse_Thread", heartbeat, 60)
     #If this is an exe, start the software updater thread
     if sys.argv[0].endswith(".exe") and os.getenv("HYDRA"):
-        updaterThread = stoppableThread(softwareUpdaterLoop, 900, "Updater_Thread")
+        socketServer.createIdleLoop("Software_Updater_Thread", softwareUpdaterLoop, 900)

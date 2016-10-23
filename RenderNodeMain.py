@@ -60,12 +60,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.updateThisNodeInfo()
         self.startupServers()
 
-        SIGNAL("updateThisNodeInfo")
-        QObject.connect(self, SIGNAL("updateThisNodeInfo"), self.updateThisNodeInfo)
-
-        self.autoUpdateThread = stoppableThread(self.updateThisNodeInfoSignaler, 15,
-                                                "AutoUpdate_Thread")
-
         logger.info("Render Node Main is live! Waiting for tasks...")
 
         try:
@@ -173,31 +167,20 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
     def closeEvent(self, event):
         choice = yesNoBox(self, "Confirm", "Really exit the RenderNodeMain server?")
         if choice == QMessageBox.Yes:
-            self.doExit()
+            self.shutdown()
         else:
             event.ignore()
 
-    def doExit(self):
+    def shutdown(self):
         logger.info("Shutting down...")
-        self.autoUpdateThread.terminate()
-        app.processEvents()
         if self.schedThreadStatus:
-            logger.info("Killing Scheduler Thread")
             self.schedThread.terminate()
-        app.processEvents()
-        if self.pulseThreadStatus:
-            logger.info("Killing Pulse Thread")
-            self.pulseThread.terminate()
-        self.updateThisNodeInfo()
-        app.processEvents()
-        if self.thisNode.task_id:
-            logger.info("Killing Current Task")
-            self.getOffThisNodeHandler()
+        if self.autoUpdateStatus:
+            self.autoUpdateThread.terminate()
         if self.renderServerStatus:
-            logger.info("Killing RenderServer Thread")
             self.renderServer.shutdown()
+        logger.debug("All Servers Shutdown")
         self.trayIcon.hide()
-        app.processEvents()
         event.accept()
         sys.exit(0)
 
@@ -206,8 +189,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         Note that this is run AFTER the CheckState is changed so when we do
         .isChecked() it's looking for the state after it has been checked."""
         if not self.autoUpdateCheckBox.isChecked():
+            self.autoUpdateStatus = False
             self.autoUpdateThread.terminate()
         else:
+            self.autoUpdateStatus = True
             self.autoUpdateThread.restart()
 
     def showWindowHandler(self):
@@ -268,46 +253,41 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
     def startupServers(self):
         logger.debug("Firing up main threads")
-        #pylint: disable=W0703
         #Startup Pulse thread
         self.pulseThreadStatus = False
         self.renderServerStatus = False
         self.schedThreadStatus = False
 
-        try:
-            self.pulseThread = stoppableThread(pulse, 60, "Pulse_Thread")
-            self.pulseThreadStatus = True
-            self.pulseThreadPixmap.setPixmap(self.donePixmap)
-            logger.info("Pulse Thread started!")
-        except Exception as e:
-            logger.error("Exception: %s", e)
-            self.pulseThreadPixmap.setPixmap(self.needsAttentionPixmap)
-
         #Start Render Server
-        try:
-            self.renderServer = RenderNode.RenderTCPServer()
-            self.renderServerStatus = True
-            self.renderServerPixmap.setPixmap(self.donePixmap)
-            logger.info("Render Server Started!")
-        except Exception as e:
-            logger.error("Exception: %s", e)
-            self.renderServerPixmap.setPixmap(self.needsAttentionPixmap)
+        self.renderServer = RenderNode.RenderTCPServer()
+        self.renderServerStatus = True
+        self.renderServerPixmap.setPixmap(self.donePixmap)
+        logger.info("Render Server Started!")
 
-        #Start Schedule Thread
+        #Start Pulse Thread
+        self.renderServer.createIdleLoop("Pulse_Thread", pulse, 60)
+        self.pulseThreadStatus = True
+        self.pulseThreadPixmap.setPixmap(self.donePixmap)
+        logger.info("Pulse Thread started!")
+
+        #Start Auto Update Thread
+        SIGNAL("updateThisNodeInfo")
+        QObject.connect(self, SIGNAL("updateThisNodeInfo"), self.updateThisNodeInfo)
+        self.autoUpdateStatus = True
+
+        self.autoUpdateThread = stoppableThread(self.updateThisNodeInfoSignaler, 15,
+                                                "AutoUpdate_Thread")
         self.startScheduleThread()
 
     def startScheduleThread(self):
+        """This is in it's own function because it starts and stops often"""
         #pylint: disable=W0703,W0201
         if bool(self.currentScheduleEnabled) and self.currentSchedule:
-            try:
-                self.schedThread = schedulerThread(self.schedulerMain,
-                                                    "Schedule_Thread", None)
-                self.schedThreadStatus = True
-                self.scheduleThreadPixmap.setPixmap(self.donePixmap)
-                logger.info("Schedule Thread started!")
-            except Exception as e:
-                logger.error("Exception: %s", e)
-                self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
+            self.schedThread = schedulerThread(self.schedulerMain,
+                                                "Schedule_Thread", None)
+            self.schedThreadStatus = True
+            self.scheduleThreadPixmap.setPixmap(self.donePixmap)
+            logger.info("Schedule Thread started!")
         else:
             logger.info("Schedule disabled. Running in manual control mode.")
             self.scheduleThreadPixmap.setPixmap(self.nonePixmap)

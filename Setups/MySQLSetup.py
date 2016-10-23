@@ -169,7 +169,8 @@ class hydraObject(object):
         select = "SELECT {0} FROM {1} {2} {3} {4}"
         select = select.format(colStatement, cls.tableName(), whereClause,
                                 orderClause, limitClause)
-        logger.debug(select, queryTuple)
+        #pylint: disable=W1201
+        logger.debug(select % queryTuple)
 
         #Fetch the data
         if explicitTransaction:
@@ -379,7 +380,7 @@ class hydra_taskboard(hydraObject):
         if answer is None:
             logger.debug("%s appears to be offline or unresponsive. Treating as dead.", self.host)
         else:
-            logger.debug("Child killed return code '%s' for node '%s'", answer, self.node)
+            logger.debug("Child killed return code '%s' for node '%s'", answer, self.host)
             if answer < 0:
                 logger.warning("%s tried to kill its job but failed for some reason.", self.host)
 
