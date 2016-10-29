@@ -162,8 +162,10 @@ def calcuateSleepTimeFromNode(nodeName):
 
 def getThisNodeOBJ():
     """Returns the current node's info from the DB, None if not found in the DB."""
-    try:
-        thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),))
-    except ValueError:
-        thisNode = None
-    return thisNode
+    thisNode = hydra_rendernode.fetch("WHERE host = %s", (Utils.myHostName(),),
+                                        multiReturn=False)
+    #If it's an empty list just return None
+    if not thisNode:
+        return None
+    else:
+        return thisNode
