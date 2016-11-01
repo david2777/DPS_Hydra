@@ -75,8 +75,6 @@ class Log(object):
 
         logger.debug(renderedFrames)
         newCurrentFrame = max(renderedFrames)
-        #Since we want it to start on the next frame after the last one saved
-        newCurrentFrame += 1
         logger.debug("New currentFrame is: %s", newCurrentFrame)
         return newCurrentFrame
 

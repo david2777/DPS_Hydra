@@ -1,4 +1,3 @@
-"""The software for managing jobs, tasks, and nodes."""
 from __future__ import division
 #Standard
 import os
@@ -35,18 +34,10 @@ import Utilities.NodeUtils as NodeUtils
 #------------------------------------------------------------------------------#
 
 class FarmView(QMainWindow, Ui_FarmView):
+    """FarmView is the queue manager. Used for managing jobs, tasks, and nodes."""
     def __init__(self):
         QMainWindow.__init__(self)
         self.setupUi(self)
-
-        with open(Utils.findResource("styleSheet.css"), "r") as myStyles:
-            self.setStyleSheet(myStyles.read())
-
-        #My UI Setup Functions
-        self.setupTables()
-        self.connectButtons()
-        self.setupHotkeys()
-        self.setWindowIcon(QIcon(Utils.findResource("Images/FarmView.png")))
 
         #Class Variables
         self.thisNodeName = Utils.myHostName()
@@ -56,6 +47,15 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.showArchivedFilter = False
         self.statusMsg = "ERROR"
         self.currentJobSel = None
+
+        with open(Utils.findResource("styleSheet.css"), "r") as myStyles:
+            self.setStyleSheet(myStyles.read())
+
+        #My UI Setup Functions
+        self.setupTreeViews()
+        self.connectButtons()
+        self.setupHotkeys()
+        self.setWindowIcon(QIcon(Utils.findResource("Images/FarmView.png")))
 
         #Make sure this node exists
         self.thisNodeButtonsEnabled = True
@@ -82,7 +82,8 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
     #--------------------------UI SETUP FUNCTIONS-------------------------#
     #---------------------------------------------------------------------#
-    def setupTables(self):
+    def setupTreeViews(self):
+        """Setup the QTreeViewWidgets headers, column spans, and margins"""
         #jobTree header and column widths
         jobHeader = QTreeWidgetItem(["Name", "ID", "Status", "Progress", "Owner",
                                     "Priority", "Start", "End", "Render Layers"])
@@ -118,6 +119,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.gridLayout_jobListJobs.setContentsMargins(0, 0, 0, 0)
 
     def connectButtons(self):
+        """Connect all of the QPushButtons and QCheckBoxes to their actions.
+        Connect QMenus to their parents as Context Menus."""
         #Connect tab switch data update
         self.tabWidget.currentChanged.connect(self.doUpdate)
         #Connect buttons in This Node tab
@@ -144,12 +147,12 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.taskTree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.taskTree.customContextMenuRequested.connect(self.taskContextMenu)
-        #self.taskTree.itemChanged.connect(self.taskTreeEditHandler)
 
         self.renderNodeTree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.renderNodeTree.customContextMenuRequested.connect(self.nodeContextHandler)
 
     def setupHotkeys(self):
+        """Connect QShortcuts to their actions"""
         #This Node
         QShortcut(QKeySequence("Ctrl+O"), self, self.onlineThisNodeHandler)
         QShortcut(QKeySequence("Ctrl+Shift+O"), self, self.offlineThisNodeHandler)
@@ -174,6 +177,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
 
     def centralContextHandler(self):
+        """Create main Context Menu and add actions to it."""
         self.centralMenu = QMenu(self)
         QObject.connect(self.centralMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
@@ -195,11 +199,14 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     @staticmethod
     def revealDetailedHandler(data_ids, sqlTable, sqlWhere):
+        """Create a dialog box with all the data from mutliple SQL record"""
+        #TODO: Add an example
         dataList = [sqlTable.fetch(sqlWhere, (d_id,)) for d_id in data_ids]
         DetailedDialog.create(dataList)
 
     @staticmethod
     def revealDataTable(data_ids, sqlTable, sqlWhere):
+        """Create a dialog box with all the data from one SQL record"""
         dataList = sqlTable.fetch(sqlWhere, (data_ids,))
         DataTableDialog.create(dataList)
 
@@ -208,6 +215,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
 
     def jobContextMenu(self):
+        """Create a Context Menu for the jobTree"""
         self.jobMenu = QMenu(self)
         QObject.connect(self.jobMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
@@ -227,10 +235,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobMenu.addSeparator()
 
         self.addItem(self.jobMenu, "Archive Jobs", self.archiveJob,
-                "Archive Job(s) and hide them from the JobTreeView",
+                "Archive Job(s) and hide them from the jobTree",
                 "Del")
         self.addItem(self.jobMenu, "Unarchive Jobs", self.unarchiveJob,
-                "Unarchive Job(s) and add them back to the JobTreeView",
+                "Unarchive Job(s) and add them back to the jobTree",
                 "Shift+Del")
         self.addItem(self.jobMenu, "Reveal Detailed Data...", self.jobDetailedData,
                 "Opens a dialog window the detailed data for the selected job(s)")
@@ -245,6 +253,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobMenu.popup(QCursor.pos())
 
     def fetchJobs(self, mode="all", job_id=None):
+        """Fetch all of the hydra_jobboard jobs corrisponding with the current
+        options selected in the UI."""
         #Build the fetch command
         if mode == "single":
             command = "WHERE id = %s"
@@ -271,17 +281,21 @@ class FarmView(QMainWindow, Ui_FarmView):
                                             "renderLayerTracker"])
 
     def userFilterAction(self):
+        """Toggle fetching only jobs owned by this user"""
         self.userFilterCheckbox.setChecked(0) if self.userFilter else 2
         self.userFilter = False if self.userFilter else True
         self.populateJobTree(clear=True)
 
     def archivedFilterAction(self):
+        """Toggle fetching jobs only which are not archived"""
         self.archivedCheckBox.setChecked(0) if self.showArchivedFilter else 2
         self.showArchivedFilter = False if self.showArchivedFilter else True
         self.populateJobTree(clear=True)
 
     @staticmethod
     def formatJobData(job):
+        """Takes a hydra_jobboard record and returns an ordered list of the data
+        to be inserted into the jobTree"""
         renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
         renderLayersTotal = len(renderLayerTracker)
         renderLayersDone = sum([1 for x in renderLayerTracker if x >= job.endFrame])
@@ -300,20 +314,23 @@ class FarmView(QMainWindow, Ui_FarmView):
                 str(job.endFrame), str(job.renderLayers)]
 
     def addJobTreeShot(self, job):
+        """Adds a hydra_jobboard record to the jobTree, putting it in the
+        correct branch and making that branch if needed."""
         jobData = self.formatJobData(job)
         #Search the JobTree for the Job's projectName to see if it already exists
-        proj = self.jobTree.findItems(str(job.projectName), Qt.MatchExactly)
-        if len(proj) > 0:
+        projSearch = self.jobTree.findItems(str(job.projectName), Qt.MatchExactly)
+        if projSearch:
             #If project was found search for job
-            shotItem = self.jobTree.findItems(str(job.id), Qt.MatchRecursive, 1)
-            if len(shotItem) > 0:
+            shotSearch = self.jobTree.findItems(str(job.id), Qt.MatchRecursive, 1)
+            if shotSearch:
                 #If job was found update it
-                shotItem = shotItem[0]
+                shotItem = shotSearch[0]
                 for i in range(0, 9):
                     shotItem.setData(i, 0, jobData[i])
             else:
                 #If job was not found add it as a new item under the project
-                shotItem = QTreeWidgetItem(proj[0], jobData)
+                projItem = projSearch[0]
+                shotItem = QTreeWidgetItem(projItem, jobData)
         else:
             #If project was not found add it and add the job below it
             root = QTreeWidgetItem(self.jobTree, [str(job.projectName)])
@@ -329,6 +346,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             shotItem.setFont(4, QFont('Segoe UI', 8, QFont.DemiBold))
 
     def populateJobTree(self, clear=False):
+        """Loads all fetchable jobs into the jobTree. Clear will clear the
+        jobTree before loading the jobs."""
         jobs = self.fetchJobs()
         if not jobs:
             return None
@@ -354,9 +373,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.jobTableLabel.setText(labelText + ":")
 
     def getJobTreeSel(self, mode="IDs"):
+        """Returns data from the items selected in the jobTree or None if
+        nothing is selected"""
         self.resetStatusBar()
         mySel = self.jobTree.selectedItems()
-        if len(mySel) < 1:
+        if not mySel:
             warningBox(self, "Selection Error",
                         "Please select something from the Job Tree and try again.")
             return None
@@ -370,6 +391,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         return data if data != [] else None
 
     def jobActionHandler(self, mode):
+        """A catch-all function for performing actions on the items selected
+        in the jobTree"""
         #TODO:Seperate?
         #pylint: disable=R0912
         jobIDs = self.getJobTreeSel()
@@ -488,6 +511,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------TASK HANDLERS-----------------------------#
     #---------------------------------------------------------------------#
     def taskContextMenu(self):
+        """Create a Context Menu for the taskTree"""
         self.taskMenu = QMenu(self)
         QObject.connect(self.taskMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
@@ -511,14 +535,12 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.currentJobSel = job_id
             self.taskTreeLabel.setText("Task Tree (Job ID: {0})".format(job_id))
 
-    def taskTreeEditHandler(self, item):
-        pass
-
     def loadTaskTree(self, job_id, clear=False):
-        #TODO:Seperate?
-        #pylint: disable=R0912
+        """Loads all subtasks into the taskTree given a job id. Clear will
+        clear the widget before loading the data."""
         if clear:
             self.taskTree.clear()
+
         #SetupTrunks
         job = hydra_jobboard.fetch("WHERE id = %s", (job_id,),
                                     cols=["id", "renderLayers",
@@ -526,27 +548,26 @@ class FarmView(QMainWindow, Ui_FarmView):
                                             "endFrame", "status", "jobType"])
         for rl in job.renderLayers.split(","):
             rootSearch = self.taskTree.findItems(str(rl), Qt.MatchExactly, 0)
-            if len(rootSearch) > 0:
+            if rootSearch:
                 root = rootSearch[0]
             else:
                 root = QTreeWidgetItem(self.taskTree, [rl])
             root.setFont(0, QFont('Segoe UI', 10, QFont.DemiBold))
 
-        #Load tasks
+        #Add tasks to taskTree
         tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
                                         multiReturn=True,
                                         cols=["id", "renderLayer", "status",
                                                 "startTime", "endTime", "host",
                                                 "startFrame", "endFrame",
                                                 "currentFrame", "exitCode"])
-        #Add tasks to taskTree
         for task in tasks:
-            roots = self.taskTree.findItems(str(task.renderLayer), Qt.MatchExactly, 0)
-            if len(roots) > 0:
-                root = roots[0]
+            rootSearch = self.taskTree.findItems(str(task.renderLayer), Qt.MatchExactly, 0)
+            if rootSearch:
+                root = rootSearch[0]
                 taskData = self.formatTaskData(task)
                 taskSearch = self.taskTree.findItems(str(task.id), Qt.MatchRecursive, 1)
-                if len(taskSearch) > 0:
+                if taskSearch:
                     taskItem = taskSearch[0]
                     for i in range(0, 9):
                         taskItem.setData(i, 0, taskData[i])
@@ -559,7 +580,8 @@ class FarmView(QMainWindow, Ui_FarmView):
             else:
                 logger.error("Could not find root for renderLayer %s on task %s!", task.renderLayer, task.id)
 
-        #Add default data if active tasks don't exist and do formatting
+        #Add default data if active tasks don't exist
+        #Do formatting on all tasks
         #Note that since the RLs were added in order we can use the same index
         rlTracker = [int(x) for x in job.renderLayerTracker.split(",")]
         for i in range(0, self.taskTree.topLevelItemCount()):
@@ -572,7 +594,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 QTreeWidgetItem(topLevelItem, defaultTaskData)
 
             #Add top level formatting to taskTree data
-            if rlTracker[i] == job.endFrame:
+            if rlTracker[i] >= job.endFrame:
                 topLevelItem.setBackgroundColor(0, niceColors[FINISHED])
             else:
                 statusToUse = topLevelItem.child(topLevelItem.childCount() - 1).text(2)
@@ -582,6 +604,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     @staticmethod
     def formatTaskData(task):
+        """Takes a hydra_taskboard record and returns an ordered list of the data
+        to be inserted into the taskTree"""
         if task.endTime:
             duration = task.endTime - task.startTime
         elif task.startTime:
@@ -592,15 +616,18 @@ class FarmView(QMainWindow, Ui_FarmView):
         startTime = str(task.startTime)[5:] if task.startTime else "None"
         endTime = str(task.endTime)[5:] if task.endTime else "None"
 
-        return [str(task.renderLayer), str(task.id), niceNames[task.status],
-                    str(task.host), str(task.startFrame), str(task.endFrame),
-                    str(task.currentFrame), startTime, endTime,
-                    str(duration), str(task.exitCode)]
+        taskData = [task.renderLayer, task.id, niceNames[task.status], task.host,
+                    task.startFrame, task.endFrame, task.currentFrame, startTime,
+                    endTime, duration, task.exitCode]
+
+        return map(str, taskData)
 
     def getTaskTreeSel(self, mode="IDs"):
+        """Returns data from the items selected in the taskTree or None if
+        nothing is selected"""
         self.resetStatusBar()
         mySel = self.taskTree.selectedItems()
-        if len(mySel) < 1:
+        if not mySel:
             warningBox(self, "Selection Error",
                         "Please select something from the Task Tree and try again.")
             return None
@@ -620,6 +647,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         return data
 
     def taskActionHandler(self, mode):
+        """A catch-all function for performing actions on the items selected
+        in the taskTree"""
         taskIDs = self.getTaskTreeSel("IDs")
         if not taskIDs:
             return None
@@ -663,8 +692,9 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.taskActionHandler("data")
 
     @staticmethod
-    def openLogFile(taskID):
-        taskOBJ = hydra_taskboard.fetch("WHERE id =  %s", (taskID,),
+    def openLogFile(task_id):
+        """Opens the default texteditor with the log for the given task_id"""
+        taskOBJ = hydra_taskboard.fetch("WHERE id =  %s", (task_id,),
                                         cols=["id", "host"])
         logPath = taskOBJ.getLogPath()
         if os.path.isfile(logPath):
@@ -677,6 +707,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     #---------------------------------------------------------------------#
 
     def nodeContextHandler(self):
+        """Create a Context Menu for the nodeTree"""
         self.nodeMenu = QMenu(self)
         QObject.connect(self.nodeMenu, SIGNAL("aboutToHide()"),
                         self.resetStatusBar)
@@ -694,12 +725,13 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.addItem(self.nodeMenu, "Reveal Detailed Data...", self.revealNodeDetailedHandler,
                 "Opens a dialog window the detailed data for the selected nodes.")
         self.addItem(self.nodeMenu, "Edit Node...", self.nodeEditorTableHandler,
-                "Open a dialog to edit selected node's attributes. WIP.")
+                "Open a dialog to edit selected node's attributes.")
 
         self.nodeMenu.popup(QCursor.pos())
 
 
-    def initrenderNodeTree(self, clear=True):
+    def populateNodeTree(self, clear=True):
+        """Loads all of the Render Nodes from hydra_rendernode into the nodeTree."""
         if clear:
             self.renderNodeTree.clear()
 
@@ -718,6 +750,8 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     @staticmethod
     def formatNodeData(node):
+        """Given a hydra_rendernode record returns a list of data to be inserted
+        into the nodeTree."""
         sched = "True" if node.scheduleEnabled == 1 else "False"
         timeString = "None"
         if node.pulse:
@@ -726,57 +760,68 @@ class FarmView(QMainWindow, Ui_FarmView):
             minutes = int(total_seconds / 60 % 60)
             seconds = int(total_seconds % 60)
             timeString = "{0} Hours, {1} Mins, {2} Secs ago".format(hours, minutes, seconds)
-        return [str(node.host), niceNames[node.status], str(node.task_id),
-                str(node.software_version), sched, timeString, str(node.capabilities)]
 
-    def renderNodeTreeHandler(self):
+        nodeData = [node.host, niceNames[node.status], node.task_id,
+                    node.software_version, sched, timeString, node.capabilities]
+
+        return map(str, nodeData)
+
+    def getNodeTreeSel(self):
+        """Returns the name of each node selected in the nodeTree, None if
+        nothing is selected."""
         self.resetStatusBar()
         rows = self.renderNodeTree.selectedItems()
-        if len(rows) < 1:
+
+        if not rows:
             warningBox(self, "Selection Error",
                     "Please select something from the Render Node Table and try again.")
             return None
-        nodes = [str(item.text(0)) for item in rows]
-        logger.debug(nodes)
-        return nodes
+        else:
+            return [str(item.text(0)) for item in rows]
 
     def onlineRenderNodesHandler(self):
-        hosts = self.renderNodeTreeHandler()
+        """Onlines each node selected in the nodeTree"""
+        hosts = self.getNodeTreeSel()
         if not hosts:
-            return None
+            return
 
         choice = yesNoBox(self, "Confirm", "Are you sure you want to online"
                           " these nodes?\n" + str(hosts))
+
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
                 thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
                                                     cols=["status", "task_id", "host"])
                 thisNode.online()
-            self.initrenderNodeTree()
+            self.populateNodeTree()
 
     def offlineRenderNodesHandler(self):
-        hosts = self.renderNodeTreeHandler()
+        """Offlines each node selected in the nodeTree"""
+        hosts = self.getNodeTreeSel()
         if not hosts:
-            return None
+            return
 
         choice = yesNoBox(self, "Confirm", "Are you sure you want to offline"
                           " these nodes?\n" + str(hosts))
+
         if choice == QMessageBox.Yes:
             for renderHost in hosts:
                 thisNode = hydra_rendernode.fetch("WHERE host = %s", (renderHost,),
                                                     cols=["status", "task_id", "host"])
                 thisNode.offline()
-            self.initrenderNodeTree()
+            self.populateNodeTree()
 
     def getOffRenderNodesHandler(self):
-        hosts = self.renderNodeTreeHandler()
+        """Kills and Offlines each node selected in the nodeTree"""
+        hosts = self.getNodeTreeSel()
         if not hosts:
-            return None
+            return
 
         choice = yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
         if choice == QMessageBox.No:
-            return None
+            return
 
+        #else
         cols = ["host", "status", "task_id"]
         renderHosts = [hydra_rendernode.fetch("WHERE host = %s", (host,), cols=cols)
                         for host in hosts]
@@ -789,17 +834,17 @@ class FarmView(QMainWindow, Ui_FarmView):
             warningBox(self, "GetOff Error!",
                         "Could not get off the following hosts: {}".format(failureHosts))
 
-        self.initrenderNodeTree()
+        self.populateNodeTree()
 
     def nodeEditorTableHandler(self):
-        hosts = self.renderNodeTreeHandler()
+        """Opens the NodeEditorDialog for the selected nodes. Confirms with
+        the user before opening more than one."""
+        hosts = self.getNodeTreeSel()
         if not hosts:
             return None
         elif len(hosts) > 1:
             choice = yesNoBox(self, "Confirm", Constants.MULTINODEEDIT_STRING)
-            if choice == QMessageBox.No:
-                aboutBox(self, "Abort", "No action taken.")
-            else:
+            if choice == QMessageBox.Yes:
                 for host in hosts:
                     self.nodeEditor(host)
         else:
@@ -807,8 +852,10 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         self.doFetch()
 
-    def nodeEditor(self, nodeName):
-        thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
+    def nodeEditor(self, host_name):
+        """Given a host_name, opens the NodeEditorDialog for editing. Pushes
+        any changes made to the database."""
+        thisNode = hydra_rendernode.fetch("WHERE host = %s", (host_name,),
                                             cols=["host", "minPriority",
                                                     "capabilities",
                                                     "scheduleEnabled",
@@ -820,7 +867,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                     "scheduleEnabled" : int(thisNode.scheduleEnabled),
                     "weekSchedule" : thisNode.weekSchedule}
         edits = NodeEditorDialog.create(defaults)
-        #logger.debug(edits)
+
         if edits:
             if edits["schedEnabled"]:
                 schedEnabled = 1
@@ -829,13 +876,15 @@ class FarmView(QMainWindow, Ui_FarmView):
             query = "UPDATE hydra_rendernode SET minPriority = %s"
             query += ", scheduleEnabled = %s, capabilities = %s"
             query += " WHERE host = %s"
-            editsTuple = (edits["priority"], schedEnabled, edits["comps"], nodeName)
+            editsTuple = (edits["priority"], schedEnabled, edits["comps"], host_name)
             with transaction() as t:
                 t.cur.execute(query, editsTuple)
-            self.initrenderNodeTree()
+            self.populateNodeTree()
 
     def revealNodeDetailedHandler(self):
-        node_list = self.renderNodeTreeHandler()
+        """Opens a deatiled data dialog conataining all of the information
+        for each selected node."""
+        node_list = self.getNodeTreeSel()
         if node_list:
             if len(node_list) == 1:
                 self.revealDataTable(node_list, hydra_rendernode, "WHERE host = %s")
@@ -843,6 +892,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.revealDetailedHandler(node_list, hydra_rendernode, "WHERE host = %s")
 
     def selectByHostHandler(self):
+        """Selects hosts in the nodeTree via host name"""
         reply = strBox(self, "Select By Host Name", "Host (using * as wildcard):")
         if reply[1]:
             colCount = self.renderNodeTree.columnCount() - 1
@@ -875,7 +925,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if thisNode:
             thisNode.online()
             self.updateStatusBar(thisNode)
-            self.initrenderNodeTree()
+            self.populateNodeTree()
 
     def offlineThisNodeHandler(self):
         """Changes the local render node's status to offline if it was idle,
@@ -885,7 +935,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if thisNode:
             thisNode.offline()
             self.updateStatusBar(thisNode)
-            self.initrenderNodeTree()
+            self.populateNodeTree()
 
     def getOffThisNodeHandler(self):
         """Offlines the node and sends a message to the render node server
@@ -901,29 +951,32 @@ class FarmView(QMainWindow, Ui_FarmView):
             if not response:
                 logger.error("Could not GetOff this node!")
                 warningBox(self, "GetOff Error", "Could not GetOff this node!")
-            self.initrenderNodeTree()
+            self.populateNodeTree()
             self.updateStatusBar(thisNode)
 
     def nodeEditorHandler(self):
+        """Opens a NodeEditorDialog for this node"""
         if self.thisNodeExists:
             self.nodeEditor(self.thisNodeName)
 
     #---------------------------------------------------------------------#
     #--------------------------UPDATE HANDLERS----------------------------#
     #---------------------------------------------------------------------#
+
     def findThisNode(self):
-        allNodes = hydra_rendernode.fetch(multiReturn=True, cols=["host", "status"])
-        for node in allNodes:
-            if node.host == self.thisNodeName:
-                return node
-        #If node cannot be found
-        warningBox(self, title="Notice", msg=Constants.DOESNOTEXISTERR_STRING)
-        self.setThisNodeButtonsEnabled(False)
-        return False
+        """Makes sure this node exists in the hydra_rendernode board. Alerts
+        the user if not."""
+        thisNode = NodeUtils.getThisNodeOBJ()
+        if thisNode:
+            return thisNode
+        else:
+            warningBox(self, title="Notice", msg=Constants.DOESNOTEXISTERR_STRING)
+            self.setThisNodeButtonsEnabled(False)
+            return None
 
     def doFetch(self):
         """Aggregate method for initilizaing all of the widgets on the default tab."""
-        self.initrenderNodeTree()
+        self.populateNodeTree()
         self.populateJobTree()
         if self.thisNodeExists:
             thisNode = self.findThisNode()
@@ -948,10 +1001,10 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.populateJobTree()
             if self.currentJobSel:
                 self.loadTaskTree(self.currentJobSel)
-            self.initrenderNodeTree()
+            self.populateNodeTree()
         elif curTab == 1:
             #Recent Jobs
-            self.updateRenderJobGrid()
+            self.loadTaskGrid()
         elif curTab == 2:
             #This Node
             if self.thisNodeExists:
@@ -973,7 +1026,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.weekSchedule.setText(str(thisNode.weekSchedule))
         self.pulseLabel.setText(str(thisNode.pulse))
 
-    def updateRenderJobGrid(self):
+    def loadTaskGrid(self):
+        """Loads data into the taskGrid (Second tab in the UI)"""
         command = "WHERE archived = '0' ORDER BY id DESC LIMIT %s"
         records = hydra_jobboard.fetch(command, (self.limitSpinBox.value(),),
                                         multiReturn=True)
@@ -988,18 +1042,21 @@ class FarmView(QMainWindow, Ui_FarmView):
         setupDataGrid(records, columns, self.taskGrid)
 
     def updateStatusBar(self, thisNode=None):
+        """Updates the statusbar with the latest status on the farm"""
         with transaction() as t:
             t.cur.execute("SELECT count(status), status FROM hydra_rendernode GROUP BY status")
             counts = t.cur.fetchall()
         #logger.debug("Counts = " + str(counts))
         countString = ", ".join(["{0} {1}".format(count, niceNames[status]) for (count, status) in counts])
-        if self.thisNodeExists:
+        if thisNode:
             countString += ", {0} {1}".format(thisNode.host, niceNames[thisNode.status])
         nowTime = datetime.datetime.now().strftime("%H:%M")
         self.statusMsg = "{0} as of {1}".format(countString, nowTime)
         self.statusbar.showMessage(self.statusMsg)
 
     def resetStatusBar(self):
+        """Resets the status to the last set status. Useful after displaying
+        tips in the status bar."""
         self.statusbar.showMessage(self.statusMsg)
 
     def setThisNodeButtonsEnabled(self, choice):
@@ -1011,6 +1068,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     @staticmethod
     def doNothing():
+        """Does nothing"""
         pass
 
 #This is at the bottom for a specific reason I can't remember
