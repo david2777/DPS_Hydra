@@ -178,7 +178,7 @@ class RenderTCPServer(TCPServer):
         progressUpdateThread.terminate()
 
         #Update HydraTask and HydraJob with currentFrame, MPF, and RLTracker
-        self.progressUpdate(False)
+        self.progressUpdate(commit=False)
 
         #EndTime, ExitCode
         self.HydraTask.endTime = datetime.datetime.now()
@@ -219,8 +219,10 @@ class RenderTCPServer(TCPServer):
         logger.info("Done with render task %s", self.HydraTask.id)
 
     def progressUpdate(self, commit=True):
-        """Parse the render log file and update the databse with the last rendered
-        frame, MPF (minutes per frame) and the renderLayerTracker"""
+        """Parse the render log file and update the databse with the currently
+        rendering frame, MPF (minutes per frame) and the renderLayerTracker.
+        Optional commit can stop the data from being updated on the databse if
+        set to False."""
         if not all([self.childProcess, self.HydraTask,
                     self.HydraJob, self.logPath]):
             logger.debug("Could not update progress")
@@ -231,6 +233,9 @@ class RenderTCPServer(TCPServer):
         newCurrentFrame = HydraLogObject.getNewCurrentFrame()
         if not newCurrentFrame:
             newCurrentFrame = self.HydraTask.currentFrame
+        else:
+            #If we have a valid new currentFrame add one since it's now on the next frame
+            newCurrentFrame += 1
 
         mpf = HydraLogObject.getAverageRenderTime()
 

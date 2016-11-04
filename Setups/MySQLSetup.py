@@ -426,7 +426,6 @@ class hydra_taskboard(hydraObject):
             if sys.platform == "win32":
                 return "\\{}".format(newPath)
             else:
-                #TODO:Test this
                 return newPath
 
 class hydra_capabilities(hydraObject):

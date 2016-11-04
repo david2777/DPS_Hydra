@@ -74,11 +74,9 @@ class RenderManagementServer(TCPServer):
             renderLayers = job.renderLayers.split(",")
             renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
 
-            if all([int(x) == int(job.endFrame) for x in renderLayerTracker]):
+            if all([int(x) > int(job.endFrame) for x in renderLayerTracker]):
                 with transaction() as t:
                     t.cur.execute("UPDATE hydra_jobboard SET status = 'F' WHERE id = %s", (job.id,))
-
-
 
             if len(renderLayers) != len(renderLayerTracker):
                 logger.critical("Malformed renderLayers or renderLayerTracker on job with id %d", job.id)
@@ -99,7 +97,7 @@ class RenderManagementServer(TCPServer):
                 break
 
             for i in range(len(renderLayers)):
-                if job.endFrame != renderLayerTracker[i]:
+                if renderLayerTracker[i] <= job.endFrame:
                     if renderLayers[i] not in runningRenderLayers:
                         renderJobs.append([int(job.id), str(renderLayers[i])])
         return renderJobs
