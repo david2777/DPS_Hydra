@@ -15,6 +15,7 @@ from CompiledUI.UI_FarmView import Ui_FarmView
 from Dialogs.NodeEditorDialog import NodeEditorDialog
 from Dialogs.DetailedDialog import DetailedDialog
 from Dialogs.DataTable import DataTableDialog
+from Dialogs.TaskResetDialog import ResetDialog
 from Dialogs.MessageBoxes import *
 
 #Hydra
@@ -399,7 +400,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not jobIDs:
             return None
 
-        cols = ["id", "status", "renderLayers", "archived", "priority"]
+        cols = ["id", "status", "renderLayers", "renderLayerTracker", "archived",
+                "priority", "startFrame", "endFrame"]
         jobOBJs = [hydra_jobboard.fetch("WHERE id = %s", (jID,), cols=cols) for jID in jobIDs]
 
         #Start Job
@@ -420,17 +422,13 @@ class FarmView(QMainWindow, Ui_FarmView):
                 self.revealDetailedHandler(jobIDs, hydra_jobboard, "WHERE id = %s")
 
         #Kill or Reset
-        elif mode in ["kill", "reset"]:
-            choice = yesNoBox(self, "Confirm", "Really {0} the selected jobs?".format(mode))
+        elif mode == "kill":
+            choice = yesNoBox(self, "Confirm", "Really kill the selected jobs?")
             if choice == QMessageBox.No:
                 return None
 
-            if mode == "kill":
-                rawResponses = [job.kill() for job in jobOBJs]
-                responses = [all(res) for res in rawResponses]
-            else:
-                rawResponses = [job.reset() for job in jobOBJs]
-                responses = rawResponses
+            rawResponses = [job.kill() for job in jobOBJs]
+            responses = [all(res) for res in rawResponses]
 
             self.populateJobTree()
 
@@ -451,6 +449,35 @@ class FarmView(QMainWindow, Ui_FarmView):
 
                 logger.error(respString)
                 warningBox(self, "Job Kill Errors!", respString)
+
+        elif mode == "reset":
+            choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?\nNote that this will open a dialog for EACH selected job to be reset.")
+            if choice == QMessageBox.No:
+                return None
+
+            errList = []
+            for job in jobOBJs:
+                if job.status in [KILLED, PAUSED, READY]:
+                    data = ResetDialog.create([job.renderLayers.split(","),
+                                                    job.startFrame])
+                    response = job.reset(data)
+                else:
+                    aboutBox(self, "Warning", "Job {} could not be reset because it is running. Please kill/pause it and try again.".format(job.id))
+                if response < 0:
+                    errList.append([response, job.id])
+
+            if errList:
+                badStartFrame = [int(x[1]) for x in errList if x[0] == -1]
+                badUpdateAttr = [int(x[1]) for x in errList if x[0] == -2]
+                errStr = "The following errors occurred during the job reset:\n"
+
+                if badStartFrame:
+                    errStr += "\tIDs of jobs given start frame was higher than the job's end frame:\n\t\t{}\n".format(badStartFrame)
+
+                if badUpdateAttr:
+                    errStr += "\tIDs of jobs where an unknown error occured while trying to udpdate the attributes in the databse:\n\t\t{}".format(badUpdateAttr)
+
+                aboutBox(self, "Job Reset Errors", errStr)
 
         #Toggle Archive on Job
         elif mode in ["archive", "unarchive"]:
@@ -730,7 +757,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.nodeMenu.popup(QCursor.pos())
 
 
-    def populateNodeTree(self, clear=True):
+    def populateNodeTree(self, clear=False):
         """Loads all of the Render Nodes from hydra_rendernode into the nodeTree."""
         if clear:
             self.renderNodeTree.clear()
@@ -738,15 +765,28 @@ class FarmView(QMainWindow, Ui_FarmView):
         renderCols = ["host", "status", "task_id", "pulse", "software_version",
                         "capabilities", "scheduleEnabled"]
         renderNodes = hydra_rendernode.fetch(orderTuples=(("host", "ASC"),),
-                                            multiReturn=True,
-                                            cols=renderCols)
+                                            multiReturn=True, cols=renderCols)
+
         for node in renderNodes:
-            nodeData = self.formatNodeData(node)
+            self.addNodeTreeHost(node)
+
+    def addNodeTreeHost(self, node):
+        nodeData = self.formatNodeData(node)
+        #Search the nodeTree to see if the node already exists in the tree
+        nodeSearch = self.renderNodeTree.findItems(str(node.host), Qt.MatchExactly)
+        if nodeSearch:
+            #If the node was found, update it's information
+            nodeItem = nodeSearch[0]
+            for i in range(0, 7):
+                nodeItem.setData(i, 0, nodeData[i])
+        else:
+            #If not add it as a new item
             nodeItem = QTreeWidgetItem(self.renderNodeTree, nodeData)
-            #Formatting
-            nodeItem.setBackgroundColor(1, niceColors[node.status])
-            if node.host == self.thisNodeName:
-                nodeItem.setFont(0, QFont('Segoe UI', 8, QFont.DemiBold))
+
+        #Formatting
+        nodeItem.setBackgroundColor(1, niceColors[node.status])
+        if node.host == self.thisNodeName:
+            nodeItem.setFont(0, QFont('Segoe UI', 8, QFont.DemiBold))
 
     @staticmethod
     def formatNodeData(node):

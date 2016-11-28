@@ -52,7 +52,7 @@ def expandScheduleData(dbData):
 
 def findSchedule(dayOfWeek, dataDict):
     """Take and ISOWeekday and a dictionary from within findNextEvent and finds
-    the next event durring the given ISOWeekday and in the dataDict."""
+    the next event during the given ISOWeekday and in the dataDict."""
     schedule = None
     i = 0
     while not schedule and i < 9:

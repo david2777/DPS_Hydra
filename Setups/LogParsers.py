@@ -128,7 +128,7 @@ class RedshiftMayaLog(Log):
             return None
 
         elif len(matches) < 1:
-            logger.info("No total frame time found in %s", self.fp)
+            logger.debug("No total frame time found in %s", self.fp)
             return None
 
         line = matches[0].strip()

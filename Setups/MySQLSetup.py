@@ -309,22 +309,45 @@ class hydra_jobboard(hydraObject):
         responses += [self.updateAttr("status", statusAfterDeath)]
         return responses
 
-    def reset(self):
-        response = self.kill("U")
-        if not response:
-            logger.error("Job Kill was unsuccessful, skipping reset...")
-            return False
-        renderLayerTracker = ["0" for _ in self.renderLayers.split(",")]
-        renderLayerTracker = ",".join(renderLayerTracker)
-        with transaction() as t:
-            t.cur.execute("UPDATE hydra_jobboard SET renderLayerTracker = %s, failures = '', attempts = '0' WHERE id = %s",
-                            (renderLayerTracker, self.id))
-        return True
+    def reset(self, resetData):
+        if not resetData:
+            logger.debug("No reset data recieved")
+            return 0
+
+        resetRLs = resetData[0]
+        currentFrame = resetData[1]
+
+        if not resetData[0]:
+            logger.debug("No renderLayers to reset")
+            return 0
+
+        if currentFrame > self.endFrame:
+            logger.error("New start frame is higher than the end frame! Aboring!")
+            return -1
+
+        if currentFrame < self.startFrame:
+            logger.warning("New start frame is lower than original start frame, resetting to default.")
+            currentFrame = 0
+
+        if currentFrame == self.startFrame:
+            currentFrame = 0
+
+        idxList = [self.renderLayers.split(",").index(x) for x in resetRLs]
+        rlTracker = self.renderLayerTracker.split(",")
+        for i in idxList:
+            rlTracker[i] = str(currentFrame)
+
+        responses = []
+        responses.append(self.updateAttr("renderLayerTracker", ",".join(rlTracker)))
+        if self.status == KILLED:
+            responses.append(self.updateAttr("status", PAUSED))
+
+        return 0 if all(responses) else -2
 
     def archive(self, mode):
         """Function for archiving/unarchiveing job. Accepts binary ints, booleans,
         or case insensitive true or false strings."""
-        if isinstance(mode, int):
+        if not isinstance(mode, int):
             mode = 1 if str(mode)[0].lower() == "t" else 0
         return self.updateAttr("archived", mode)
 

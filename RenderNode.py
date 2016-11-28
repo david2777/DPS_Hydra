@@ -211,12 +211,12 @@ class RenderTCPServer(TCPServer):
 
         self.resetThisNode()
         log.close()
+        logger.info("Done with render task %s", self.HydraTask.id)
         self.childProcess = None
         self.PSUtilProc = None
         self.HydraJob = None
         self.HydraTask = None
         self.logPath = None
-        logger.info("Done with render task %s", self.HydraTask.id)
 
     def progressUpdate(self, commit=True):
         """Parse the render log file and update the databse with the currently
