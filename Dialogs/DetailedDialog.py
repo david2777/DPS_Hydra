@@ -1,5 +1,3 @@
-"""Update Me!"""
-#TODO:Switch to TreeView w/ each branching being part of selection?
 #Standard
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *

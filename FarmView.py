@@ -200,8 +200,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     @staticmethod
     def revealDetailedHandler(data_ids, sqlTable, sqlWhere):
-        """Create a dialog box with all the data from mutliple SQL record"""
-        #TODO: Add an example
+        """Create a dialog box with all the data from mutliple SQL records"""
         dataList = [sqlTable.fetch(sqlWhere, (d_id,)) for d_id in data_ids]
         DetailedDialog.create(dataList)
 
@@ -394,7 +393,6 @@ class FarmView(QMainWindow, Ui_FarmView):
     def jobActionHandler(self, mode):
         """A catch-all function for performing actions on the items selected
         in the jobTree"""
-        #TODO:Seperate?
         #pylint: disable=R0912
         jobIDs = self.getJobTreeSel()
         if not jobIDs:
@@ -433,7 +431,6 @@ class FarmView(QMainWindow, Ui_FarmView):
             self.populateJobTree()
 
             respString = "Job Kill returned the following errors:\n"
-            #TODO:Read this through again
             if not all(responses):
                 failureIDXes = [i for i, x in enumerate(responses) if not x]
                 for idx in failureIDXes:

@@ -4,7 +4,6 @@ of legacy stuff that isn't used anymore."""
 import subprocess
 
 #pylint: disable=R0903,W0613
-#TODO:Remove uneeded server variables
 
 class IsAliveQuestion(object):
     """A simple Question for checking if a server is alive"""

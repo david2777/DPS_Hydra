@@ -205,7 +205,6 @@ class RenderManagementServer(TCPServer):
     @staticmethod
     def checkOnTimeouts(timeouts, lastTimeoutCheck, nowTime):
         logger.debug("Checking on Tasks in progress with timeouts")
-        #TODO: See if this works
         if not lastTimeoutCheck:
             lastTimeoutCheck = nowTime
         nowTime = datetime.datetime.now()
