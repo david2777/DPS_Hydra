@@ -357,7 +357,7 @@
          </layout>
         </item>
         <item row="2" column="0">
-         <widget class="QLabel" name="startStatusLabel_2">
+         <widget class="QLabel" name="startStatusLabel">
           <property name="text">
            <string>Start Status:</string>
           </property>
@@ -376,7 +376,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QRadioButton" name="startStatusLabel">
+           <widget class="QRadioButton" name="pauseStatusRadioButton">
             <property name="text">
              <string>Paused</string>
             </property>
@@ -556,7 +556,7 @@
   <tabstop>projLineEdit</tabstop>
   <tabstop>projButton</tabstop>
   <tabstop>startStatusRadioButton</tabstop>
-  <tabstop>startStatusLabel</tabstop>
+  <tabstop>pauseStatusRadioButton</tabstop>
   <tabstop>prioritySpinBox</tabstop>
   <tabstop>timeoutSpinbox</tabstop>
   <tabstop>executableComboBox</tabstop>

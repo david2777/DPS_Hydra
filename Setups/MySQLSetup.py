@@ -388,6 +388,9 @@ class hydra_taskboard(hydraObject):
                             "{0}..{1}".format(self.startFrame, self.endFrame),
                             "/by", hydraJob.byFrame, "/exit"]
 
+        elif hydraJob.jobType == "BatchFile":
+            renderList = [baseCMD, taskFile]
+
         else:
             logger.error("Bad Job Type!")
             return None

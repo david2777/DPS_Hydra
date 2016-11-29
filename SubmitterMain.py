@@ -101,6 +101,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         QObject.connect(self.finalCheckBox, SIGNAL("stateChanged(int)"), self.toggleFinalBoxes)
         QObject.connect(self.sceneButton, SIGNAL("clicked()"), self.sceneButtonHandler)
         QObject.connect(self.projButton, SIGNAL("clicked()"), self.projButtonHandler)
+        self.jobTypeComboBox.currentIndexChanged.connect(self.jobTypeSwitcher)
 
     def populateReqs(self):
         #Get requirements master list from the DB
@@ -163,6 +164,11 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
     #------------------------------------------------------------------------#
 
     def submitButtonHandler(self):
+
+        #######################################################################
+        #TODO: Rework this to work with multiple job types
+        #######################################################################
+
         #Getting data in same order as JobTicket
         execName = str(self.executableComboBox.currentText())
         baseCMD = str(self.cmdLineEdit.text())
@@ -232,7 +238,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         if projectName == "":
             projectName = "UnkownProject"
 
-        phase01Status = False
+        phase01Status = True
         if self.testCheckBox.isChecked():
             logger.info("Building Phase 01")
             #Phase specific overrides
@@ -324,7 +330,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         sceneFile = self.browseFileButtonHandler(self.sceneLineEdit,
                                                 startDir,
                                                 "Find maya scene file...",
-                                                "Maya Files (*.ma *.mb);;All Files(*)")
+                                                "All Files(*);;Maya Files (*.ma *.mb);;Batch File (*.bat);;Fusion Comp (*.comp)")
         if sceneFile and str(self.niceNameLineEdit.text()) == "":
             defName = sceneFile.split("/")[-1]
             self.niceNameLineEdit.setText(defName)
@@ -362,6 +368,35 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             self.maxNodesP2SpinBox.setEnabled(False)
         else:
             self.maxNodesP2SpinBox.setEnabled(True)
+
+    def jobTypeSwitcher(self):
+        jobType = str(self.jobTypeComboBox.currentText())
+
+        #Re-enable everything
+        allWidgets = [self.renderLayersLineEdit, self.startSpinBox, self.endSpinBox,
+                        self.testFramesSpinBox, self.testCheckBox, self.finalCheckBox,
+                        self.sceneLineEdit, self.sceneButton, self.projLineEdit,
+                        self.projButton, self.executableComboBox, self.maxNodesP1SpinBox,
+                        self.maxNodesP2SpinBox]
+
+        _ = [x.setEnabled(True) for x in allWidgets]
+
+        #Disable anything we don't want
+        batchDisable = [self.renderLayersLineEdit, self.startSpinBox, self.endSpinBox,
+                        self.testFramesSpinBox, self.testCheckBox, self.finalCheckBox,
+                        self.projLineEdit, self.projButton, self.executableComboBox,
+                        self.maxNodesP2SpinBox]
+
+        fusionDisable = [self.renderLayersLineEdit, self.testFramesSpinBox, self.testCheckBox,
+                            self.finalCheckBox, self.executableComboBox, self.maxNodesP2SpinBox,
+                            self.projLineEdit, self.projButton]
+
+        if jobType == "BatchFile":
+            _ = [x.setEnabled(False) for x in batchDisable]
+
+        elif jobType == "FusionComp":
+            _ = [x.setEnabled(False) for x in fusionDisable]
+
     #------------------------------------------------------------------------#
     #----------------------------Get/Modify Data-----------------------------#
     #------------------------------------------------------------------------#

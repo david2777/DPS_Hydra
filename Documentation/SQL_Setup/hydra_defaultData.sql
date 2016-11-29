@@ -41,7 +41,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `hydra_jobtypes` WRITE;
 /*!40000 ALTER TABLE `hydra_jobtypes` DISABLE KEYS */;
-INSERT INTO `hydra_jobtypes` VALUES ('FusionComp'),('MentalRayRender'),('RedshiftRender');
+INSERT INTO `hydra_jobtypes` VALUES ('FusionComp'),('MentalRayRender'),('RedshiftRender'),('BatchFile');
 /*!40000 ALTER TABLE `hydra_jobtypes` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
