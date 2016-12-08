@@ -681,7 +681,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             response = yesNoBox(self, "Confirm", "Are you sure you want to kill these tasks: {}".format(taskIDs))
             if response == QMessageBox.No:
                 return None
-            cols = ["id", "status", "exitCode", "endTime"]
+            cols = ["id", "status", "exitCode", "endTime", "host"]
             taskOBJs = [hydra_taskboard.fetch("WHERE id = %s", (t,), cols=cols)
                         for t in taskIDs]
             responses = [task.kill() for task in taskOBJs]

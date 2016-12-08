@@ -302,7 +302,7 @@ class hydra_jobboard(hydraObject):
 
     def kill(self, statusAfterDeath="K", TCPKill=True):
         subTasks = hydra_taskboard.fetch("WHERE job_id = %s AND status = 'S'", (self.id,),
-                                        cols=["id", "status", "exitCode", "endTime"],
+                                        cols=["id", "status", "exitCode", "endTime", "host"],
                                         multiReturn=True)
         responses = [task.kill(statusAfterDeath, TCPKill) for task in subTasks]
 
@@ -384,9 +384,9 @@ class hydra_taskboard(hydraObject):
         elif hydraJob.jobType == "FusionComp":
             renderList = [execsDict[hydraJob.execName], taskFile]
             renderList += baseCMD
-            renderList += ["/render", "/frames",
+            renderList += ["/render", "/quiet", "/frames",
                             "{0}..{1}".format(self.startFrame, self.endFrame),
-                            "/by", hydraJob.byFrame, "/exit"]
+                            "/by", hydraJob.byFrame, "/exit", "/log TestLog.txt", "/verbose"]
 
         elif hydraJob.jobType == "BatchFile":
             renderList = [baseCMD, taskFile]
