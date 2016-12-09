@@ -1,0 +1,59 @@
+Hydra log file C:\Hydra\logs\render\0000000014.log.txt on Purple
+RenderNode is ['C:\\Users\\DPSPurple\\Documents\\GitHub\\DPS_Hydra\\RenderNodeMain.py']
+Command: ['C:/Program Files/Autodesk/maya2015/bin/render.exe', '-r', 'redshift', '-cam', 'Anim:shotCamShape', '-rd', 'C:/Users/DPSPurple/Desktop/testFrames', '-proj', '//zed/lego/', '-x', '960', '-y', '540', '-s', '101', '-e', '159', '-b', '2', '-rl', 'Beauty', '"//zed/Lego/LEGOSWInstore/1HY17/Constraction_1HY17/Animation/seq_010/shot_010_0040/maya/lighting/Constraction_1HY17_shot_010_0040_lit.0001.ma"']
+
+[Redshift] Redshift for Maya 2015
+[Redshift] Version 2.0.67, Oct 20 2016
+[Redshift] Rendering layer 'Beauty', frame 101 (1/30)
+[Redshift] Scene translation time: 51.25s
+[Redshift] License for redshift-core 2017.04 (permanent)
+[Redshift] Rendering time: 33.6s (2 GPU(s) used)
+[Redshift] Saved file 'C:\Users\DPSPurple\Desktop\testFrames\Beauty\Beauty.101.exr' in 0.11s
+[Redshift] Frame done - total time for layer 'Beauty', frame 101 (1/30): 1m:25s
+[Redshift] Rendering layer 'Beauty', frame 103 (2/30)
+[Redshift] Scene translation time: 45.34s
+[Redshift] License for redshift-core 2017.04 (permanent)
+[Redshift] Rendering time: 31.3s (2 GPU(s) used)
+[Redshift] Saved file 'C:\Users\DPSPurple\Desktop\testFrames\Beauty\Beauty.103.exr' in 0.11s
+[Redshift] Frame done - total time for layer 'Beauty', frame 103 (2/30): 1m:16s
+[Redshift] Rendering layer 'Beauty', frame 105 (3/30)
+[Redshift] Scene translation time: 31.70s
+[Redshift] License for redshift-core 2017.04 (permanent)
+[Redshift] Rendering time: 34.1s (2 GPU(s) used)
+[Redshift] Saved file 'C:\Users\DPSPurple\Desktop\testFrames\Beauty\Beauty.105.exr' in 0.11s
+[Redshift] Frame done - total time for layer 'Beauty', frame 105 (3/30): 1m:5s
+[Redshift] Rendering layer 'Beauty', frame 107 (4/30)
+[Redshift] Scene translation time: 14.58s
+[Redshift] License for redshift-core 2017.04 (permanent)
+[Redshift] Rendering time: 30.6s (2 GPU(s) used)
+[Redshift] Saved file 'C:\Users\DPSPurple\Desktop\testFrames\Beauty\Beauty.107.exr' in 0.10s
+[Redshift] Frame done - total time for layer 'Beauty', frame 107 (4/30): 45.33s
+[Redshift] Rendering layer 'Beauty', frame 109 (5/30)
+[Redshift] Scene translation time: 19.69s
+[Redshift] License for redshift-core 2017.04 (permanent)
+[Redshift] Rendering time: 31.9s (2 GPU(s) used)
+[Redshift] Saved file 'C:\Users\DPSPurple\Desktop\testFrames\Beauty\Beauty.109.exr' in 0.10s
+[Redshift] Frame done - total time for layer 'Beauty', frame 109 (5/30): 51.77s
+[Redshift] Rendering layer 'Beauty', frame 111 (6/30)
+[Redshift] Scene translation time: 14.14s
+[Redshift] License for redshift-core 2017.04 (permanent)
+[Redshift] Rendering time: 29.0s (2 GPU(s) used)
+[Redshift] Saved file 'C:\Users\DPSPurple\Desktop\testFrames\Beauty\Beauty.111.exr' in 0.10s
+[Redshift] Frame done - total time for layer 'Beauty', frame 111 (6/30): 43.30s
+[Redshift] Rendering layer 'Beauty', frame 113 (7/30)
+[Redshift] Scene translation time: 20.39s
+[Redshift] License for redshift-core 2017.04 (permanent)
+[Redshift] Rendering time: 29.7s (2 GPU(s) used)
+[Redshift] Saved file 'C:\Users\DPSPurple\Desktop\testFrames\Beauty\Beauty.113.exr' in 0.10s
+[Redshift] Frame done - total time for layer 'Beauty', frame 113 (7/30): 50.32s
+[Redshift] Rendering layer 'Beauty', frame 115 (8/30)
+[Redshift] Scene translation time: 14.22s
+[Redshift] License for redshift-core 2017.04 (permanent)
+[Redshift] Rendering time: 29.1s (2 GPU(s) used)
+[Redshift] Saved file 'C:\Users\DPSPurple\Desktop\testFrames\Beauty\Beauty.115.exr' in 0.10s
+[Redshift] Frame done - total time for layer 'Beauty', frame 115 (8/30): 43.48s
+[Redshift] Rendering layer 'Beauty', frame 117 (9/30)
+[Redshift] Scene translation time: 15.09s
+[Redshift] License for redshift-core 2017.04 (permanent)
+
+Process exited with code 0 at 2016-12-09 11:24:53 on Purple

@@ -25,7 +25,7 @@ except AttributeError:
 class Ui_taskResetDialog(object):
     def setupUi(self, taskResetDialog):
         taskResetDialog.setObjectName(_fromUtf8("taskResetDialog"))
-        taskResetDialog.resize(345, 291)
+        taskResetDialog.resize(345, 309)
         self.formLayout_2 = QtGui.QFormLayout(taskResetDialog)
         self.formLayout_2.setFieldGrowthPolicy(QtGui.QFormLayout.AllNonFixedFieldsGrow)
         self.formLayout_2.setObjectName(_fromUtf8("formLayout_2"))
@@ -56,6 +56,10 @@ class Ui_taskResetDialog(object):
         self.frameRangeLabel = QtGui.QLabel(taskResetDialog)
         self.frameRangeLabel.setObjectName(_fromUtf8("frameRangeLabel"))
         self.formLayout_2.setWidget(2, QtGui.QFormLayout.LabelRole, self.frameRangeLabel)
+        self.resetNodeCheckbox = QtGui.QCheckBox(taskResetDialog)
+        self.resetNodeCheckbox.setChecked(True)
+        self.resetNodeCheckbox.setObjectName(_fromUtf8("resetNodeCheckbox"))
+        self.formLayout_2.setWidget(3, QtGui.QFormLayout.FieldRole, self.resetNodeCheckbox)
 
         self.retranslateUi(taskResetDialog)
         QtCore.QMetaObject.connectSlotsByName(taskResetDialog)
@@ -66,6 +70,7 @@ class Ui_taskResetDialog(object):
         self.cancelButton.setText(_translate("taskResetDialog", "Cancel", None))
         self.renderLayerLabel.setText(_translate("taskResetDialog", "Render Layers:", None))
         self.frameRangeLabel.setText(_translate("taskResetDialog", "Start Frame:", None))
+        self.resetNodeCheckbox.setText(_translate("taskResetDialog", "Reset Crashed Nodes", None))
 
 
 if __name__ == "__main__":

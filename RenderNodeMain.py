@@ -41,6 +41,11 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.thisNode = NodeUtils.getThisNodeOBJ()
         self.isVisable = True
 
+        self.pulseThreadStatus = False
+        self.renderServerStatus = False
+        self.schedThreadStatus = False
+        self.autoUpdateStatus = False
+
         if not self.thisNode:
             self.offlineButton.setEnabled(False)
             self.getoffButton.setEnabled(False)
@@ -253,11 +258,6 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
     def startupServers(self):
         logger.debug("Firing up main threads")
-        #Startup Pulse thread
-        self.pulseThreadStatus = False
-        self.renderServerStatus = False
-        self.schedThreadStatus = False
-
         #Start Render Server
         self.renderServer = RenderNode.RenderTCPServer()
         self.renderServerStatus = True

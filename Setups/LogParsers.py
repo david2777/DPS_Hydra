@@ -45,7 +45,7 @@ class Log(object):
         if not self.filteredLines:
             self.filterLines()
 
-        if len(self.filteredLines) < 1:
+        if not self.filteredLines:
             return None
 
         reg = re.compile(self.savedFileRegex)
@@ -88,7 +88,7 @@ class RedshiftMayaLog(Log):
         if not self.filteredLines:
             self.filterLines()
 
-        if len(self.filteredLines) < 1:
+        if not self.filteredLines:
             return None
 
         reg = re.compile(r"Rendering time: .*\n*")
@@ -100,6 +100,7 @@ class RedshiftMayaLog(Log):
         timeMatches = []
         for line in matches:
             tm = reg.findall(line)
+            #Needs to be modified to look for SS.MS when render time is less than 1M
             if returnDateTime:
                 timeDict = {x[-1] : int(x[:-1]) for x in tm}
                 s = timeDict["s"] if "s" in timeDict.keys() else 0
@@ -115,7 +116,7 @@ class RedshiftMayaLog(Log):
         if not self.filteredLines:
             self.filterLines()
 
-        if len(self.filteredLines) < 1:
+        if not self.filteredLines:
             return None
 
         reg = re.compile(r"total time for \d+ frames:.*")
@@ -127,7 +128,7 @@ class RedshiftMayaLog(Log):
             logger.critical("More than one total time found in %s", self.fp)
             return None
 
-        elif len(matches) < 1:
+        elif not matches:
             logger.debug("No total frame time found in %s", self.fp)
             return None
 
@@ -154,7 +155,7 @@ class RedshiftMayaLog(Log):
         if not self.filteredLines:
             self.filterLines()
 
-        if len(self.filteredLines) < 1:
+        if not self.filteredLines:
             return None
 
         reg = re.compile(r"total time for (\d+) frames:.*")
@@ -166,7 +167,7 @@ class RedshiftMayaLog(Log):
             logger.critical("More than one total time found in %s", self.fp)
             return None
 
-        elif len(matches) < 1:
+        elif not matches:
             matches = [max(self.getSavedFrameNumbers())]
 
         return int(matches[0])
@@ -202,7 +203,7 @@ class MentalRayMayaLog(Log):
         if not self.filteredLines:
             self.filterLines()
 
-        if len(self.filteredLines) < 1:
+        if not self.filteredLines:
             return None
 
         reg = re.compile(r"wallclock  (\d:\d{2}:\d{2}.\d{2})")
@@ -212,7 +213,7 @@ class MentalRayMayaLog(Log):
 
         frameCount = self.getTotalFrameCount()
 
-        if len(matches) < 1 or len(frameCount) < 1:
+        if not matches or len(frameCount) < 1:
             return None
 
         clockPerFrame = len(matches) / frameCount
@@ -268,7 +269,7 @@ class FusionCompLog(Log):
         if not self.filteredLines:
             self.filterLines()
 
-        if len(self.filteredLines) < 1:
+        if not self.filteredLines:
             return None
 
         reg = re.compile(r"Average: (\d*.\d*) ")
@@ -283,7 +284,7 @@ class FusionCompLog(Log):
         if not self.filteredLines:
             self.filterLines()
 
-        if len(self.filteredLines) < 1:
+        if not self.filteredLines:
             return None
 
         reg = re.compile(r"Total Time: (\d*h) (\d*m) (\d*.\d*s),")

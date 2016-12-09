@@ -10,9 +10,6 @@ from Setups.LoggingSetup import logger
 class Server(object):
     allThreads = {}
     def createIdleLoop(self, threadName, targetFunction, interval=None):
-        #self.targetFunction = targetFunction
-        #self.interval = interval
-        #self.threadName = threadName
         stopEvent = threading.Event()
         self.allThreads[threadName] = stopEvent
         threadOBJ = threading.Thread(target=self.tgt, name=threadName,
@@ -32,7 +29,7 @@ class Server(object):
 
     def shutdown(self):
         for threadName, stopEvent in self.allThreads.iteritems():
-            logger.info("Killing %s Thread...", threadName)
+            logger.debug("Killing %s Thread...", threadName)
             stopEvent.set()
 
 class TCPServer(Server):
@@ -40,12 +37,11 @@ class TCPServer(Server):
         HydraTCPHandler.TCPserver = self
         logger.debug("Open TCPServer Socket @ Port %s", port)
         self.serverObject = MySocketServer(("", port), HydraTCPHandler)
-        self.serverThread = self.createIdleLoop("TCP_Server_Thread",
-                                                self.serverObject.serve_forever)
+        self.createIdleLoop("TCP_Server_Thread", self.serverObject.serve_forever)
 
     def shutdown(self):
-        self.serverObject.shutdown()
         Server.shutdown(self)
+        self.serverObject.shutdown()
 
 class MySocketServer(SocketServer.TCPServer):
     allow_reuse_address = True

@@ -169,10 +169,11 @@ class RenderTCPServer(TCPServer):
         #Wait for task to finish
         self.childProcess.communicate()
 
-        #Record the results
+        #Get Exit Code, Record the results
+        self.HydraTask.exitCode = self.childProcess.returncode if self.childProcess else 1234
         logString = "\nProcess exited with code {0} at {1} on {2}\n"
         nowTime = datetime.datetime.now().replace(microsecond=0)
-        log.write(logString.format(self.childProcess.returncode, nowTime,
+        log.write(logString.format(self.HydraTask.exitCode, nowTime,
                                     self.thisNode.host))
 
         progressUpdateThread.terminate()
@@ -180,9 +181,8 @@ class RenderTCPServer(TCPServer):
         #Update HydraTask and HydraJob with currentFrame, MPF, and RLTracker
         self.progressUpdate(commit=False)
 
-        #EndTime, ExitCode
+        #EndTime
         self.HydraTask.endTime = datetime.datetime.now()
-        self.HydraTask.exitCode = self.childProcess.returncode if self.childProcess else 1
 
         #Status, Attempts. Failures
         if self.childKilled == 1:

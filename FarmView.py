@@ -448,18 +448,20 @@ class FarmView(QMainWindow, Ui_FarmView):
                 warningBox(self, "Job Kill Errors!", respString)
 
         elif mode == "reset":
-            choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?\nNote that this will open a dialog for EACH selected job to be reset.")
-            if choice == QMessageBox.No:
-                return None
+            if len(jobOBJs) > 1:
+                choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?\nNote that this will open a dialog for EACH selected job to be reset.")
+                if choice == QMessageBox.No:
+                    return None
 
             errList = []
             for job in jobOBJs:
-                if job.status in [KILLED, PAUSED, READY]:
+                if job.status in [KILLED, PAUSED, READY, FINISHED]:
                     data = ResetDialog.create([job.renderLayers.split(","),
                                                     job.startFrame])
                     response = job.reset(data)
                 else:
                     aboutBox(self, "Warning", "Job {} could not be reset because it is running. Please kill/pause it and try again.".format(job.id))
+                    response = 1
                 if response < 0:
                     errList.append([response, job.id])
 

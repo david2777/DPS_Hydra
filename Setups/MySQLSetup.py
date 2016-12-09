@@ -415,26 +415,34 @@ class hydra_taskboard(hydraObject):
 
     def kill(self, statusAfterDeath="K", TCPKill=True):
         if self.status == STARTED:
-            killed = None
+            killed = False
+            updateNode = True
+            node = hydra_rendernode.fetch("WHERE host = %s", (self.host,),
+                                            cols=["status", "task_id"])
+
             if TCPKill:
-                killed = self.sendKillQuestion(statusAfterDeath)
-                #If killed returns None then the node is probably offline
-                if killed:
-                    return True if killed > 0 else False
+                if node.task_id != self.id:
+                    logger.warning("Node is not running the given task! Marking as dead.")
+                    updateNode = False
+
+                else:
+                    killed = self.sendKillQuestion(statusAfterDeath)
+                    #If killed returns None then the node is probably offline
+                    if killed:
+                        return True if killed > 0 else False
 
             #If it was not killed by the node then we need to mark it as dead here instead
             if not killed:
                 logger.debug("TCPKill recived None, marking task as killed")
-                node = hydra_rendernode.fetch("WHERE host = %s", (self.host,),
-                                                cols=["status", "task_id"])
-                node.status = IDLE if node.status == STARTED else OFFLINE
-                node.task_id = None
                 self.status = statusAfterDeath
                 self.exitCode = 1
                 self.endTime = datetime.datetime.now()
                 with transaction() as t:
                     self.update(t)
-                    node.update(t)
+                    if updateNode:
+                        node.status = IDLE if node.status == STARTED else OFFLINE
+                        node.task_id = None
+                        node.update(t)
                 return True
         else:
             logger.debug("Task Kill is skipping task %s because of status %s", self.id, self.status)
