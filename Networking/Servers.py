@@ -10,23 +10,25 @@ from Setups.LoggingSetup import logger
 class Server(object):
     allThreads = {}
     def createIdleLoop(self, threadName, targetFunction, interval=None):
-        self.targetFunction = targetFunction
-        self.interval = interval
-        self.threadName = threadName
-        self.stopEvent = threading.Event()
-        self.allThreads[threadName] = self.stopEvent
-        self.threadOBJ = threading.Thread(target=self.tgt, name=self.threadName)
-        self.threadOBJ.deamon = True
-        self.threadOBJ.start()
+        #self.targetFunction = targetFunction
+        #self.interval = interval
+        #self.threadName = threadName
+        stopEvent = threading.Event()
+        self.allThreads[threadName] = stopEvent
+        threadOBJ = threading.Thread(target=self.tgt, name=threadName,
+                                        args=(targetFunction, interval, stopEvent))
+        threadOBJ.deamon = True
+        threadOBJ.start()
 
-    def tgt(self):
-        if self.interval:
-            while not self.stopEvent.is_set():
-                self.targetFunction()
-                self.stopEvent.wait(self.interval)
+    @staticmethod
+    def tgt(targetFunction, interval, stopEvent):
+        if interval:
+            while not stopEvent.is_set():
+                targetFunction()
+                stopEvent.wait(interval)
         else:
-            while not self.stopEvent.is_set():
-                self.targetFunction()
+            while not stopEvent.is_set():
+                targetFunction()
 
     def shutdown(self):
         for threadName, stopEvent in self.allThreads.iteritems():
