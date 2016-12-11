@@ -84,6 +84,26 @@ class RedshiftMayaLog(Log):
     filterRegex = r"\[Redshift\]\s.*[\r\n]"
     savedFileRegex = r"Saved file '(.*)'"
 
+    @staticmethod
+    def getRsRenderTimeMatch(line):
+        secReg = re.compile(r"(\d+\.\d+s)")
+        minReg = re.compile(r"(\d+[hms])")
+        secCheck = secReg.findall(line)
+        if secCheck:
+            s = int(float(secCheck[0][:-1]))
+            m = 0
+            h = 0
+        else:
+            tm = minReg.findall(line)
+            #print tm
+            timeDict = {x[-1] : int(x[:-1]) for x in tm}
+            #print timeDict
+            s = timeDict["s"] if "s" in timeDict.keys() else 0
+            m = timeDict["m"] if "m" in timeDict.keys() else 0
+            h = timeDict["h"] if "h" in timeDict.keys() else 0
+
+        return [h, m, s]
+
     def getEachFrameRenderTime(self, returnDateTime=True):
         if not self.filteredLines:
             self.filterLines()
@@ -91,21 +111,16 @@ class RedshiftMayaLog(Log):
         if not self.filteredLines:
             return None
 
-        reg = re.compile(r"Rendering time: .*\n*")
+        reg = re.compile(r"Frame done - total time for layer.*\n*")
         matches = []
         for line in self.filteredLines:
             matches += reg.findall(line)
 
-        reg = re.compile(r"(\d+[hms])")
+
         timeMatches = []
         for line in matches:
-            tm = reg.findall(line)
-            #Needs to be modified to look for SS.MS when render time is less than 1M
+            h, m, s = self.getRsRenderTimeMatch(line)
             if returnDateTime:
-                timeDict = {x[-1] : int(x[:-1]) for x in tm}
-                s = timeDict["s"] if "s" in timeDict.keys() else 0
-                m = timeDict["m"] if "m" in timeDict.keys() else 0
-                h = timeDict["h"] if "h" in timeDict.keys() else 0
                 timeMatches.append(datetime.timedelta(hours=h, minutes=m, seconds=s))
             else:
                 timeMatches.append(str(datetime.timedelta(hours=h, minutes=m, seconds=s)))
@@ -134,22 +149,18 @@ class RedshiftMayaLog(Log):
 
         line = matches[0].strip()
 
-        reg = re.compile(r"(\d+[hms])")
-        tm = reg.findall(line)
-        #pylint: disable=R0204
-        if returnDateTime:
-            timeDict = {x[-1] : int(x[:-1]) for x in tm}
-            s = timeDict["s"] if "s" in timeDict.keys() else 0
-            m = timeDict["m"] if "m" in timeDict.keys() else 0
-            h = timeDict["h"] if "h" in timeDict.keys() else 0
-            if h > 24:
-                logger.critical("Critical! Log Parser is not setup to handle times longer than 24 hours yet...")
-                return None
-            totalTime = datetime.timedelta(hours=h, minutes=m, seconds=s)
-        else:
-            totalTime = ":".join(tm)
+        h, m, s = self.getRsRenderTimeMatch(line)
 
-        return totalTime
+        if h > 24:
+            logger.critical("Critical! Log Parser is not setup to handle times longer than 24 hours yet...")
+            return None
+
+        totalTime = datetime.timedelta(hours=h, minutes=m, seconds=s)
+
+        if returnDateTime:
+            return totalTime
+        else:
+            return str(totalTime)
 
     def getTotalFrameCount(self):
         if not self.filteredLines:
