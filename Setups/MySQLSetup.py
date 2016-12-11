@@ -316,31 +316,33 @@ class hydra_jobboard(hydraObject):
 
         resetRLs = resetData[0]
         currentFrame = resetData[1]
-
-        if not resetData[0]:
-            logger.debug("No renderLayers to reset")
-            return 0
-
-        if currentFrame > self.endFrame:
-            logger.error("New start frame is higher than the end frame! Aboring!")
-            return -1
-
-        if currentFrame < self.startFrame:
-            logger.warning("New start frame is lower than original start frame, resetting to default.")
-            currentFrame = 0
-
-        if currentFrame == self.startFrame:
-            currentFrame = 0
-
-        idxList = [self.renderLayers.split(",").index(x) for x in resetRLs]
-        rlTracker = self.renderLayerTracker.split(",")
-        for i in idxList:
-            rlTracker[i] = str(currentFrame)
-
+        nodeReset = resetData[2]
         responses = []
-        responses.append(self.updateAttr("renderLayerTracker", ",".join(rlTracker)))
-        if self.status == KILLED:
-            responses.append(self.updateAttr("status", PAUSED))
+
+        if nodeReset:
+            responses.append(self.updateAttr("failures", ""))
+            responses.append(self.updateAttr("attempts", 0))
+
+        if resetRLs:
+            if currentFrame > self.endFrame:
+                logger.error("New start frame is higher than the end frame! Aboring!")
+                return -1
+
+            if currentFrame < self.startFrame:
+                logger.warning("New start frame is lower than original start frame, resetting to default.")
+                currentFrame = 0
+
+            if currentFrame == self.startFrame:
+                currentFrame = 0
+
+            idxList = [self.renderLayers.split(",").index(x) for x in resetRLs]
+            rlTracker = self.renderLayerTracker.split(",")
+            for i in idxList:
+                rlTracker[i] = str(currentFrame)
+
+            responses.append(self.updateAttr("renderLayerTracker", ",".join(rlTracker)))
+            if self.status == KILLED:
+                responses.append(self.updateAttr("status", PAUSED))
 
         return 0 if all(responses) else -2
 

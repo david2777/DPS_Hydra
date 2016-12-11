@@ -399,7 +399,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             return None
 
         cols = ["id", "status", "renderLayers", "renderLayerTracker", "archived",
-                "priority", "startFrame", "endFrame"]
+                "priority", "startFrame", "endFrame", "failures", "attempts"]
         jobOBJs = [hydra_jobboard.fetch("WHERE id = %s", (jID,), cols=cols) for jID in jobIDs]
 
         #Start Job
@@ -419,7 +419,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             else:
                 self.revealDetailedHandler(jobIDs, hydra_jobboard, "WHERE id = %s")
 
-        #Kill or Reset
+        #Kill
         elif mode == "kill":
             choice = yesNoBox(self, "Confirm", "Really kill the selected jobs?")
             if choice == QMessageBox.No:
@@ -447,6 +447,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 logger.error(respString)
                 warningBox(self, "Job Kill Errors!", respString)
 
+        #Reset
         elif mode == "reset":
             if len(jobOBJs) > 1:
                 choice = yesNoBox(self, "Confirm", "Really reset the selected jobs?\nNote that this will open a dialog for EACH selected job to be reset.")

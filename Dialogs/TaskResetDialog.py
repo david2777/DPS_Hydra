@@ -18,6 +18,7 @@ class ResetDialog(QDialog, Ui_taskResetDialog):
         #Connect Buttons
         self.okButton.clicked.connect(self.okButtonHandler)
         self.cancelButton.clicked.connect(self.cancelButtonHandler)
+        self.renderLayersCheckbox.stateChanged.connect(self.renderLayersCbxHandler)
 
         self.populateData()
 
@@ -27,6 +28,14 @@ class ResetDialog(QDialog, Ui_taskResetDialog):
         dialog.exec_()
         if dialog.save:
             return dialog.getValues()
+
+    def renderLayersCbxHandler(self):
+        if self.renderLayersCheckbox.isChecked():
+            self.renderLayerListWidget.setEnabled(True)
+            self.startFrameSpinbox.setEnabled(True)
+        else:
+            self.renderLayerListWidget.setEnabled(False)
+            self.startFrameSpinbox.setEnabled(False)
 
     def populateData(self):
         renderLayers = self.data[0]
@@ -38,9 +47,15 @@ class ResetDialog(QDialog, Ui_taskResetDialog):
         self.startFrameSpinbox.setValue(startFrame)
 
     def getValues(self):
-        selectedLayers = [str(item.text()) for item in self.renderLayerListWidget.selectedItems()]
-        startFrame = self.startFrameSpinbox.value()
-        return [selectedLayers, startFrame]
+        if not bool(self.renderLayersCheckbox.isChecked()):
+            selectedLayers = []
+            startFrame = 0
+        else:
+            selectedLayers = [str(item.text()) for item in self.renderLayerListWidget.selectedItems()]
+            startFrame = self.startFrameSpinbox.value()
+
+        resetNode = bool(self.resetNodeCheckbox.isChecked())
+        return [selectedLayers, startFrame, resetNode]
 
     def okButtonHandler(self):
         self.save = True
