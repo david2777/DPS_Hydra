@@ -33,8 +33,9 @@ class RenderManagementServer(TCPServer):
     def processRenderTasks(self):
         logger.debug("Processing Render Tasks")
         #Fetch all Jobs
-        jobList = hydra_jobboard.fetch("WHERE archived = 0 AND status IN ('R','S','X')", multiReturn=True)
+        jobList = hydra_jobboard.fetch("WHERE archived = 0 AND status IN ('R','S')", multiReturn=True)
         self.allJobs = {x.id : x for x in jobList}
+        self.updateJobStatuses(self.allJobs)
 
         taskList = hydra_taskboard.fetch("WHERE status = 'S'", multiReturn=True)
         self.runningTasks = defaultdict(list)
@@ -74,10 +75,6 @@ class RenderManagementServer(TCPServer):
             renderLayers = job.renderLayers.split(",")
             renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
 
-            if all([int(x) > int(job.endFrame) for x in renderLayerTracker]):
-                with transaction() as t:
-                    t.cur.execute("UPDATE hydra_jobboard SET status = 'F' WHERE id = %s", (job.id,))
-
             if len(renderLayers) != len(renderLayerTracker):
                 logger.critical("Malformed renderLayers or renderLayerTracker on job with id %d", job.id)
                 with transaction() as t:
@@ -85,6 +82,7 @@ class RenderManagementServer(TCPServer):
                 break
 
             runningRenderLayers = [x.renderLayer for x in self.runningTasks[int(job.id)]]
+
             if job.maxNodes > 0 and len(runningRenderLayers) > 0:
                 if len(runningRenderLayers) >= int(job.maxNodes):
                     logger.debug("Skipping job %d because it is over node limit", job.id)
@@ -100,7 +98,36 @@ class RenderManagementServer(TCPServer):
                 if renderLayerTracker[i] <= job.endFrame:
                     if renderLayers[i] not in runningRenderLayers:
                         renderJobs.append([int(job.id), str(renderLayers[i])])
+
         return renderJobs
+
+    @staticmethod
+    def updateJobStatuses(allJobs):
+        updateList = []
+        for job in allJobs.values():
+            renderLayerTracker = [int(x) for x in job.renderLayerTracker.split(",")]
+
+            tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job.id,), multiReturn=True,
+                                            cols=["id", "status"])
+
+            statusList = [t.status for t in tasks]
+            #If one task is started and job is not listed as started, call job started
+            if STARTED in statusList and job.status != STARTED:
+                updateList.append([int(job.id), STARTED])
+
+            #Elif all of the RlTrackers are above the job end frame, job is finished
+            elif all([int(x) > int(job.endFrame) for x in renderLayerTracker]):
+                updateList.append([int(job.id), FINISHED])
+
+            #Else if it says it's started it's probably just waiting so mark as ready
+            elif job.status == STARTED:
+                updateList.append([int(job.id), READY])
+
+        for job_id, status in updateList:
+            with transaction() as t:
+                t.cur.execute("UPDATE hydra_jobboard SET status = %s WHERE id = %s",
+                                (status, job_id))
+
 
     @staticmethod
     def checkNodeStatus(idleNodes):

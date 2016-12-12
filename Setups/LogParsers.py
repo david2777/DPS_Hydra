@@ -12,6 +12,8 @@ def getLog(hydraJob, logPath):
         return RedshiftMayaLog(logPath)
     elif jobType == "MentalRayRender":
         return MentalRayMayaLog(logPath)
+    elif jobType == "FusionComp":
+        return FusionCompLog(logPath)
     else:
         return None
 

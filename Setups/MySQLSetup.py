@@ -31,7 +31,6 @@ KILLED = 'K'                #Job was killed
 ERROR = 'E'                 #Job returned a non-zero exit code
 CRASHED = 'C'               #Machine or server software crashed, task was found in host's DB record upon restart
 TIMEOUT = 'T'               #Job took longer than the timeout time allowed
-RESET = 'X'
 
 #Statuses for render nodes
 IDLE = 'I'                  #Ready to accept jobs
@@ -46,7 +45,6 @@ niceNames = {STARTED: 'Started',
             ERROR: 'Error',
             CRASHED: 'Crashed',
             TIMEOUT: "Timed Out",
-            RESET: 'Reset',
             IDLE: 'Idle',
             OFFLINE: 'Offline',
             PENDING: 'Pending',
@@ -369,8 +367,9 @@ class hydra_taskboard(hydraObject):
 
         #Not sure if Maya for Linux or Maya 2016 thing but one of the two is
         #   is appending quotes on the file cmd and messing everything up
+        taskFile = os.path.abspath(hydraJob.taskFile)
         if platform == "win32":
-            taskFile = "\"{0}\"".format(hydraJob.taskFile)
+            taskFile = "\"{0}\"".format(taskFile)
         else:
             taskFile = hydraJob.taskFile
 
@@ -391,7 +390,7 @@ class hydra_taskboard(hydraObject):
                             "/by", hydraJob.byFrame, "/exit", "/log TestLog.txt", "/verbose"]
 
         elif hydraJob.jobType == "BatchFile":
-            renderList = [baseCMD, taskFile]
+            renderList = [taskFile, baseCMD]
 
         else:
             logger.error("Bad Job Type!")

@@ -1120,7 +1120,6 @@ niceColors = {PAUSED: QColor(240,230,200),      #Light Orange
              CRASHED: QColor(220,90,90),        #Dark Red
              STARTED: QColor(200,220,240),      #Light Blue
              ERROR: QColor(220,90,90),          #Red
-             RESET: QColor(240,230,200),      #Light Orange
              IDLE: QColor(255,255,255),         #White
              OFFLINE: QColor(240,240,240),      #Gray
              PENDING: QColor(240,230,200),      #Orange

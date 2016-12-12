@@ -83,17 +83,14 @@ class RenderTCPServer(TCPServer):
         #self.thisNode will be updated in in init statement
         if self.thisNode.task_id:
             logger.info("Rouge task discovered. Unsticking...")
-
             self.HydraTask = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,),
                                             cols=["id", "job_id", "renderLayer",
                                                     "status", "exitCode",
                                                     "endTime", "host",
-                                                    "currentFrame"],
-                                            multiReturn=False)
-
+                                                    "currentFrame"])
             self.HydraJob = hydra_jobboard.fetch("WHERE id = %s", (self.HydraTask.job_id,),
-                                            cols=["jobType", "renderLayerTracker"],
-                                            multiReturn=False)
+                                            cols=["jobType", "renderLayerTracker"])
+            self.logPath = self.HydraTask.getLogPath()
 
             self.HydraTask.kill(CRASHED, False)
 
@@ -161,6 +158,7 @@ class RenderTCPServer(TCPServer):
         #Run the job and keep track of the process
         self.childProcess = subprocess.Popen(renderTaskCMD,
                                             stdout=log, stderr=log,
+                                            cwd=os.path.split(self.HydraJob.taskFile)[0],
                                             **Utils.buildSubprocessArgs(False))
 
         logger.info("Started PID %s to do Task %s", self.childProcess.pid, self.HydraTask.id)
@@ -183,6 +181,10 @@ class RenderTCPServer(TCPServer):
 
         #EndTime
         self.HydraTask.endTime = datetime.datetime.now()
+
+        #Work around for batch files
+        if self.HydraJob.jobType == "BatchFile" and self.HydraTask.exitCode == 0:
+            self.HydraTask.currentFrame = self.HydraTask.endFrame
 
         #Status, Attempts. Failures
         if self.childKilled == 1:
@@ -223,13 +225,16 @@ class RenderTCPServer(TCPServer):
         rendering frame, MPF (minutes per frame) and the renderLayerTracker.
         Optional commit can stop the data from being updated on the databse if
         set to False."""
-        if not all([self.childProcess, self.HydraTask,
-                    self.HydraJob, self.logPath]):
+        if not all([self.HydraTask, self.HydraJob, self.logPath]):
             logger.debug("Could not update progress")
             return
 
         #Get Log Parser and find the highest rendered frame
         HydraLogObject = LogParsers.getLog(self.HydraJob, self.logPath)
+        if not HydraLogObject:
+            logger.debug("Log for job %s could not be parsed", self.HydraJob.id)
+            return
+
         newCurrentFrame = HydraLogObject.getNewCurrentFrame()
         if not newCurrentFrame:
             newCurrentFrame = self.HydraTask.currentFrame

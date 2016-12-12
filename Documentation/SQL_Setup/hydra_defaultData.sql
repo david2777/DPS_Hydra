@@ -31,7 +31,7 @@ UNLOCK TABLES;
 
 LOCK TABLES `hydra_executable` WRITE;
 /*!40000 ALTER TABLE `hydra_executable` DISABLE KEYS */;
-INSERT INTO `hydra_executable` VALUES ('maya2014_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe',NULL),('maya2015_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe',NULL);
+INSERT INTO `hydra_executable` VALUES ('maya2014_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe',NULL),('maya2015_Render','C:/Program Files/Autodesk/maya2014/bin/render.exe',NULL),('none','',NULL);
 /*!40000 ALTER TABLE `hydra_executable` ENABLE KEYS */;
 UNLOCK TABLES;
 

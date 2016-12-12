@@ -188,15 +188,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         projectName = str(self.projectNameLineEdit.text())
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
         jobType = str(self.jobTypeComboBox.currentText())
-
-
         proj = str(self.projLineEdit.text())
-        if len(proj) < 5:
-            aboutBox(self, "Please set Project Directory!", "Project Directory must be more than 5 characters long.")
-            logger.error("Please set Project Directory! Project Directory must be more than 5 characters long.")
-            return
-        else:
-            baseCMD += " -proj {0}".format(proj)
 
         #Error Checking
         if len(baseCMD) > 1000:
@@ -223,7 +215,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             aboutBox(self, "Priority out of range!", "Priority must be between 0 and 255!")
             logger.error("Priority out of range! Priority must be between 0 and 255!")
             return
-        if len(niceName) > 60 or len(niceName) < 1:
+        if len(niceName) > 60 or len(niceName) < 2:
             aboutBox(self, "NiceName out of range!", "NiceName must be more than 1 and less than 60 characters!")
             logger.error("NiceName out of range! NiceName must be more than 1 and less than 60 characters!")
             return
@@ -238,11 +230,15 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         if projectName == "":
             projectName = "UnkownProject"
 
-        phase01Status = True
+        if jobType not in ["BatchFile", "FusionComp"]:
+            baseCMD += " -proj {0}".format(proj)
+
+        phase01Status = False
         if self.testCheckBox.isChecked():
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
+            #This is cool because at least for now anything with a phase one SHOULD be a Maya Job
             baseCMDOverride = baseCMD + " -x 640 -y 360"
 
             if ((endFrame - startFrame) % byFrame) != 0:
@@ -265,12 +261,10 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                 niceNameOverride = "{0}_FinalFrame".format(niceName)
                 byFrameOverride = 1
                 phase01FinalFrameJob = submitJob(niceNameOverride, projectName,
-                                                owner, jobStatus,
-                                                compatabilityList, execName,
-                                                baseCMDOverride, endFrame,
-                                                endFrame, byFrameOverride,
-                                                renderLayers, taskFile,
-                                                int(priority * 1.35), phase,
+                                                owner, jobStatus, compatabilityList,
+                                                execName, baseCMDOverride, endFrame,
+                                                endFrame, byFrameOverride, renderLayers,
+                                                taskFile, int(priority * 1.25), phase,
                                                 maxNodesP1, timeout, 10, jobType)
 
                 logger.info("Phase 01 final frame workaround submitted with id: %s", phase01FinalFrameJob.id)
@@ -281,17 +275,16 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 02")
             #Phase specific overrides
             phase = 2
-            byFrameOverride = 1
+            byFrame = 1
             if phase01Status:
                 jobStatusOverride = "U"
             else:
                 jobStatusOverride = jobStatus
 
             phase02 = submitJob(niceName, projectName, owner, jobStatusOverride,
-                                compatabilityList, execName, baseCMD,
-                                startFrame, endFrame, byFrameOverride,
-                                renderLayers, taskFile, priority, phase,
-                                maxNodesP2, timeout, 10, jobType)
+                                compatabilityList, execName, baseCMD, startFrame,
+                                endFrame, byFrame, renderLayers, taskFile, priority,
+                                phase, maxNodesP2, timeout, 10, jobType)
 
             logger.info("Phase 02 submitted with id: %s", phase02.id)
 
@@ -370,6 +363,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             self.maxNodesP2SpinBox.setEnabled(True)
 
     def jobTypeSwitcher(self):
+        #TODO:Change data in form on change?
         jobType = str(self.jobTypeComboBox.currentText())
 
         #Re-enable everything
@@ -392,9 +386,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
                             self.projLineEdit, self.projButton]
 
         if jobType == "BatchFile":
+            self.testCheckBox.setCheckState(0)
+            self.finalCheckBox.setCheckState(2)
             _ = [x.setEnabled(False) for x in batchDisable]
 
         elif jobType == "FusionComp":
+            self.testCheckBox.setCheckState(0)
+            self.finalCheckBox.setCheckState(2)
             _ = [x.setEnabled(False) for x in fusionDisable]
 
     #------------------------------------------------------------------------#
@@ -423,6 +421,20 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
     renderLayerTracker = ["0" for _ in renderLayers.split(",")]
     renderLayerTracker = ",".join(renderLayerTracker)
     niceName = "{0}_PHASE{1:02d}".format(niceName, phase)
+
+    if jobType == "BatchFile":
+        renderLayers = "Batch"
+        renderLayerTracker = "0"
+        startFrame = 1
+        endFrame = 1
+        execName = "none"
+        maxNodes = 1
+
+    elif jobType == "FusionComp":
+        renderLayers = "Fusion"
+        renderLayerTracker = "0"
+        execName = "fusion"
+        maxNodes = 1
 
     job = hydra_jobboard(niceName=niceName, projectName=projectName,
                         owner=owner, status=status,
