@@ -390,13 +390,16 @@ class hydra_taskboard(hydraObject):
                             "/by", hydraJob.byFrame, "/exit", "/log TestLog.txt", "/verbose"]
 
         elif hydraJob.jobType == "BatchFile":
-            renderList = [taskFile, baseCMD]
+            renderList = [taskFile, hydraJob.baseCMD]
 
         else:
             logger.error("Bad Job Type!")
             return None
 
-        return [str(x) for x in renderList]
+        if hydraJob.jobType == "BatchFile":
+            return " ".join([str(x) for x in renderList])
+        else:
+            return [str(x) for x in renderList]
 
     def sendKillQuestion(self, newStatus):
         """Kill the current task running on the renderhost. Return True if successful,

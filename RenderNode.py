@@ -158,7 +158,6 @@ class RenderTCPServer(TCPServer):
         #Run the job and keep track of the process
         self.childProcess = subprocess.Popen(renderTaskCMD,
                                             stdout=log, stderr=log,
-                                            cwd=os.path.split(self.HydraJob.taskFile)[0],
                                             **Utils.buildSubprocessArgs(False))
 
         logger.info("Started PID %s to do Task %s", self.childProcess.pid, self.HydraTask.id)
@@ -184,7 +183,8 @@ class RenderTCPServer(TCPServer):
 
         #Work around for batch files
         if self.HydraJob.jobType == "BatchFile" and self.HydraTask.exitCode == 0:
-            self.HydraTask.currentFrame = self.HydraTask.endFrame
+            self.HydraTask.currentFrame = (self.HydraTask.endFrame + 1)
+            self.HydraJob.renderLayerTracker = str((self.HydraTask.endFrame + 1))
 
         #Status, Attempts. Failures
         if self.childKilled == 1:
