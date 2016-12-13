@@ -339,7 +339,7 @@ class hydra_jobboard(hydraObject):
                 rlTracker[i] = str(currentFrame)
 
             responses.append(self.updateAttr("renderLayerTracker", ",".join(rlTracker)))
-            if self.status == KILLED:
+            if self.status in [KILLED, FINISHED]:
                 responses.append(self.updateAttr("status", PAUSED))
 
         return 0 if all(responses) else -2
