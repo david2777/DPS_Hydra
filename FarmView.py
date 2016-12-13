@@ -5,6 +5,8 @@ import sys
 import fnmatch
 import datetime
 import webbrowser
+from operator import attrgetter
+from collections import defaultdict
 
 #Third Party
 from PyQt4.QtGui import *
@@ -588,6 +590,9 @@ class FarmView(QMainWindow, Ui_FarmView):
                                                 "startTime", "endTime", "host",
                                                 "startFrame", "endFrame",
                                                 "currentFrame", "exitCode"])
+
+        self.setNodeTaskColors(tasks)
+
         for task in tasks:
             rootSearch = self.taskTree.findItems(str(task.renderLayer), Qt.MatchExactly, 0)
             if rootSearch:
@@ -755,6 +760,24 @@ class FarmView(QMainWindow, Ui_FarmView):
                 "Open a dialog to edit selected node's attributes.")
 
         self.nodeMenu.popup(QCursor.pos())
+
+    def setNodeTaskColors(self, tasks):
+        #Reset colors
+        for i in range(self.renderNodeTree.topLevelItemCount()):
+            self.renderNodeTree.topLevelItem(i).setBackgroundColor(0, niceColors[READY])
+
+        #Set new colors
+        if not tasks:
+            return
+        taskGroups = defaultdict(list)
+        for task in tasks:
+            taskGroups[str(task.host)].append(task)
+        taskGroups = {k : sorted(v, key=attrgetter("id"), reverse=True)[0].status for k, v in taskGroups.iteritems()}
+        for node, status in taskGroups.iteritems():
+            nodeSearch = self.renderNodeTree.findItems(str(node), Qt.MatchExactly)
+            if nodeSearch:
+                nodeItem = nodeSearch[0]
+                nodeItem.setBackgroundColor(0, niceColors[status])
 
 
     def populateNodeTree(self, clear=False):
