@@ -63,7 +63,11 @@ class Log(object):
 
     def getSavedFrameNumbers(self):
         """Gets a list of frame numbers assuing name.number.ext naming scheme."""
-        frameNumbers = [int(f.split(".")[-2]) for f in self.getSavedFiles()]
+        savedFiles = self.getSavedFiles()
+        if not savedFiles:
+            return [0]
+
+        frameNumbers = [int(f.split(".")[-2]) for f in savedFiles]
 
         #Get unique values via a set, make into a list again, sort, return
         return sorted(list(set(frameNumbers)))

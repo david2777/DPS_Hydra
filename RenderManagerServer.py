@@ -37,10 +37,11 @@ class RenderManagementServer(TCPServer):
         self.updateJobStatuses(allJobs)
         renderJobs = self.createRenderJobs(allJobs, runningTasks)
         logger.debug("RenderJobs: %s", str(renderJobs))
-        if renderJobs:
-            renderJobsList = [x[0] for x in renderJobs]
-            renderJobOBJList = [x for x in allJobs if x.id in renderJobsList]
-            self.shuffleQueue(renderJobOBJList, taskList)
+        #if renderJobs:
+            #renderJobsList = [x[0] for x in renderJobs]
+            #renderJobOBJList = [v for k, v in allJobs.iteritems() if k in renderJobsList]
+            #Tasks have no priority!
+            #self.shuffleQueue(renderJobOBJList, taskList)
 
         #Fetch all Nodes and find out which ones are online
         nodeList = hydra_rendernode.fetch(multiReturn=True)
