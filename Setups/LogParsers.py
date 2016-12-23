@@ -7,13 +7,19 @@ import datetime
 from Setups.LoggingSetup import logger
 
 def getLog(hydraJob, logPath):
+    #pylint: disable=R0204
     jobType = hydraJob.jobType
     if jobType == "RedshiftRender":
-        return RedshiftMayaLog(logPath)
+        log = RedshiftMayaLog(logPath)
     elif jobType == "MentalRayRender":
-        return MentalRayMayaLog(logPath)
+        log = MentalRayMayaLog(logPath)
     elif jobType == "FusionComp":
-        return FusionCompLog(logPath)
+        log = FusionCompLog(logPath)
+    else:
+        return None
+
+    if log.filterLines():
+        return log
     else:
         return None
 
@@ -36,7 +42,7 @@ class Log(object):
         reg = re.compile(self.filterRegex)
         lines = reg.findall(self.logFileContents)
         if not lines:
-            logger.critical("Could not find any filtered lines in %s", self.fp)
+            logger.debug("Could not find any filtered lines in %s", self.fp)
             return None
         self.filteredLines = lines
         return lines

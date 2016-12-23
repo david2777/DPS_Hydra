@@ -89,10 +89,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         """Setup the QTreeViewWidgets headers, column spans, and margins"""
         #jobTree header and column widths
         jobHeader = QTreeWidgetItem(["Name", "ID", "Status", "Progress", "Owner",
-                                    "Priority", "Start", "End", "Render Layers"])
+                                    "Priority", "MPF", "Errors"])
         self.jobTree.setHeaderItem(jobHeader)
         #Must set widths AFTER setting header, same order as header
-        widthList = [300, 50, 60, 80, 100, 50, 70, 70, 60]
+        widthList = [400, 50, 60, 80, 100, 50, 100]
         for i, x in enumerate(widthList):
             self.jobTree.setColumnWidth(i, x)
 
@@ -112,7 +112,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.renderNodeTree.setHeaderItem(nodeHeader)
         widthList = [200, 70, 70, 85, 75, 175, 110]
         for i, x in enumerate(widthList):
-            self.jobTree.setColumnWidth(i, x)
+            self.renderNodeTree.setColumnWidth(i, x)
 
         #Job List splitter size
         self.splitter_jobList.setSizes([10500, 10000])
@@ -279,7 +279,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                                             "owner", "priority", "startFrame",
                                             "endFrame", "maxNodes",
                                             "projectName", "archived",
-                                            "renderLayers",
+                                            "renderLayers", "attempts", "mpf",
                                             "renderLayerTracker"])
 
     def userFilterAction(self):
@@ -312,8 +312,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         taskString = "{0} ({1}/{2})".format(percent, renderLayersDone, renderLayersTotal)
 
         return [job.niceName, str(job.id), niceNames[job.status],
-                taskString, job.owner, str(job.priority), str(job.startFrame),
-                str(job.endFrame), str(job.renderLayers)]
+                taskString, job.owner, str(job.priority), str(job.mpf),
+                str(job.attempts)]
 
     def addJobTreeShot(self, job):
         """Adds a hydra_jobboard record to the jobTree, putting it in the
@@ -327,7 +327,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             if shotSearch:
                 #If job was found update it
                 shotItem = shotSearch[0]
-                for i in range(0, 9):
+                for i in range(0, self.jobTree.columnCount()):
                     shotItem.setData(i, 0, jobData[i])
             else:
                 #If job was not found add it as a new item under the project
@@ -341,7 +341,7 @@ class FarmView(QMainWindow, Ui_FarmView):
 
         #Update colors and stuff
         if job.archived == 1:
-            for i in range(0, 9):
+            for i in range(0, self.jobTree.columnCount()):
                 shotItem.setBackgroundColor(i, QColor(200, 200, 200))
         shotItem.setBackgroundColor(2, niceColors[job.status])
         if job.owner == self.username:
@@ -584,7 +584,7 @@ class FarmView(QMainWindow, Ui_FarmView):
             root.setFont(0, QFont('Segoe UI', 10, QFont.DemiBold))
 
         #Add tasks to taskTree
-        tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job_id,),
+        tasks = hydra_taskboard.fetch("WHERE job_id = %s AND archived = '0'", (job_id,),
                                         multiReturn=True,
                                         cols=["id", "renderLayer", "status",
                                                 "startTime", "endTime", "host",
@@ -601,7 +601,7 @@ class FarmView(QMainWindow, Ui_FarmView):
                 taskSearch = self.taskTree.findItems(str(task.id), Qt.MatchRecursive, 1)
                 if taskSearch:
                     taskItem = taskSearch[0]
-                    for i in range(0, 9):
+                    for i in range(0, self.taskTree.columnCount()):
                         taskItem.setData(i, 0, taskData[i])
                 else:
                     taskItem = QTreeWidgetItem(root, taskData)
@@ -800,7 +800,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if nodeSearch:
             #If the node was found, update it's information
             nodeItem = nodeSearch[0]
-            for i in range(0, 7):
+            for i in range(0, self.renderNodeTree.columnCount()):
                 nodeItem.setData(i, 0, nodeData[i])
         else:
             #If not add it as a new item

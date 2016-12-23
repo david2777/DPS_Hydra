@@ -153,6 +153,7 @@ CREATE TABLE `hydra_taskboard` (
   `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',
   `exitCode` int(11) DEFAULT NULL COMMENT 'Exit code from the subprocess',
   `mpf` time DEFAULT NULL COMMENT 'Minute per frame',
+  `archived` int(4) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `id_idx` (`job_id`),
