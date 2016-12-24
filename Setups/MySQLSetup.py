@@ -322,7 +322,7 @@ class hydra_jobboard(hydraObject):
             responses.append(self.updateAttr("attempts", 0))
 
         if resetRLs:
-            if currentFrame > self.endFrame:
+            if currentFrame > (self.endFrame + 1):
                 logger.error("New start frame is higher than the end frame! Aboring!")
                 return -1
 
@@ -379,7 +379,7 @@ class hydra_taskboard(hydraObject):
             renderList = [execsDict[hydraJob.execName]]
             renderList += baseCMD
             renderList += ["-s", self.currentFrame, "-e", self.endFrame, "-b",
-                            hydraJob.byFrame, "-rl", hydraJob.renderLayers,
+                            hydraJob.byFrame, "-rl", self.renderLayer,
                             taskFile]
 
         elif hydraJob.jobType == "FusionComp":
