@@ -284,13 +284,11 @@ class FarmView(QMainWindow, Ui_FarmView):
 
     def userFilterAction(self):
         """Toggle fetching only jobs owned by this user"""
-        self.userFilterCheckbox.setChecked(0) if self.userFilter else 2
         self.userFilter = False if self.userFilter else True
         self.populateJobTree(clear=True)
 
     def archivedFilterAction(self):
         """Toggle fetching jobs only which are not archived"""
-        self.archivedCheckBox.setChecked(0) if self.showArchivedFilter else 2
         self.showArchivedFilter = False if self.showArchivedFilter else True
         self.populateJobTree(clear=True)
 
@@ -352,6 +350,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         jobTree before loading the jobs."""
         jobs = self.fetchJobs()
         if not jobs:
+            if clear:
+                self.jobTree.clear()
             return None
 
         topLevelOpenList = []
@@ -1040,7 +1040,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def doFetch(self):
         """Aggregate method for initilizaing all of the widgets on the default tab."""
         self.populateNodeTree()
-        self.populateJobTree()
+        self.populateJobTree(clear=True)
         if self.thisNodeExists:
             thisNode = self.findThisNode()
             self.updateStatusBar(thisNode)

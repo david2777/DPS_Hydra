@@ -240,6 +240,10 @@ class RenderManagementServer(TCPServer):
         frame = int(frameList[idx])
         if frame < jobOBJ.startFrame:
             frame = jobOBJ.startFrame
+        if jobOBJ.byFrame > 1:
+            byFrameList = range(jobOBJ.startFrame, jobOBJ.endFrame)[::jobOBJ.byFrame]
+            if frame not in byFrameList and frame > byFrameList[-1]:
+                frame = jobOBJ.endFrame
         return frame
 
     @staticmethod
@@ -286,7 +290,7 @@ def main():
     socketServer = RenderManagementServer()
     socketServer.createIdleLoop("Process_Render_Tasks_Thread",
                                 socketServer.processRenderTasks,
-                                interval=15)
+                                interval=5)
 
 if __name__ == "__main__":
     main()

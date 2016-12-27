@@ -238,55 +238,54 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
-            #This is cool because at least for now anything with a phase one SHOULD be a Maya Job
+            #This is cool at least for now because anything with a phase one SHOULD be a Maya Job
             baseCMDOverride = baseCMD + " -x 640 -y 360"
-
-            if ((endFrame - startFrame) % byFrame) != 0:
-                phase01FinalFrame = True
-                #This looks kinda dumb but works because Python 2.7 divide returns an int
-                endFrameOverride = ((((endFrame - startFrame) / byFrame) * byFrame) + startFrame)
-            else:
-                phase01FinalFrame = False
-                endFrameOverride = endFrame
 
             phase01 = submitJob(niceName, projectName, owner, jobStatus,
                                 compatabilityList, execName, baseCMDOverride,
-                                startFrame, endFrameOverride, byFrame, renderLayers,
+                                startFrame, endFrame, byFrame, renderLayers,
                                 taskFile, int(priority * 1.25), phase, maxNodesP1,
                                 timeout, 10, jobType)
 
             logger.info("Phase 01 submitted with id: %s", phase01.id)
-
-            if phase01FinalFrame:
-                niceNameOverride = "{0}_FinalFrame".format(niceName)
-                byFrameOverride = 1
-                phase01FinalFrameJob = submitJob(niceNameOverride, projectName,
-                                                owner, jobStatus, compatabilityList,
-                                                execName, baseCMDOverride, endFrame,
-                                                endFrame, byFrameOverride, renderLayers,
-                                                taskFile, int(priority * 1.25), phase,
-                                                maxNodesP1, timeout, 10, jobType)
-
-                logger.info("Phase 01 final frame workaround submitted with id: %s", phase01FinalFrameJob.id)
 
             phase01Status = True
 
         if self.finalCheckBox.isChecked():
             logger.info("Building Phase 02")
             #Phase specific overrides
-            phase = 2
+            frameRange = range(startFrame, endFrame + 1)
+            phase02Frames = frameRange[:10]
+            phase03Frames = frameRange[10:]
+
+            if jobType == "FusionComp":
+                phase02Frames = frameRange
+                phase03Frames = []
+
             byFrame = 1
             if phase01Status:
                 jobStatusOverride = "U"
             else:
                 jobStatusOverride = jobStatus
 
+            phase = 2
             phase02 = submitJob(niceName, projectName, owner, jobStatusOverride,
-                                compatabilityList, execName, baseCMD, startFrame,
-                                endFrame, byFrame, renderLayers, taskFile, priority,
+                                compatabilityList, execName, baseCMD, phase02Frames[0],
+                                phase02Frames[-1], byFrame, renderLayers, taskFile, priority,
                                 phase, maxNodesP2, timeout, 10, jobType)
 
             logger.info("Phase 02 submitted with id: %s", phase02.id)
+
+            if phase03Frames:
+                logger.info("Building Phase 03")
+                phase = 3
+                phase03 = submitJob(niceName, projectName, owner, jobStatusOverride,
+                                    compatabilityList, execName, baseCMD, phase03Frames[0],
+                                    phase03Frames[-1], byFrame, renderLayers, taskFile, priority,
+                                    phase, maxNodesP2, timeout, 10, jobType)
+
+                logger.info("Phase 03 submitted with id: %s", phase03.id)
+
 
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")
@@ -363,7 +362,6 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             self.maxNodesP2SpinBox.setEnabled(True)
 
     def jobTypeSwitcher(self):
-        #TODO:Change data in form on change?
         jobType = str(self.jobTypeComboBox.currentText())
 
         #Re-enable everything
@@ -389,12 +387,23 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             self.testCheckBox.setCheckState(0)
             self.finalCheckBox.setCheckState(2)
             _ = [x.setEnabled(False) for x in batchDisable]
+            wildcard = "none"
 
         elif jobType == "FusionComp":
             self.testCheckBox.setCheckState(0)
             self.finalCheckBox.setCheckState(2)
             _ = [x.setEnabled(False) for x in fusionDisable]
+            wildcard = "fusion*"
 
+        elif jobType.find("Render") > 0:
+            wildcard = "maya*_render"
+
+        else:
+            wildcard = "qwertyuiop"
+
+        i = self.executableComboBox.findText(wildcard, Qt.MatchWildcard)
+        if i > 0:
+            self.executableComboBox.setCurrentIndex(i)
     #------------------------------------------------------------------------#
     #----------------------------Get/Modify Data-----------------------------#
     #------------------------------------------------------------------------#

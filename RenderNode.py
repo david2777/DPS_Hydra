@@ -83,6 +83,7 @@ class RenderTCPServer(TCPServer):
         (Like if the node crashed/restarted)"""
         #self.thisNode will be updated in in init statement
         self.thisNode = getThisNodeOBJ()
+        nodeStatus = self.thisNode.status
         taskUpdate = False
         if self.thisNode.task_id:
             taskUpdate = True
@@ -109,9 +110,9 @@ class RenderTCPServer(TCPServer):
             if statusAfterDeath == ERROR:
                 self.taskFailure()
 
-        elif self.thisNode.status in [STARTED, PENDING]:
+        elif nodeStatus in [STARTED, PENDING]:
             logger.warning("Reseting bad status, node set %s but no task found!", self.thisNode.status)
-            self.thisNode.status = IDLE if self.thisNode.status == STARTED else OFFLINE
+            self.thisNode.status = IDLE if nodeStatus == STARTED else OFFLINE
 
         with transaction() as t:
             self.thisNode.update(t)
@@ -176,7 +177,7 @@ class RenderTCPServer(TCPServer):
         log.write('Command: {0}\n\n'.format(renderTaskCMD))
         Utils.flushOut(log)
 
-        progressUpdateThread = stoppableThread(self.progressUpdate, 300,
+        progressUpdateThread = stoppableThread(self.progressUpdate, 120,
                                                 "Progress_Update_Thread")
 
         try:
@@ -198,9 +199,11 @@ class RenderTCPServer(TCPServer):
             log.write("\n\n-----------Job crashed on startup!-----------\n")
             log.write(e)
             log.close()
+            #unstickTask will update all info on the DB and cleanup variables
             self.unstickTask(ERROR)
             return
 
+        #If it gets this far then the subprocess has exited for one reason or another
         #Get Exit Code, Record the results
         self.HydraTask.exitCode = self.childProcess.returncode if self.childProcess else 1234
         logString = "\nProcess exited with code {0} at {1} on {2}\n"
