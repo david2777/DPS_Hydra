@@ -252,18 +252,16 @@ class hydra_rendernode(hydraObject):
     def getOff(self):
         response = True
         if self.status == "S":
+            self.updateAttr("status", PENDING)
             task = hydra_taskboard.fetch("WHERE id  = %s", (self.task_id,),
                                         cols=["id", "status", "exitCode", "endTime", "host"])
             response = task.kill()
 
             if response:
-                self.status = "O"
+                self.status = OFFLINE
                 self.task_id = None
-            else:
-                self.status = "P"
-
-            with transaction() as t:
-                self.update(t)
+                with transaction() as t:
+                    self.update(t)
 
         return response
 

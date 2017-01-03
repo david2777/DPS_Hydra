@@ -275,7 +275,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         QObject.connect(self, SIGNAL("updateThisNodeInfo"), self.updateThisNodeInfo)
         self.autoUpdateStatus = True
 
-        self.autoUpdateThread = stoppableThread(self.updateThisNodeInfoSignaler, 15,
+        self.autoUpdateThread = stoppableThread(self.updateThisNodeInfoSignaler, 1,
                                                 "AutoUpdate_Thread")
         self.startScheduleThread()
 

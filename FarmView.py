@@ -69,7 +69,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         QObject.connect(self, SIGNAL("doUpdate"), self.doUpdate)
 
         #Start autoUpdater and then fetch data from DB
-        self.autoUpdateThread = stoppableThread(self.doUpdateSignaler, 10, "AutoUpdate_Thread")
+        self.autoUpdateThread = stoppableThread(self.doUpdateSignaler, 1, "AutoUpdate_Thread")
         self.doFetch()
 
     def addItem(self, menu, name, handler, statusTip, hotkey=None):
@@ -819,10 +819,10 @@ class FarmView(QMainWindow, Ui_FarmView):
         timeString = "None"
         if node.pulse:
             total_seconds = (datetime.datetime.now().replace(microsecond=0) - node.pulse).total_seconds()
-            hours = int(total_seconds / 60 / 60)
+            days = int(total_seconds / 60 / 60 / 24)
+            hours = int(total_seconds / 60 / 60 % 24)
             minutes = int(total_seconds / 60 % 60)
-            seconds = int(total_seconds % 60)
-            timeString = "{0} Hours, {1} Mins, {2} Secs ago".format(hours, minutes, seconds)
+            timeString = "{0} Days, {1} Hours, {2} Mins ago".format(days, hours, minutes)
 
         nodeData = [node.host, niceNames[node.status], node.task_id,
                     node.software_version, sched, timeString, node.capabilities]

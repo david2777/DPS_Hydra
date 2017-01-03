@@ -37,11 +37,10 @@ class RenderManagementServer(TCPServer):
         self.updateJobStatuses(allJobs)
         renderJobs = self.createRenderJobs(allJobs, runningTasks)
         logger.debug("RenderJobs: %s", str(renderJobs))
-        #if renderJobs:
-            #renderJobsList = [x[0] for x in renderJobs]
-            #renderJobOBJList = [v for k, v in allJobs.iteritems() if k in renderJobsList]
-            #Tasks have no priority!
-            #self.shuffleQueue(renderJobOBJList, taskList)
+        if renderJobs:
+            renderJobsList = [x[0] for x in renderJobs]
+            renderJobOBJList = [v for k, v in allJobs.iteritems() if k in renderJobsList]
+            self.shuffleQueue(renderJobOBJList, taskList, allJobs)
 
         #Fetch all Nodes and find out which ones are online
         nodeList = hydra_rendernode.fetch(multiReturn=True)
@@ -50,8 +49,8 @@ class RenderManagementServer(TCPServer):
             idleNodes = [x for x in nodeList if x.status == IDLE]
             idleNodes = self.checkNodeStatus(idleNodes)
 
-        #Check on node timeouts
-        self.checkOnTimeouts(runningNodes)
+        #Check on timeouts
+        self.checkOnTimeouts(runningNodes, runningTasks, allJobs)
 
         if renderJobs:
             #Assign Tasks to Nodes
@@ -102,33 +101,69 @@ class RenderManagementServer(TCPServer):
                             taskOBJ.update(t)
                         break
 
-    def checkOnTimeouts(self, runningNodes):
-        logger.debug("Checking on running Nodes for timeouts")
+    def checkOnTimeouts(self, runningNodes, runningTasks, allJobs):
+        logger.debug("Checking for timeouts")
+        #Node Timeouts
         now = datetime.datetime.now()
         for nodeOBJ in runningNodes:
             if (now - nodeOBJ.pulse) > datetime.timedelta(hours=3):
-                logger.debug("Node %s is timed out!", nodeOBJ.host)
+                logger.debug("Node %s is timed out after 3 hours of no pulse", nodeOBJ.host)
                 self.getOffNode(nodeOBJ)
 
+        #Task Timeouts
+        nestedList = runningTasks.values()
+        runningTaskList = [item for sublist in nestedList for item in sublist]
+        for task in runningTaskList:
+            try:
+                job = allJobs[task.job_id]
+            except KeyError:
+                job = hydra_jobboard.fetch("WHERE id = %s", (task.job_id,),
+                                            cols=["timeout"])
+            if job.timeout > 0:
+                timeoutDT = datetime.timedelta(seconds=job.timeout)
+                timeCheck = (now - task.lastNewFrameTime)
+                if (now - task.lastNewFrameTime) > timeoutDT:
+                    logger.debug("Task %s has been timed out after %s seconds (timeout = %s)",
+                                    task.id, timeCheck.total_seconds(), job.timeout)
+                    task.kill(ERROR)
+
     @staticmethod
-    def shuffleQueue(jobList, taskList):
-        ########################################################################
-        ########################################################################
-        #TODO: UNTESTED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ########################################################################
-        ########################################################################
+    def shuffleQueue(jobList, taskList, allJobs):
+        """Pretty messy...."""
         logger.debug("Shuffling Render Tasks")
-        sortedTasks = sorted(taskList, key=attrgetter("priority"))
-        sortedJobs = sorted(jobList, key=attrgetter("priority"))
+        sortedTasks = sorted(taskList, key=attrgetter("lastNewFrameTime"),
+                                reverse=True)
+        sortedTasks = sorted(sortedTasks, key=attrgetter("priority"))
+        sortedJobs = sorted(jobList, key=attrgetter("priority"), reverse=True)
+
+        #TODO:This is very messy, should probably clean it up...
+        i = 0
+        limit = len(sortedJobs) - 1
         for task in sortedTasks:
-            for job in sortedJobs:
-                logger.debug((task.priority / job.priority))
+            if i > limit:
+                logger.debug("Exiting shuffle due to limit reached.")
+                return
+            breakStatus = False
+            try:
+                parentJob = allJobs[task.job_id]
+            except KeyError:
+                logger.warning("Could not find job %s in allJobs", task.job_id)
+                parentJob = hydra_jobboard.fetch("WHERE id = %s", (task.job_id,),
+                                            cols=["priority"])
+            while not breakStatus:
+                job = sortedJobs[i]
                 #If the job priority is 25% or more higher than the task's,
                 #   kill the task to make room for the new job
-                if (task.priority / job.priority) < .75:
-                    logger.debug("Killing task %s", task.id)
-                    break
+                killCalc = (parentJob.priority / job.priority)
+                if killCalc < .75:
+                    logger.debug("Killing task %s due to killCalc of %s",
+                                    task.id, killCalc)
+                    task.kill(KILLED)
+                    breakStatus = True
+                    i += 1
                 else:
+                    logger.debug("Exiting shuffle due to killCalc of %s from task %s",
+                                    killCalc, task.id)
                     return
 
     @staticmethod
@@ -140,7 +175,7 @@ class RenderManagementServer(TCPServer):
             tasks = hydra_taskboard.fetch("WHERE job_id = %s", (job.id,), multiReturn=True,
                                             cols=["id", "status"])
 
-            statusList = [t.status for t in tasks]
+            statusList = [str(t.status) for t in tasks]
             #If one task is started and job is not listed as started, call job started
             if STARTED in statusList and job.status != STARTED:
                 updateList.append([int(job.id), STARTED])
@@ -150,7 +185,7 @@ class RenderManagementServer(TCPServer):
                 updateList.append([int(job.id), FINISHED])
 
             #Else if it says it's started it's probably just waiting so mark as ready
-            elif job.status == STARTED:
+            elif job.status == STARTED and STARTED not in statusList:
                 updateList.append([int(job.id), READY])
 
         for job_id, status in updateList:
@@ -290,7 +325,7 @@ def main():
     socketServer = RenderManagementServer()
     socketServer.createIdleLoop("Process_Render_Tasks_Thread",
                                 socketServer.processRenderTasks,
-                                interval=5)
+                                interval=10)
 
 if __name__ == "__main__":
     main()

@@ -278,6 +278,7 @@ class RenderTCPServer(TCPServer):
         else:
             #If we have a valid new currentFrame add one since it's now on the next frame
             newCurrentFrame += 1
+            self.HydraTask.lastNewFrameTime = datetime.datetime.now()
 
         mpf = HydraLogObject.getAverageRenderTime()
 

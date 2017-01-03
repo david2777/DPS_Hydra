@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 5.7.9, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: hydra
+-- Host: godzilla    Database: hydra
 -- ------------------------------------------------------
--- Server version	5.7.9-log
+-- Server version	5.7.17
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -147,13 +147,15 @@ CREATE TABLE `hydra_taskboard` (
   `startTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Time the task started',
   `host` varchar(80) DEFAULT NULL COMMENT 'Host the task is running on',
   `renderLayer` varchar(50) NOT NULL COMMENT 'Render layer this task is running',
+  `priority` int(4) NOT NULL DEFAULT '50',
   `startFrame` int(6) NOT NULL COMMENT 'The frame for this task',
   `endFrame` int(6) NOT NULL,
   `currentFrame` int(6) NOT NULL COMMENT 'Current frame being rendered',
   `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',
   `exitCode` int(11) DEFAULT NULL COMMENT 'Exit code from the subprocess',
   `mpf` time DEFAULT NULL COMMENT 'Minute per frame',
-  `archived` int(4) NOT NULL DEFAULT '0',
+  `archived` int(4) NOT NULL DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
+  `lastNewFrameTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Time a frame was last succesfully rendered and pushed to the database. ',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `id_idx` (`job_id`),
@@ -172,4 +174,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-09-18 23:29:03
+-- Dump completed on 2017-01-02 18:12:14
