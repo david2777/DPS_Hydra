@@ -13,21 +13,21 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra Qt
-from CompiledUI.UI_FarmView import Ui_FarmView
-from Dialogs.NodeEditorDialog import NodeEditorDialog
-from Dialogs.DetailedDialog import DetailedDialog
-from Dialogs.DataTable import DataTableDialog
-from Dialogs.TaskResetDialog import ResetDialog
-from Dialogs.MessageBoxes import *
+from compiled_qt.UI_FarmView import Ui_FarmView
+from dialogs_qt.NodeEditorDialog import NodeEditorDialog
+from dialogs_qt.DetailedDialog import DetailedDialog
+from dialogs_qt.DataTable import DataTableDialog
+from dialogs_qt.TaskResetDialog import ResetDialog
+from dialogs_qt.MessageBoxes import *
 
 #Hydra
-import Constants
-from Setups.WidgetFactories import *
-from Setups.LoggingSetup import logger
-from Setups.MySQLSetup import *
-from Setups.Threads import *
-import Utilities.Utils as Utils
-import Utilities.NodeUtils as NodeUtils
+import constants
+from dialogs_qt.WidgetFactories import *
+from hydra.logging_setup import logger
+from hydra.mysql_setup import *
+from hydra.threads import *
+import utils.hydra_utils as hydra_utils
+import utils.node_utils as node_utils
 
 #Doesn't like Qt classes
 #pylint: disable=E0602,E1101,C0302
@@ -43,22 +43,22 @@ class FarmView(QMainWindow, Ui_FarmView):
         self.setupUi(self)
 
         #Class Variables
-        self.thisNodeName = Utils.myHostName()
+        self.thisNodeName = hydra_utils.myHostName()
         logger.info("This host is %s", self.thisNodeName)
-        self.username = Utils.getInfoFromCFG("database", "username")
+        self.username = hydra_utils.getInfoFromCFG("database", "username")
         self.userFilter = False
         self.showArchivedFilter = False
         self.statusMsg = "ERROR"
         self.currentJobSel = None
 
-        with open(Utils.findResource("styleSheet.css"), "r") as myStyles:
+        with open(hydra_utils.findResource("assets/styleSheet.css"), "r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
         #My UI Setup Functions
         self.setupTreeViews()
         self.connectButtons()
         self.setupHotkeys()
-        self.setWindowIcon(QIcon(Utils.findResource("Images/FarmView.png")))
+        self.setWindowIcon(QIcon(hydra_utils.findResource("assets/FarmView.png")))
 
         #Make sure this node exists
         self.thisNodeButtonsEnabled = True
@@ -880,7 +880,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not hosts:
             return
 
-        choice = yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
+        choice = yesNoBox(self, "Confirm", constants.GETOFF_STRING + str(hosts))
         if choice == QMessageBox.No:
             return
 
@@ -906,7 +906,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not hosts:
             return None
         elif len(hosts) > 1:
-            choice = yesNoBox(self, "Confirm", Constants.MULTINODEEDIT_STRING)
+            choice = yesNoBox(self, "Confirm", constants.MULTINODEEDIT_STRING)
             if choice == QMessageBox.Yes:
                 for host in hosts:
                     self.nodeEditor(host)
@@ -984,7 +984,7 @@ class FarmView(QMainWindow, Ui_FarmView):
     def onlineThisNodeHandler(self):
         """Changes the local render node's status to online if it was offline,
         goes back to started if it was pending offline."""
-        thisNode = NodeUtils.getThisNodeOBJ()
+        thisNode = node_utils.getThisNodeOBJ()
         if thisNode:
             thisNode.online()
             self.updateStatusBar(thisNode)
@@ -994,7 +994,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         """Changes the local render node's status to offline if it was idle,
         pending if it was working on something."""
         #Get the most current info from the database
-        thisNode = NodeUtils.getThisNodeOBJ()
+        thisNode = node_utils.getThisNodeOBJ()
         if thisNode:
             thisNode.offline()
             self.updateStatusBar(thisNode)
@@ -1004,11 +1004,11 @@ class FarmView(QMainWindow, Ui_FarmView):
         """Offlines the node and sends a message to the render node server
         running on localhost to kill its current task(task will be
         resubmitted)"""
-        thisNode = NodeUtils.getThisNodeOBJ()
+        thisNode = node_utils.getThisNodeOBJ()
         if not thisNode:
             return
 
-        choice = yesNoBox(self, "Confirm", Constants.GETOFFLOCAL_STRING)
+        choice = yesNoBox(self, "Confirm", constants.GETOFFLOCAL_STRING)
         if choice == QMessageBox.Yes:
             response = thisNode.getOff()
             if not response:
@@ -1029,11 +1029,11 @@ class FarmView(QMainWindow, Ui_FarmView):
     def findThisNode(self):
         """Makes sure this node exists in the hydra_rendernode board. Alerts
         the user if not."""
-        thisNode = NodeUtils.getThisNodeOBJ()
+        thisNode = node_utils.getThisNodeOBJ()
         if thisNode:
             return thisNode
         else:
-            warningBox(self, title="Notice", msg=Constants.DOESNOTEXISTERR_STRING)
+            warningBox(self, title="Notice", msg=constants.DOESNOTEXISTERR_STRING)
             self.setThisNodeButtonsEnabled(False)
             return None
 

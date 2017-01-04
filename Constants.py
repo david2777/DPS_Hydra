@@ -19,7 +19,7 @@ RENDERLOGDIR = os.path.join(BASELOGDIR, "render")
 FRAMELOGPATH = os.path.join(RENDERLOGDIR, 'TempFrameTracker.log.txt')
 SETTINGS = os.path.join(BASEDIR, "HydraSettings.cfg")
 
-#Connections
+#connections
 MANYBYTES = 4096
 
 #Value Dictionaries

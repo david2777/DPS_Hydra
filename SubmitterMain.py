@@ -10,13 +10,13 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra Qt
-from CompiledUI.UI_Submitter import Ui_MainWindow
+from compiled_qt.UI_Submitter import Ui_MainWindow
 
 #Hydra
-from Setups.MySQLSetup import *
-from Setups.LoggingSetup import logger
-from Dialogs.MessageBoxes import aboutBox
-from Utilities.Utils import findResource
+from hydra.mysql_setup import *
+from hydra.logging_setup import logger
+from dialogs_qt.MessageBoxes import aboutBox
+from utils.hydra_utils import findResource
 
 #Doesn't like Qt classes
 #pylint: disable=E0602,E1101,C0302
@@ -26,7 +26,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         QMainWindow.__init__(self)
         #Built-in UI Setup
         self.setupUi(self)
-        self.setWindowIcon(QIcon(findResource("Images/SubmitterMain.png")))
+        self.setWindowIcon(QIcon(findResource("assets/SubmitterMain.png")))
 
         #Setup the UI with my fuctions
         self.setupGlobals()

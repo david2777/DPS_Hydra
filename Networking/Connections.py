@@ -4,9 +4,9 @@ import socket
 import pickle
 
 #Hydra
-import Constants
-from Setups.LoggingSetup import logger
-from Utilities.Utils import getInfoFromCFG
+import constants
+from hydra.logging_setup import logger
+from utils.hydra_utils import getInfoFromCFG
 
 class TCPConnection(object):
     """A connection to a remote Hydra server, using TCP"""
@@ -38,12 +38,12 @@ class TCPConnection(object):
                 #Knows we're done sending
                 sock.shutdown(socket.SHUT_WR)
                 #Read the response, an ASCII encoded object
-                answerBytes = sock.recv(Constants.MANYBYTES)
+                answerBytes = sock.recv(constants.MANYBYTES)
                 #Convert the response to an object
                 try:
                     answer = pickle.loads(answerBytes)
                 except EOFError:
-                    logger.error("EOF Error on Connections.TCPConnection.getAnswer()")
+                    logger.error("EOF Error on connections.TCPConnection.getAnswer()")
                     logger.error("answerBytes = %s", str(answerBytes))
                     answer = None
             except socket.error as err:

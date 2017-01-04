@@ -8,18 +8,18 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra Qt
-from CompiledUI.UI_RenderNodeMain import Ui_RenderNodeMainWindow
-from Dialogs.NodeEditorDialog import NodeEditorDialog
-from Dialogs.MessageBoxes import aboutBox, yesNoBox
+from compiled_qt.UI_RenderNodeMain import Ui_RenderNodeMainWindow
+from dialogs_qt.NodeEditorDialog import NodeEditorDialog
+from dialogs_qt.MessageBoxes import aboutBox, yesNoBox
 
 #Hydra
 import RenderNode
-from Setups.LoggingSetup import logger, outputWindowFormatter
-from Setups.MySQLSetup import *
-from Setups.Threads import *
-from Setups.SingleInstanceLocker import InstanceLock
-import Utilities.NodeUtils as NodeUtils
-import Utilities.Utils as Utils
+from hydra.logging_setup import logger, outputWindowFormatter
+from hydra.mysql_setup import *
+from hydra.threads import *
+from hydra.single_instance import InstanceLock
+import utils.node_utils as node_utils
+import utils.hydra_utils as hydra_utils
 
 #Doesn't like Qt classes
 #pylint: disable=E0602,E1101
@@ -35,10 +35,10 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         QMainWindow.__init__(self)
         self.setupUi(self)
 
-        with open(Utils.findResource("styleSheet.css"), "r") as myStyles:
+        with open(hydra_utils.findResource("assets/styleSheet.css"), "r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
-        self.thisNode = NodeUtils.getThisNodeOBJ()
+        self.thisNode = node_utils.getThisNodeOBJ()
         self.isVisable = True
 
         self.pulseThreadStatus = False
@@ -105,15 +105,15 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
 
         #Get Pixmaps and Icon
-        self.donePixmap = QPixmap(Utils.findResource("Images/status/done.png"))
-        self.inProgPixmap = QPixmap(Utils.findResource("Images/status/inProgress.png"))
-        self.needsAttentionPixmap = QPixmap(Utils.findResource("Images/status/needsAttention.png"))
-        self.nonePixmap = QPixmap(Utils.findResource("Images/status/none.png"))
-        self.notStartedPixmap = QPixmap(Utils.findResource("Images/status/notStarted.png"))
-        self.refreshPixmap = QPixmap(Utils.findResource("Images/refresh.png"))
+        self.donePixmap = QPixmap(hydra_utils.findResource("assets/status/done.png"))
+        self.inProgPixmap = QPixmap(hydra_utils.findResource("assets/status/inProgress.png"))
+        self.needsAttentionPixmap = QPixmap(hydra_utils.findResource("assets/status/needsAttention.png"))
+        self.nonePixmap = QPixmap(hydra_utils.findResource("assets/status/none.png"))
+        self.notStartedPixmap = QPixmap(hydra_utils.findResource("assets/status/notStarted.png"))
+        self.refreshPixmap = QPixmap(hydra_utils.findResource("assets/refresh.png"))
         self.refreshIcon = QIcon()
         self.refreshIcon.addPixmap(self.refreshPixmap)
-        self.RIcon = QIcon(Utils.findResource("Images/RenderNodeMain.png"))
+        self.RIcon = QIcon(hydra_utils.findResource("assets/RenderNodeMain.png"))
 
         self.isVisable = True
 
@@ -184,7 +184,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.autoUpdateThread.terminate()
         if self.renderServerStatus:
             self.renderServer.shutdown()
-        logger.debug("All Servers Shutdown")
+        logger.debug("All servers Shutdown")
         self.trayIcon.hide()
         event.accept()
         sys.exit(0)
@@ -368,7 +368,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
 
         self.updateThisNodeInfo()
 
-        sleepTime, nowStatus = NodeUtils.calcuateSleepTimeFromNode(self.thisNode.host)
+        sleepTime, nowStatus = node_utils.calcuateSleepTimeFromNode(self.thisNode.host)
         if not sleepTime or not nowStatus:
             logger.error("Could not find schdule! Checking again in 24 hours.")
             return 86400
@@ -401,7 +401,7 @@ class schedulerThread(stoppableThread):
             self.stopEvent.wait(self.interval)
 
 def pulse():
-    host = Utils.myHostName()
+    host = hydra_utils.myHostName()
     with transaction() as t:
         t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
                     "WHERE host = '{0}'".format(host))

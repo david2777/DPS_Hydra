@@ -1,4 +1,4 @@
-"""Questions you can ask nodes, can probably be cleaned up a bit to get rid
+"""questions you can ask nodes, can probably be cleaned up a bit to get rid
 of legacy stuff that isn't used anymore."""
 #Standard
 import subprocess

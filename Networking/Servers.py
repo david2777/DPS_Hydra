@@ -1,11 +1,11 @@
-"""Setups for various local servers"""
+"""hydra for various local servers"""
 #Standard
 import SocketServer
 import threading
 import pickle
 
 #Hydra
-from Setups.LoggingSetup import logger
+from hydra.logging_setup import logger
 
 class Server(object):
     allThreads = {}
