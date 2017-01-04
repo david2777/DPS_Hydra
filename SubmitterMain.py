@@ -13,7 +13,7 @@ from PyQt4.QtCore import *
 from compiled_qt.UI_Submitter import Ui_MainWindow
 
 #Hydra
-from hydra.mysql_setup import *
+from hydra.hydra_sql import *
 from hydra.logging_setup import logger
 from dialogs_qt.MessageBoxes import aboutBox
 from utils.hydra_utils import findResource

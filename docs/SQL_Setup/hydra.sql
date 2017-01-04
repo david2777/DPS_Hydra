@@ -68,7 +68,7 @@ CREATE TABLE `hydra_jobboard` (
   `projectName` varchar(60) NOT NULL DEFAULT 'UnknownProject' COMMENT 'Nice name for the project. Helps keep the FarmView JobTree organized. ',
   `jobType` varchar(45) NOT NULL,
   `owner` varchar(45) NOT NULL DEFAULT 'HydraUser' COMMENT 'User name of the person who submitted the job',
-  `status` char(1) NOT NULL DEFAULT 'U' COMMENT 'Status of the job, for more info on this see mysql_setup.py',
+  `status` char(1) NOT NULL DEFAULT 'U' COMMENT 'Status of the job, for more info on this see hydra_sql.py',
   `creationTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Time the job was created',
   `requirements` varchar(255) NOT NULL DEFAULT '' COMMENT 'Requirements for the job ie. RedShift, Fusion, MentalRay, Power',
   `execName` varchar(20) NOT NULL COMMENT 'Executeable the job needs',

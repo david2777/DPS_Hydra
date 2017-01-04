@@ -15,7 +15,7 @@ from dialogs_qt.MessageBoxes import aboutBox, yesNoBox
 #Hydra
 import RenderNode
 from hydra.logging_setup import logger, outputWindowFormatter
-from hydra.mysql_setup import *
+from hydra.hydra_sql import *
 from hydra.threads import *
 from hydra.single_instance import InstanceLock
 import utils.node_utils as node_utils

@@ -5,7 +5,7 @@ import datetime
 #Hydra
 from constants import TIMEDICT, TIMEDICT_REV
 from hydra.logging_setup import logger
-from hydra.mysql_setup import *
+from hydra.hydra_sql import *
 
 def simplifyScheduleData(qtDataList):
     """Take data from the QTableWidget, simplifty it for storage in the DB"""

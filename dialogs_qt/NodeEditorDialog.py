@@ -11,7 +11,7 @@ from compiled_qt.UI_NodeEditor import Ui_nodeEditorDialog
 from dialogs_qt.NodeSchedulerDialog import NodeSchedulerDialog
 
 #Hydra
-from hydra.mysql_setup import *
+from hydra.hydra_sql import *
 
 #Doesn't like Qt classes
 #pylint: disable=E0602,E1101,C0302

@@ -9,7 +9,7 @@ from MySQLdb import IntegrityError
 
 #Hydra
 from hydra.logging_setup import logger
-from hydra.mysql_setup import hydra_rendernode, transaction
+from hydra.hydra_sql import hydra_rendernode, transaction
 import utils.hydra_utils as hydra_utils
 
 if __name__ == "__main__":

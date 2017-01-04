@@ -10,7 +10,7 @@ import traceback
 import psutil
 
 #Hydra
-from hydra.mysql_setup import *
+from hydra.hydra_sql import *
 from hydra.logging_setup import logger
 from hydra.single_instance import InstanceLock
 import constants

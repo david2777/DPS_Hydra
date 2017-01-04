@@ -24,7 +24,7 @@ from dialogs_qt.MessageBoxes import *
 import constants
 from dialogs_qt.WidgetFactories import *
 from hydra.logging_setup import logger
-from hydra.mysql_setup import *
+from hydra.hydra_sql import *
 from hydra.threads import *
 import utils.hydra_utils as hydra_utils
 import utils.node_utils as node_utils

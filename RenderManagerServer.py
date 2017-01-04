@@ -4,11 +4,11 @@ import os
 import sys
 
 #Hydra
+import hydra.hydra_sql as sql
 from hydra.logging_setup import logger
 from hydra.single_instance import InstanceLock
-from hydra.mysql_setup import *
 from networking.servers import TCPServer
-from networking.connections import TCPConnection
+#from networking.connections import TCPConnection
 from utils.hydra_utils import getInfoFromCFG
 
 class RenderManagementServer(TCPServer):
@@ -19,10 +19,12 @@ class RenderManagementServer(TCPServer):
     @staticmethod
     def processRenderTasks():
         logger.debug("Processing Render Tasks")
+        allNodesList = sql.hydra_rendernode.fetch()
+        logger.debug(allNodesList)
 
 def main():
-    logger.info("Starting in %s", os.getcwd())
-    logger.info("arglist %s", sys.argv)
+    logger.info("starting in %s", os.getcwd())
+    logger.info("arglist is %s", sys.argv)
 
     #Check for other RenderNode isntances
     lockFile = InstanceLock("HydraRenderManager")
