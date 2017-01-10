@@ -123,7 +123,7 @@ class hydraObject(object):
             #logger.debug(('dirty', k, v))
 
     def __repr__(self):
-        return "{0} object {1}".format(self.tableName(), getattr(self, self.primaryKey))
+        return "{0} {1}".format(self.tableName(), getattr(self, self.primaryKey))
 
     @classmethod
     def tableName(cls):
@@ -372,7 +372,7 @@ class hydra_taskboard(hydraObject):
         else False"""
         logger.debug('Kill task on %s', self.host)
         connection = TCPConnection(hostname=self.host)
-        answer = connection.getAnswer(KillCurrentTaskQuestion(newStatus))
+        answer = connection.get_answer(KillCurrentTaskQuestion(newStatus))
         if answer is None:
             logger.debug("%s appears to be offline or unresponsive. Treating as dead.", self.host)
         else:

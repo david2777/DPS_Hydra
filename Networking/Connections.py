@@ -10,26 +10,26 @@ from utils.hydra_utils import getInfoFromCFG
 
 class TCPConnection(object):
     """A connection to a remote Hydra server, using TCP"""
-    def __init__(self, hostname=None, port=None):
-        """Constructor. Supply a hostname to connect to another computer."""
-        if not hostname:
-            hostname = getInfoFromCFG("database", "host")
+    def __init__(self, address=None, port=None):
+        """Constructor. Supply a address to connect to another computer."""
+        if not address:
+            address = getInfoFromCFG("database", "host")
         if not port:
             port = int(getInfoFromCFG("network", "port"))
-        self.hostname = hostname
+        self.address = address
         self.port = port
 
-    def getAnswer(self, question):
+    def get_answer(self, question):
         """Send the question to a remote server and get an answer back"""
+        if self.address is None or self.port is None:
+            return None
         #Create a TCP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             #Connect to the server
-            logger.debug("TCP Connect to %s %d", self.hostname, self.port)
-            if self.hostname is None:
-                return None
+            logger.debug("TCP Connect to %s %d", self.address, self.port)
             try:
-                sock.connect((self.hostname, self.port))
+                sock.connect((self.address, self.port))
                 #Convert the question to ASCII
                 questionBytes = pickle.dumps(question)
                 #Send the question
@@ -43,7 +43,7 @@ class TCPConnection(object):
                 try:
                     answer = pickle.loads(answerBytes)
                 except EOFError:
-                    logger.error("EOF Error on connections.TCPConnection.getAnswer()")
+                    logger.error("EOF Error on connections.TCPConnection.get_answer()")
                     logger.error("answerBytes = %s", str(answerBytes))
                     answer = None
             except socket.error as err:
@@ -51,25 +51,19 @@ class TCPConnection(object):
                 answer = None
         finally:
             sock.close()
-            logger.debug("TCP Connection to %s %d was closed.", self.hostname, self.port)
+            logger.debug("TCP Connection to %s %d was closed.", self.address, self.port)
         return answer
 
-    def sendQuestion(self, question):
-        """Send question without waiting for a response"""
+    def is_alive(self):
+        if self.address is None or self.port is None:
+            return None
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        returnVal = False
         try:
             #Connect to the server
-            logger.debug("TCP Connect to %s %d", self.hostname, self.port)
-            if self.hostname is None:
-                return None
-            sock.connect((self.hostname, self.port))
-            questionBytes = pickle.dumps(question)
-            sock.sendall(questionBytes)
-            sock.shutdown(socket.SHUT_WR)
+            logger.debug("TCP Connect to %s %d", self.address, self.port)
+            sock.connect((self.address, self.port))
             sock.close()
-            returnVal = True
         except socket.error as err:
+            logger.debug("TCP Connection to %s %d was closed with errors", self.address, self.port)
             logger.error(err)
-        logger.debug("TCP Connection to %s %d was closed.", self.hostname, self.port)
-        return returnVal
+            return False

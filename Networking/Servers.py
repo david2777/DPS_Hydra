@@ -51,6 +51,6 @@ class HydraTCPHandler(SocketServer.StreamRequestHandler):
     def handle(self):
         questionBytes = self.rfile.read()
         question = pickle.loads(questionBytes)
-        answer = question.computeAnswer(self.TCPserver)
+        answer = question.compute_answer(self.TCPserver)
         answerBytes = pickle.dumps(answer)
         self.wfile.write(answerBytes)
