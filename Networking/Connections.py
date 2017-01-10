@@ -8,6 +8,8 @@ import constants
 from hydra.logging_setup import logger
 from utils.hydra_utils import getInfoFromCFG
 
+#pylint: disable=R0903
+
 class TCPConnection(object):
     """A connection to a remote Hydra server, using TCP"""
     def __init__(self, address=None, port=None):
@@ -53,17 +55,3 @@ class TCPConnection(object):
             sock.close()
             logger.debug("TCP Connection to %s %d was closed.", self.address, self.port)
         return answer
-
-    def is_alive(self):
-        if self.address is None or self.port is None:
-            return None
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            #Connect to the server
-            logger.debug("TCP Connect to %s %d", self.address, self.port)
-            sock.connect((self.address, self.port))
-            sock.close()
-        except socket.error as err:
-            logger.debug("TCP Connection to %s %d was closed with errors", self.address, self.port)
-            logger.error(err)
-            return False

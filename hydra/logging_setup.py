@@ -37,9 +37,6 @@ if debugMode:
     fileFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
                                           "%(pathname)s line %(lineno)s\n"
                                           "%(asctime)s\n")
-else:
-    fileFormatter = logging.Formatter("%(levelname)-9s%(message)s\n"
-                                          "%(asctime)s\n", "%Y-%m-%d %H:%M:%S")
 
 #-----------------------------Console Logger-----------------------------------#
 #Make sure we have a console window attached
@@ -64,12 +61,13 @@ if not os.path.isdir(BASELOGDIR):
 
 logfileName = os.path.join(BASELOGDIR, appname + '.txt')
 
-fileLogger = logging.handlers.TimedRotatingFileHandler(logfileName,
-                                                        when="midnight",
-                                                        backupCount=7)
-fileLogger.setLevel(logging.DEBUG if debugMode else logging.INFO)
-fileLogger.setFormatter(fileFormatter)
-logger.addHandler(fileLogger)
+if debugMode:
+    fileLogger = logging.handlers.TimedRotatingFileHandler(logfileName,
+                                                            when="midnight",
+                                                            backupCount=7)
+    fileLogger.setLevel(logging.DEBUG if debugMode else logging.INFO)
+    fileLogger.setFormatter(fileFormatter)
+    logger.addHandler(fileLogger)
 
 if configErr:
     logger.error("Could not find config file when setting up formatter! Maybe because node had yet to be registered.")

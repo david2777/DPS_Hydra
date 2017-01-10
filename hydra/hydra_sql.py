@@ -36,6 +36,7 @@ TIMEOUT = 'T'               #Job took longer than the timeout time allowed
 IDLE = 'I'                  #Ready to accept jobs
 OFFLINE = 'O'               #Not ready to accept jobs
 PENDING = 'P'               #Offline after current job is complete
+GETOFF = 'G'
 
 niceNames = {STARTED: 'Started',
             READY: 'Ready',
@@ -48,6 +49,7 @@ niceNames = {STARTED: 'Started',
             IDLE: 'Idle',
             OFFLINE: 'Offline',
             PENDING: 'Pending',
+            GETOFF: 'GetOff'
             }
 
 niceNamesRev = {v: k for k, v in niceNames.items()}
@@ -324,7 +326,7 @@ class hydra_taskboard(hydraObject):
     autoColumn = "id"
     primaryKey = "id"
 
-    def createTaskCMD(self, hydraJob, platform="win32"):
+    def create_task_cmd(self, hydraJob, platform="win32"):
         execs = hydra_executable.fetch(multiReturn=True)
         if platform == "win32":
             execsDict = {ex.name: ex.win32 for ex in execs}
@@ -367,11 +369,11 @@ class hydra_taskboard(hydraObject):
         else:
             return [str(x) for x in renderList]
 
-    def sendKillQuestion(self, newStatus):
+    def send_kill_question(self, newStatus):
         """Kill the current task running on the renderhost. Return True if successful,
         else False"""
         logger.debug('Kill task on %s', self.host)
-        connection = TCPConnection(hostname=self.host)
+        connection = TCPConnection(address=self.ip_addr)
         answer = connection.get_answer(KillCurrentTaskQuestion(newStatus))
         if answer is None:
             logger.debug("%s appears to be offline or unresponsive. Treating as dead.", self.host)
@@ -396,7 +398,7 @@ class hydra_taskboard(hydraObject):
                     updateNode = False
 
                 else:
-                    killed = self.sendKillQuestion(statusAfterDeath)
+                    killed = self.send_kill_question(statusAfterDeath)
                     #If killed returns None then the node is probably offline
                     if killed:
                         return True if killed > 0 else False
@@ -418,7 +420,7 @@ class hydra_taskboard(hydraObject):
             logger.debug("Task Kill is skipping task %s because of status %s", self.id, self.status)
             return True
 
-    def getLogPath(self):
+    def get_log_path(self):
         thisHost = hydra_utils.myHostName()
         path = os.path.join(constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
         if thisHost == self.host:

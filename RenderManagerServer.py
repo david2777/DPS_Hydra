@@ -118,10 +118,14 @@ class RenderManagementServer(servers.TCPServer):
 
     @staticmethod
     def check_idle_nodes(idleNodeList):
+        #TODO: FIX THIS
+        return idleNodeList
         logger.debug("Checking Node Status on Idle Nodes")
         onlineList = []
         for node in idleNodeList:
-            answer = connections.TCPConnection(address=node.ip_addr).is_alive()
+            conn = connections.TCPConnection(address=node.ip_addr)
+            question = questions.IsAliveQuestion()
+            answer = conn.get_answer(question)
             if not answer:
                 logger.debug("%s could not be reached, removing from Idle Nodes", node.host)
             else:
@@ -181,7 +185,7 @@ class RenderManagementServer(servers.TCPServer):
                 response = self.filter_job(job, node)
                 if response:
                     #Create task object and insert into databse
-                    task = sql.hydra_taskboard(job_id=job.id, host=node.hostname,
+                    task = sql.hydra_taskboard(job_id=job.id, host=node.host,
                                             status=sql.STARTED,
                                             startTime=datetime.datetime.now(),
                                             priority=job.priority,
@@ -214,8 +218,8 @@ class RenderManagementServer(servers.TCPServer):
             logger.debug("Skipping job %d because it does not meet %s's minPriority requirement", job.id, node.host)
             return False
 
-        if job.failures and job.failures != "":
-            failures = job.failures.split(",")
+        if job.failedNodes and job.failedNodes != "":
+            failures = job.failedNodes.split(",")
             if node.host in failures:
                 logger.debug("Skipping job %d because it has failed on node %s in the past", job.id, node.host)
                 return False
@@ -247,16 +251,42 @@ class RenderManagementServer(servers.TCPServer):
     #--------------------------------------------------------------------------#
 
     @staticmethod
-    def progress_update_handler(updateType, node, values):
+    def progress_update_handler(updateType, data):
         if updateType == "TaskProgress":
-            logger.debug(node, values)
+            logger.debug(data)
             return True
         elif updateType == "TaskCompletion":
-            logger.debug(node, values)
+            logger.debug(data)
             return True
         else:
             logger.error("Bad UpdateType!")
             return False
+
+    @staticmethod
+    def change_node_status(node, newStatus):
+        if newStatus == sql.IDLE:
+            return node.online()
+        elif newStatus == sql.OFFLINE:
+            return node.offline()
+        elif newStatus == sql.GETOFF:
+            return node.getoff()
+        else:
+            return None
+
+    @staticmethod
+    def unstick_node(node, nodeStatus, taskStatus):
+        task = sql.hydra_taskboard.fetch("WHERE id = %s", (node.task_id,))
+        task.status = taskStatus
+        task.endTime = datetime.datetime.now()
+        task.exitCode = 1
+
+        node.status = nodeStatus
+        node.task_id = None
+        node.last_frame_start_time = None
+
+        with sql.transaction() as t:
+            task.update(t)
+            node.update(t)
 
 def main():
     logger.info("starting in %s", os.getcwd())
