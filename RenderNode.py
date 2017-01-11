@@ -85,14 +85,6 @@ class RenderTCPServer(servers.TCPServer):
         self.change_this_node_status(newStatus)
         logger.info("RenderNode servers Shutdown")
 
-    def start_render_task(self, job, task):
-        """Command sent to the RenderTCPServer, starts the render task in a new
-        thread to prevent thread locking during the render."""
-        self.renderThread = threading.Thread(target=self.launch_render_task,
-                                                args=(job, task))
-        self.renderThread.start()
-        return self.renderThread.isAlive()
-
     def launch_render_task(self, job, task):
         """Does the actual rendering, then records the results on the database"""
         logger.info("Starting task with id %s on job with id %s", task.id, task.job_id)
@@ -162,6 +154,22 @@ class RenderTCPServer(servers.TCPServer):
             self.change_this_node_status(sql.GETOFF)
 
         logger.info("Done with render task %s", task.id)
+
+    #--------------------------------------------------------------------------#
+    #-------------------------Incoming TCP Handlers----------------------------#
+    #--------------------------------------------------------------------------#
+
+    @staticmethod
+    def is_alive():
+        return True
+
+    def start_render_task(self, job, task):
+        """Command sent to the RenderTCPServer, starts the render task in a new
+        thread to prevent thread locking during the render."""
+        self.renderThread = threading.Thread(target=self.launch_render_task,
+                                                args=(job, task))
+        self.renderThread.start()
+        return self.renderThread.isAlive()
 
     def kill_current_job(self, statusAfterDeath):
         """Kills the render node's current job if it's running one.

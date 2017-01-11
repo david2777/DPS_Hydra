@@ -118,8 +118,6 @@ class RenderManagementServer(servers.TCPServer):
 
     @staticmethod
     def check_idle_nodes(idleNodeList):
-        #TODO: FIX THIS
-        return idleNodeList
         logger.debug("Checking Node Status on Idle Nodes")
         onlineList = []
         for node in idleNodeList:
@@ -249,6 +247,9 @@ class RenderManagementServer(servers.TCPServer):
     #--------------------------------------------------------------------------#
     #-------------------------Incoming TCP Handlers----------------------------#
     #--------------------------------------------------------------------------#
+    @staticmethod
+    def is_alive():
+        return True
 
     @staticmethod
     def progress_update_handler(updateType, data):

@@ -19,8 +19,9 @@ class CMDQuestion(object):
         return subprocess.check_output(self.args, stderr=subprocess.STDOUT)
 
 class IsAliveQuestion(object):
-    def compute_answer(self):
-        return True
+    """A Question for running arbitrary commands on a server."""
+    def compute_answer(self, server):
+        return server.is_alive()
 
 class KillCurrentTaskQuestion(object):
     def __init__(self, statusAfterDeath):
