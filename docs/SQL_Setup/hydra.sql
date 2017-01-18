@@ -68,7 +68,7 @@ CREATE TABLE `hydra_jobboard` (
   `projectName` varchar(60) NOT NULL DEFAULT 'UnknownProject' COMMENT 'Nice name for the project. Helps keep the FarmView JobTree organized. ',
   `jobType` varchar(45) NOT NULL,
   `owner` varchar(45) NOT NULL DEFAULT 'HydraUser' COMMENT 'User name of the person who submitted the job',
-  `status` char(1) NOT NULL DEFAULT 'U' COMMENT 'Status of the job, for more info on this see hydra_sql.py',
+  `status` char(1) NOT NULL DEFAULT 'U' COMMENT 'Status of the job, for more info on this see MySQLSetup.py',
   `creationTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Time the job was created',
   `requirements` varchar(255) NOT NULL DEFAULT '' COMMENT 'Requirements for the job ie. RedShift, Fusion, MentalRay, Power',
   `execName` varchar(20) NOT NULL COMMENT 'Executeable the job needs',
@@ -92,7 +92,7 @@ CREATE TABLE `hydra_jobboard` (
   KEY `type_idx` (`jobType`),
   CONSTRAINT `exec` FOREIGN KEY (`execName`) REFERENCES `hydra_executable` (`name`) ON UPDATE CASCADE,
   CONSTRAINT `type` FOREIGN KEY (`jobType`) REFERENCES `hydra_jobtypes` (`type`) ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='New job board for Hydra. Setup somewhat differently than the old job board.';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -120,13 +120,15 @@ CREATE TABLE `hydra_rendernode` (
   `status` char(1) NOT NULL DEFAULT 'O' COMMENT 'The one character abbreviation for the node''s status (Idle, Started, etc)',
   `minPriority` int(11) NOT NULL DEFAULT '0' COMMENT 'Lowest priority task that can be run by this node (Note this also exists in the hydraSettings.cfg file on each node but that one does nothing- David)',
   `platform` varchar(15) NOT NULL COMMENT 'System platform (ie win32)',
+  `ip_addr` varchar(39) DEFAULT NULL COMMENT 'IP Address for the node, required if the node is enabled for rendering',
   `task_id` int(11) DEFAULT NULL COMMENT 'The ID of the task currently running (if any)',
   `capabilities` varchar(255) DEFAULT '' COMMENT 'The render nodes current capabilites in alphabetical order. (ie VRay, RenderMan, SOuP)',
-  `scheduleEnabled` int(1) DEFAULT '0',
-  `weekSchedule` varchar(255) DEFAULT '',
+  `schedule_enabled` int(1) DEFAULT '0',
+  `week_schedule` varchar(255) DEFAULT '',
   `pulse` datetime DEFAULT NULL COMMENT 'The last time RenderNodeMain.exe was known to be running, if ever',
-  `lastFrameStartTime` datetime DEFAULT NULL,
+  `last_frame_start_time` datetime DEFAULT NULL,
   `software_version` varchar(255) DEFAULT NULL COMMENT 'The version of the RenderNodeMain.exe currently running on this node',
+  `is_render_node` int(1) DEFAULT '0' COMMENT 'Is this node used for rendering, 0 = False 1 = True',
   PRIMARY KEY (`host`),
   UNIQUE KEY `host_UNIQUE` (`host`),
   KEY `rendertask_key_idx` (`task_id`),
@@ -148,18 +150,20 @@ CREATE TABLE `hydra_taskboard` (
   `status` char(1) NOT NULL DEFAULT 'S' COMMENT 'Current task status',
   `startTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Time the task started',
   `archived` int(4) NOT NULL DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
+  `priority` int(4) NOT NULL DEFAULT '50',
   `startFrame` int(6) DEFAULT NULL COMMENT 'The frame for this task',
   `endFrame` int(6) DEFAULT NULL,
   `currentFrame` int(6) DEFAULT NULL COMMENT 'Current frame being rendered',
+  `currentRenderLayer` varchar(60) DEFAULT NULL COMMENT 'Render layer currently in progress',
   `exitCode` int(11) DEFAULT NULL COMMENT 'Exit code from the subprocess',
   `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',
-  `lastFrameStartTime` datetime DEFAULT NULL COMMENT 'Time a frame was last succesfully rendered and pushed to the database. ',
+  `last_frame_start_time` datetime DEFAULT NULL COMMENT 'Time a frame was last succesfully rendered and pushed to the database. ',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
   KEY `id_idx` (`job_id`),
   KEY `node_key_idx` (`host`),
   CONSTRAINT `job_id_key` FOREIGN KEY (`job_id`) REFERENCES `hydra_jobboard` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='A new task board for Hydra tasks!';
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -171,4 +175,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-01-03 22:36:32
+-- Dump completed on 2017-01-17 20:48:50

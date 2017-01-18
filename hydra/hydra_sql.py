@@ -343,11 +343,12 @@ class hydra_taskboard(hydraObject):
 
         baseCMD = shlex.split(hydraJob.baseCMD)
 
-        if hydraJob.jobType in ["RedshiftRender", "MentalRayRender"]:
+        if hydraJob.jobType == "Maya_Render":
             renderList = [execsDict[hydraJob.execName]]
             renderList += baseCMD
-            renderList += ["-s", self.currentFrame, "-e", self.endFrame, "-b",
-                            hydraJob.byFrame, "-rl", self.renderLayer,
+            renderList += ["-postFrame", "source hydra_maya_utils;DPSHydra_TaskUpdate;",
+                            "-s", self.startFrame, "-e", self.endFrame, "-b",
+                            hydraJob.byFrame, "-rl", hydraJob.renderLayers,
                             taskFile]
 
         elif hydraJob.jobType == "FusionComp":

@@ -253,24 +253,86 @@ class RenderManagementServer(servers.TCPServer):
 
     @staticmethod
     def progress_update_handler(updateType, data):
-        if updateType == "TaskProgress":
-            logger.debug(data)
-            return True
-        elif updateType == "TaskCompletion":
-            logger.debug(data)
-            return True
+        logger.debug("Progress Update: %s", str(data))
+        if updateType == "TaskProgress" or updateType == "tp":
+            #TODO:MPF Calc
+            renderNode = sql.hydra_rendernode.fetch("WHERE host = %s", (data["thisNode"],),
+                                                    cols=["task_id"])
+            task = sql.hydra_taskboard.fetch("WHERE id = %s", (renderNode.task_id,),
+                                            cols=["currentFrame", "currentRenderLayer",
+                                                    "last_frame_start_time"])
+            try:
+                task.currentFrame = data["currentFrame"]
+                task.currentRenderLayer = data["renderLayer"]
+                task.last_frame_start_time = datetime.datetime.now()
+                with sql.transaction() as t:
+                    task.update(t)
+                return True
+            except KeyError:
+                logger.error("Key error on ProgressUpdate Update. Data: %s", str(data))
+                return False
+
+        elif updateType == "TaskCompletion" or updateType == "tc":
+            #TODO:Cleanup fetch columns
+            try:
+                task = sql.hydra_taskboard.fetch("WHERE id = %s", (data["task_id"],))
+                job = sql.hydra_jobboard.fetch("WHERE id = %s", (task.job_id,))
+                node = sql.hydra_rendernode.fetch("WHERE host = %s", (task.host,))
+                with sql.transaction() as t:
+                    t.cur.execute("SELECT count(id) FROM hydra_taskboard WHERE job_id = %s AND status = 'S'", (task.job_id,))
+                    taskCount = t.cur.fetchall()
+                taskCount = int(taskCount[0][0]) - 1
+
+                node.status = sql.IDLE if node.status == sql.STARTED else sql.OFFLINE
+                node.task_id = None
+
+                task.exitCode = data["exitCode"]
+                task.endTime = data["endTime"]
+
+                if task.exitCode == 0:
+                    task.status = sql.FINISHED
+                    #TODO: Cleanup log?
+                    if taskCount <= 0:
+                        job.status = sql.FINISHED
+                else:
+                    newStatus = data["statusAfterDeath"]
+                    task.status = newStatus if newStatus else sql.ERROR
+                    if task.status == sql.ERROR:
+                        job.attempts += 1
+                        if job.failedNodes == "":
+                            job.failedNodes = task.host
+                        else:
+                            job.failedNodes += task.host
+                        if job.attempts >= job.maxAttempts:
+                            job.status = sql.ERROR
+
+                with sql.transaction() as t:
+                    job.update(t)
+                    task.update(t)
+                    node.update(t)
+
+                return True
+            except KeyError:
+                logger.error("Key error on TaskCompletion Update. Data: %s", str(data))
+                return False
         else:
             logger.error("Bad UpdateType!")
             return False
 
     @staticmethod
-    def change_node_status(node, newStatus):
+    def change_node_status(node, newStatus, force=False):
         if newStatus == sql.IDLE:
-            return node.online()
+            if force:
+                return node.updateAttr("status", sql.IDLE)
+            else:
+                return node.online()
         elif newStatus == sql.OFFLINE:
-            return node.offline()
+            if force:
+                return node.updateAttr("status", sql.OFFLINE)
+            else:
+                return node.offline()
         elif newStatus == sql.GETOFF:
-            return node.getoff()
+            return None
         else:
             return None
 
@@ -304,7 +366,7 @@ def main():
     socketServer = RenderManagementServer()
     socketServer.createIdleLoop("Process_Render_Tasks_Thread",
                                 socketServer.process_render_tasks,
-                                interval=30)
+                                interval=10)
 
 if __name__ == "__main__":
     main()

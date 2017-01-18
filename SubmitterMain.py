@@ -395,8 +395,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             _ = [x.setEnabled(False) for x in fusionDisable]
             wildcard = "fusion*"
 
-        elif jobType.find("Render") > 0:
-            wildcard = "maya*_render"
+        elif jobType == "Maya_Render":
+            wildcard = "mayaRender_*"
 
         else:
             wildcard = "qwertyuiop"
@@ -426,14 +426,10 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
                 baseCMD, startFrame, endFrame, byFrame, renderLayers, taskFile,
                 priority, phase, maxNodes, timeout, maxAttempts, jobType):
     """A simple function for submitting a job to the jobBoard"""
-    #Setup default renderLayerTracker
-    renderLayerTracker = ["0" for _ in renderLayers.split(",")]
-    renderLayerTracker = ",".join(renderLayerTracker)
     niceName = "{0}_PHASE{1:02d}".format(niceName, phase)
 
     if jobType == "BatchFile":
         renderLayers = "Batch"
-        renderLayerTracker = "0"
         startFrame = 1
         endFrame = 1
         execName = "none"
@@ -441,7 +437,6 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
 
     elif jobType == "FusionComp":
         renderLayers = "Fusion"
-        renderLayerTracker = "0"
         execName = "fusion"
         maxNodes = 1
 
@@ -451,10 +446,8 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
                         baseCMD=baseCMD, startFrame=startFrame,
                         endFrame=endFrame, byFrame=byFrame,
                         renderLayers=renderLayers,
-                        renderLayerTracker=renderLayerTracker,
-                        taskFile=taskFile, priority=priority,
-                        phase=phase, maxNodes=maxNodes, timeout=timeout,
-                        maxAttempts=maxAttempts, jobType=jobType)
+                        taskFile=taskFile, priority=priority, maxNodes=maxNodes,
+                        timeout=timeout, maxAttempts=maxAttempts, jobType=jobType)
 
     with transaction() as t:
         job.insert(trans=t)

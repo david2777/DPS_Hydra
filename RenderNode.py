@@ -53,10 +53,10 @@ class RenderTCPServer(servers.TCPServer):
         port = int(hydra_utils.getInfoFromCFG("network", "port"))
         self.startServerThread(port)
 
-    def change_this_node_status(self, status):
+    def change_this_node_status(self, status, force=False):
         """Convenience function for changing the status of this node."""
         conn = connections.TCPConnection(self.managerAddress, self.managerPort)
-        question = questions.ChangeNodeStatusQuestion(self.thisNode, status)
+        question = questions.ChangeNodeStatusQuestion(self.thisNode, status, force)
         return conn.get_answer(question)
 
     def unstick_task(self, statusAfterDeath=sql.ERROR):
@@ -68,9 +68,11 @@ class RenderTCPServer(servers.TCPServer):
             question = questions.UnstickNodeQuestion(self.thisNode, newStatus, statusAfterDeath)
             return conn.get_answer(question)
         elif self.thisNode.status == sql.PENDING:
-            return self.change_this_node_status(sql.OFFLINE)
+            return self.change_this_node_status(sql.OFFLINE, force=True)
         elif self.thisNode.status == sql.STARTED:
-            return self.change_this_node_status(sql.IDLE)
+            response = self.change_this_node_status(sql.IDLE, force=True)
+            logger.info(response)
+            return response
 
     def shutdown(self):
         """Offline node, Kill current job, shutdown servers, reset node status"""
@@ -134,10 +136,10 @@ class RenderTCPServer(servers.TCPServer):
 
         #If it gets this far then the subprocess has exited for one reason or another
         #Get Exit Code, Record the results
+        doneTime = datetime.datetime.now().replace(microsecond=0)
         exitCode = self.childProcess.returncode if self.childProcess else 1234
         logString = "\nProcess exited with code {0} at {1} on {2}\n"
-        nowTime = datetime.datetime.now().replace(microsecond=0)
-        log.write(logString.format(exitCode, nowTime, self.thisNode.host))
+        log.write(logString.format(exitCode, doneTime, self.thisNode.host))
         self.childProcess = None
         self.PSUtilProc = None
 
@@ -145,7 +147,7 @@ class RenderTCPServer(servers.TCPServer):
         logPath = None
 
         logger.debug("Sending completion data to the manager")
-        data = {"task_id" : task.id, "exitCode" : exitCode, "endTime" : nowTime}
+        data = {"task_id" : task.id, "exitCode" : exitCode, "endTime" : doneTime}
         conn = connections.TCPConnection(self.managerAddress, self.managerPort)
         question = questions.ProgressUpdateQuestion("TaskCompletion", data)
         response = conn.get_answer(question)

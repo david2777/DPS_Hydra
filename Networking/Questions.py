@@ -38,11 +38,12 @@ class ProgressUpdateQuestion(object):
         return server.progress_update_handler(self.updateType, self.data)
 
 class ChangeNodeStatusQuestion(object):
-    def __init__(self, node, newStatus):
+    def __init__(self, node, newStatus, force):
         self.node = node
         self.newStatus = newStatus
+        self.force = force
     def compute_answer(self, server):
-        return server.change_node_status(self.node, self.newStatus)
+        return server.change_node_status(self.node, self.newStatus, self.force)
 
 class UnstickNodeQuestion(object):
     def __init__(self, node, nodeStatus, taskStatus):
