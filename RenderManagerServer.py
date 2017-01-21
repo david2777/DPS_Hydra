@@ -255,16 +255,23 @@ class RenderManagementServer(servers.TCPServer):
     def progress_update_handler(updateType, data):
         logger.debug("Progress Update: %s", str(data))
         if updateType == "TaskProgress" or updateType == "tp":
-            #TODO:MPF Calc
             renderNode = sql.hydra_rendernode.fetch("WHERE host = %s", (data["thisNode"],),
                                                     cols=["task_id"])
             task = sql.hydra_taskboard.fetch("WHERE id = %s", (renderNode.task_id,),
                                             cols=["currentFrame", "currentRenderLayer",
-                                                    "last_frame_start_time"])
+                                                    "last_frame_start_time", "mpf"])
             try:
                 task.currentFrame = data["currentFrame"]
                 task.currentRenderLayer = data["renderLayer"]
+                oldTime = task.last_frame_start_time
                 task.last_frame_start_time = datetime.datetime.now()
+                if oldTime:
+                    tdiff = task.last_frame_start_time - oldTime
+                    if task.mpf:
+                        tsecs = ((task.mpf.total_seconds() + tdiff.total_seconds()) / 2)
+                        task.mpf = datetime.timedelta(seconds=tsecs)
+                    else:
+                        task.mpf = tdiff
                 with sql.transaction() as t:
                     task.update(t)
                 return True
@@ -273,11 +280,16 @@ class RenderManagementServer(servers.TCPServer):
                 return False
 
         elif updateType == "TaskCompletion" or updateType == "tc":
-            #TODO:Cleanup fetch columns
+            taskCols = ["job_id", "host", "exitCode", "endTime", "mpf", "status"]
+            jobCols = ["mpf", "status", "attempts", "failedNodes", "maxAttempts"]
+            nodeCols = ["status", "task_id"]
             try:
-                task = sql.hydra_taskboard.fetch("WHERE id = %s", (data["task_id"],))
-                job = sql.hydra_jobboard.fetch("WHERE id = %s", (task.job_id,))
-                node = sql.hydra_rendernode.fetch("WHERE host = %s", (task.host,))
+                task = sql.hydra_taskboard.fetch("WHERE id = %s", (data["task_id"],),
+                                                    cols=taskCols)
+                job = sql.hydra_jobboard.fetch("WHERE id = %s", (task.job_id,),
+                                                cols=jobCols)
+                node = sql.hydra_rendernode.fetch("WHERE host = %s", (task.host,),
+                                                    cols=nodeCols)
                 with sql.transaction() as t:
                     t.cur.execute("SELECT count(id) FROM hydra_taskboard WHERE job_id = %s AND status = 'S'", (task.job_id,))
                     taskCount = t.cur.fetchall()
@@ -288,6 +300,12 @@ class RenderManagementServer(servers.TCPServer):
 
                 task.exitCode = data["exitCode"]
                 task.endTime = data["endTime"]
+
+                if task.mpf:
+                    if job.mpf:
+                        job.mpf = ((job.mpf.total_seconds() + task.mpf.total_seconds()) / 2)
+                    else:
+                        job.mpf = task.mpf
 
                 if task.exitCode == 0:
                     task.status = sql.FINISHED
