@@ -39,7 +39,7 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
             title = "Editing {0}:".format(defaults["host"])
             self.editorGroup.setTitle(title)
             self.minPrioritySpinbox.setValue(defaults["priority"])
-            if defaults["scheduleEnabled"] == 1:
+            if defaults["schedule_enabled"] == 1:
                 self.schedCheckBox.setCheckState(2)
 
 
@@ -88,14 +88,14 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
         #An empty list will return boolean False
         if edits:
             editsFormat = ",".join(edits)
-            if editsFormat != self.defaults["weekSchedule"]:
-                self.defaults["weekSchedule"] = editsFormat
+            if editsFormat != self.defaults["week_schedule"]:
+                self.defaults["week_schedule"] = editsFormat
                 with transaction() as t:
-                    cmd = "UPDATE hydra_rendernode SET weekSchedule = %s WHERE host = %s"
+                    cmd = "UPDATE hydra_rendernode SET week_schedule = %s WHERE host = %s"
                     t.cur.execute(cmd, (editsFormat, self.defaults["host"]))
         else:
             with transaction() as t:
-                cmd = "UPDATE hydra_rendernode SET weekSchedule = %s, scheduleEnabled = 0 WHERE host = %s"
+                cmd = "UPDATE hydra_rendernode SET week_schedule = %s, schedule_enabled = 0 WHERE host = %s"
                 t.cur.execute(cmd, (None, self.defaults["host"]))
             self.schedCheckBox.setCheckState(0)
 

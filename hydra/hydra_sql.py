@@ -267,7 +267,7 @@ class hydra_rendernode(hydraObject):
 
         return response
 
-    def killTask(self, statusAfterDeath=KILLED):
+    def kill_task(self, statusAfterDeath=KILLED):
         if self.status == "S" and self.task_id:
             taskOBJ = hydra_taskboard.fetch("WHERE id = %s", self.task_id,
                                             cols=["host", "status", "exitCode",
@@ -279,12 +279,12 @@ class hydra_rendernode(hydraObject):
             return True
 
     @staticmethod
-    def isRendering():
+    def is_rendering():
         #TODO:Open connection to render node and check status of self.childProcess
         return True
 
     @staticmethod
-    def resourceCheck():
+    def resource_check():
         #TODO:Check resources on target machine ie RAM/CPU usage
         return True
 

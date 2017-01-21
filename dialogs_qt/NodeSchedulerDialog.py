@@ -24,7 +24,7 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
 
         if self.defaults:
             self.editorGroup.setTitle("Week Schedule for {0}".format(self.defaults["host"]))
-            self.defaultSchedule = expandScheduleData(self.defaults["weekSchedule"])
+            self.defaultSchedule = expandScheduleData(self.defaults["week_schedule"])
 
         self.buildUI()
 
