@@ -259,8 +259,14 @@ class RenderManagementServer(servers.TCPServer):
                                                     cols=["task_id"])
             task = sql.hydra_taskboard.fetch("WHERE id = %s", (renderNode.task_id,),
                                             cols=["currentFrame", "currentRenderLayer",
-                                                    "last_frame_start_time", "mpf"])
+                                                    "last_frame_start_time", "mpf",
+                                                    "job_id", "frame_count"])
+            job = sql.hydra_jobboard.fetch("WHERE id = %s", (task.job_id,),
+                                            cols=["frame_count", "startFrame",
+                                                    "endFrame", "byFrame"])
             try:
+                job.frame_count += 1
+                task.frame_count += 1
                 task.currentFrame = data["currentFrame"]
                 task.currentRenderLayer = data["renderLayer"]
                 oldTime = task.last_frame_start_time
@@ -274,6 +280,7 @@ class RenderManagementServer(servers.TCPServer):
                         task.mpf = tdiff
                 with sql.transaction() as t:
                     task.update(t)
+                    job.update(t)
                 return True
             except KeyError:
                 logger.error("Key error on ProgressUpdate Update. Data: %s", str(data))
@@ -301,6 +308,9 @@ class RenderManagementServer(servers.TCPServer):
                 task.exitCode = data["exitCode"]
                 task.endTime = data["endTime"]
 
+                totalFrameRange = range(job.startFrame, (job.endFrame + 1))[::job.byFrame]
+                targetFrameCount = len(totalFrameRange)
+
                 if task.mpf:
                     if job.mpf:
                         job.mpf = ((job.mpf.total_seconds() + task.mpf.total_seconds()) / 2)
@@ -312,6 +322,8 @@ class RenderManagementServer(servers.TCPServer):
                     #TODO: Cleanup log?
                     if taskCount <= 0:
                         job.status = sql.FINISHED
+                        if job.frame_count != targetFrameCount and job.byFrame != 1:
+                            logger.warning("Job %s totalFrameRange is %s. %s expected.", job.id, totalFrameRange, targetFrameCount)
                 else:
                     newStatus = data["statusAfterDeath"]
                     task.status = newStatus if newStatus else sql.ERROR

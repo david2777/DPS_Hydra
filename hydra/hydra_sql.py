@@ -308,9 +308,21 @@ class hydra_jobboard(hydraObject):
         return responses
 
     def reset(self, resetData):
-        logger.debug(resetData)
-        self.answer = 0
-        return self.answer
+        logger.debug("Resetting job %s with data: %s", self.id, resetData)
+        self.status = PAUSED
+        self.frame_count = 0
+        self.renderLayers = resetData[0]
+        self.startFrame = resetData[1]
+        self.endFrame = resetData[2]
+        self.byFrame = resetData[3]
+        if resetData[4]:
+            self.failedNodes = ""
+            self.attempts = 0
+
+        with transaction() as t:
+            self.update(t)
+
+        return 0
 
     def archive(self, mode):
         """Function for archiving/unarchiveing job. Accepts binary ints, booleans,
@@ -374,7 +386,9 @@ class hydra_taskboard(hydraObject):
         """Kill the current task running on the renderhost. Return True if successful,
         else False"""
         logger.debug('Kill task on %s', self.host)
-        connection = TCPConnection(address=self.ip_addr)
+        node = hydra_rendernode.fetch("WHERE task_id = %s", (self.id,),
+                                        cols=["ip_addr"])
+        connection = TCPConnection(address=node.ip_addr)
         answer = connection.get_answer(KillCurrentTaskQuestion(newStatus))
         if answer is None:
             logger.debug("%s appears to be offline or unresponsive. Treating as dead.", self.host)

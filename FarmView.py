@@ -17,7 +17,7 @@ from compiled_qt.UI_FarmView import Ui_FarmView
 from dialogs_qt.NodeEditorDialog import NodeEditorDialog
 from dialogs_qt.DetailedDialog import DetailedDialog
 from dialogs_qt.DataTable import DataTableDialog
-from dialogs_qt.TaskResetDialog import ResetDialog
+from dialogs_qt.JobResetDialog import ResetDialog
 from dialogs_qt.MessageBoxes import *
 from dialogs_qt.WidgetFactories import *
 
@@ -279,7 +279,8 @@ class FarmView(QMainWindow, Ui_FarmView):
                                             "owner", "priority", "startFrame",
                                             "endFrame", "maxNodes",
                                             "projectName", "archived",
-                                            "renderLayers", "attempts", "mpf"])
+                                            "renderLayers", "attempts", "mpf",
+                                            "byFrame", "frame_count"])
 
     def user_filter_action(self):
         """Toggle fetching only jobs owned by this user"""
@@ -295,11 +296,12 @@ class FarmView(QMainWindow, Ui_FarmView):
     def format_job_data(job):
         """Takes a hydra_jobboard record and returns an ordered list of the data
         to be inserted into the jobTree"""
-        #TODO: Fix
-        completeFrames = 1
-        totalFrames = 1
-        percent = "{0:.0%}".format(float(completeFrames / totalFrames))
-        taskString = "{0} ({1}/{2})".format(percent, 1, 1)
+        totalFrameRange = range(job.startFrame, (job.endFrame + 1))[::job.byFrame]
+        if job.endFrame not in totalFrameRange:
+            totalFrameRange.append(job.endFrame)
+        totalFrames = len(totalFrameRange)
+        percent = "{0:.0%}".format(float(int(job.frame_count) / totalFrames))
+        taskString = "{0} ({1}/{2})".format(percent, job.frame_count, totalFrames)
 
         return [job.niceName, str(job.id), sql.niceNames[job.status],
                 taskString, job.owner, str(job.priority), str(job.mpf),
@@ -392,8 +394,8 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not jobIDs:
             return None
 
-        cols = ["id", "status", "renderLayers", "archived",
-                "priority", "startFrame", "endFrame", "failedNodes", "attempts"]
+        cols = ["id", "status", "renderLayers", "archived", "priority",
+                "startFrame", "endFrame", "byFrame", "failedNodes", "attempts"]
         jobOBJs = [sql.hydra_jobboard.fetch("WHERE id = %s", (jID,), cols=cols) for jID in jobIDs]
 
         #Start Job
@@ -451,27 +453,18 @@ class FarmView(QMainWindow, Ui_FarmView):
             errList = []
             for job in jobOBJs:
                 if job.status in [sql.KILLED, sql.PAUSED, sql.READY, sql.FINISHED]:
-                    data = ResetDialog.create([job.renderLayers.split(","),
-                                                    job.startFrame])
+                    data = ResetDialog.create([job.renderLayers, job.startFrame,
+                                                job.endFrame, job.byFrame])
                     response = job.reset(data)
                 else:
                     aboutBox(self, "Warning", "Job {} could not be reset because it is running. Please kill/pause it and try again.".format(job.id))
                     response = 1
                 if response < 0:
-                    errList.append([response, job.id])
+                    errList.append(job.id)
 
-            if errList:
-                badStartFrame = [int(x[1]) for x in errList if x[0] == -1]
-                badUpdateAttr = [int(x[1]) for x in errList if x[0] == -2]
-                errStr = "The following errors occurred during the job reset:\n"
-
-                if badStartFrame:
-                    errStr += "\tIDs of jobs given start frame was higher than the job's end frame:\n\t\t{}\n".format(badStartFrame)
-
-                if badUpdateAttr:
-                    errStr += "\tIDs of jobs where an unknown error occured while trying to udpdate the attributes in the databse:\n\t\t{}".format(badUpdateAttr)
-
-                aboutBox(self, "Job Reset Errors", errStr)
+                if errList:
+                    errStr = "The following jobs returned an error:\n{}".format(errList)
+                    aboutBox(self, "Job Reset Errors", errStr)
 
         #Toggle Archive on Job
         elif mode in ["archive", "unarchive"]:
@@ -711,7 +704,6 @@ class FarmView(QMainWindow, Ui_FarmView):
     def set_node_task_colors(self, tasks):
         #Reset colors
         for i in range(self.renderNodeTree.topLevelItemCount()):
-            logger.debug(i)
             self.renderNodeTree.topLevelItem(i).setBackgroundColor(0, niceColors[sql.READY])
 
         #Set new colors
