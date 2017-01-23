@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 
 #Hydra
 from hydra.logging_setup import logger
-import constants
+import Constants
 
 def changeHydraEnviron(newEnviron):
     if sys.platform == "win32":
@@ -63,8 +63,8 @@ def softwareUpdater():
     try:
         currentVersion = float(thisVersion.split("_")[-1])
     except ValueError:
-        logger.warning("Unable to obtain version number from file path. Assuming version number from constants")
-        currentVersion = constants.VERSION
+        logger.warning("Unable to obtain version number from file path. Assuming version number from Constants")
+        currentVersion = Constants.VERSION
 
     versions = os.listdir(hydraPath)
     versions = [float(x.split("_")[-1]) for x in versions if x.startswith("dist_")]
@@ -107,31 +107,31 @@ def getInfoFromCFG(section, option):
     """Return information from the local configuration file."""
     config = ConfigParser.RawConfigParser()
     #Create a copy if it doesn't exist
-    if not os.path.exists(constants.SETTINGS):
-        folder = os.path.dirname(constants.SETTINGS)
+    if not os.path.exists(Constants.SETTINGS):
+        folder = os.path.dirname(Constants.SETTINGS)
         logger.info("Check for folder %s", folder)
         if os.path.exists(folder):
             logger.info("%s Exists", folder)
         else:
             logger.info("Make %s", folder)
             os.mkdir(folder)
-        cfgFile = findResource(os.path.basename(constants.SETTINGS))
+        cfgFile = findResource(os.path.basename(Constants.SETTINGS))
         logger.info("Copy %s", cfgFile)
-        shutil.copyfile(cfgFile, constants.SETTINGS)
+        shutil.copyfile(cfgFile, Constants.SETTINGS)
 
-    config.read(constants.SETTINGS)
+    config.read(Constants.SETTINGS)
     return config.get(section=section, option=option)
 
 def writeInfoToCFG(section, option, value):
     config = ConfigParser.RawConfigParser()
-    config.read(constants.SETTINGS)
+    config.read(Constants.SETTINGS)
     #Make sure it exists
-    if not os.path.exists(constants.SETTINGS):
+    if not os.path.exists(Constants.SETTINGS):
         return
 
     config.set(section, option, value)
 
-    with open(constants.SETTINGS, "wb") as configFile:
+    with open(Constants.SETTINGS, "wb") as configFile:
         config.write(configFile)
 
 def myHostName():
@@ -171,7 +171,7 @@ def nonFlanged(name):
 
 def sockRecvAll(sock):
     """Receive all bytes from a socket, with no buffer size limit"""
-    receivedStrings = (sock.recv(constants.MANYBYTES) for i in itertools.count(0))
+    receivedStrings = (sock.recv(Constants.MANYBYTES) for i in itertools.count(0))
     #Concatenate the nonempty ones
     return ''.join(itertools.takewhile(len, receivedStrings))
 

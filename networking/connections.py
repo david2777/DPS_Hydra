@@ -4,7 +4,7 @@ import socket
 import pickle
 
 #Hydra
-import constants
+import Constants
 from hydra.logging_setup import logger
 from utils.hydra_utils import getInfoFromCFG
 
@@ -40,7 +40,7 @@ class TCPConnection(object):
                 #Knows we're done sending
                 sock.shutdown(socket.SHUT_WR)
                 #Read the response, an ASCII encoded object
-                answerBytes = sock.recv(constants.MANYBYTES)
+                answerBytes = sock.recv(Constants.MANYBYTES)
                 #Convert the response to an object
                 try:
                     answer = pickle.loads(answerBytes)

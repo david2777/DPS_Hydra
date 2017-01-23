@@ -22,7 +22,7 @@ from dialogs_qt.MessageBoxes import *
 from dialogs_qt.WidgetFactories import *
 
 #Hydra
-import constants
+import Constants
 from hydra.logging_setup import logger
 import hydra.hydra_sql as sql
 import hydra.threads as hydra_threads
@@ -820,7 +820,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not hosts:
             return
 
-        choice = yesNoBox(self, "Confirm", constants.GETOFF_STRING + str(hosts))
+        choice = yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
         if choice == QMessageBox.No:
             return
 
@@ -846,7 +846,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not hosts:
             return None
         elif len(hosts) > 1:
-            choice = yesNoBox(self, "Confirm", constants.MULTINODEEDIT_STRING)
+            choice = yesNoBox(self, "Confirm", Constants.MULTINODEEDIT_STRING)
             if choice == QMessageBox.Yes:
                 for host in hosts:
                     self.node_editor(host)
@@ -948,7 +948,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if not thisNode:
             return
 
-        choice = yesNoBox(self, "Confirm", constants.GETOFFLOCAL_STRING)
+        choice = yesNoBox(self, "Confirm", Constants.GETOFFLOCAL_STRING)
         if choice == QMessageBox.Yes:
             response = thisNode.getOff()
             if not response:
@@ -973,7 +973,7 @@ class FarmView(QMainWindow, Ui_FarmView):
         if thisNode:
             return thisNode
         else:
-            warningBox(self, title="Notice", msg=constants.DOESNOTEXISTERR_STRING)
+            warningBox(self, title="Notice", msg=Constants.DOESNOTEXISTERR_STRING)
             self.set_this_node_buttons_enabled(False)
             return None
 

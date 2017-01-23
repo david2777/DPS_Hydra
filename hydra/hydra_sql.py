@@ -11,7 +11,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra
-import constants
+import Constants
 from hydra.logging_setup import logger
 from hydra import password_storage
 from networking.questions import KillCurrentTaskQuestion
@@ -437,7 +437,7 @@ class hydra_taskboard(hydraObject):
 
     def get_log_path(self):
         thisHost = hydra_utils.myHostName()
-        path = os.path.join(constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
+        path = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
         if thisHost == self.host:
             return path
         else:
