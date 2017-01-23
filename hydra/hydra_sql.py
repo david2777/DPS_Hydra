@@ -345,14 +345,6 @@ class hydra_taskboard(hydraObject):
         else:
             execsDict = {ex.name: ex.linux for ex in execs}
 
-        #Not sure if Maya for Linux or Maya 2016 thing but one of the two is
-        #   is appending quotes on the file cmd and messing everything up
-        taskFile = os.path.abspath(hydraJob.taskFile)
-        if platform == "win32":
-            taskFile = "\"{0}\"".format(taskFile)
-        else:
-            taskFile = hydraJob.taskFile
-
         baseCMD = shlex.split(hydraJob.baseCMD)
 
         if hydraJob.jobType == "Maya_Render":
@@ -361,17 +353,17 @@ class hydra_taskboard(hydraObject):
             renderList += ["-postFrame", "source hydra_maya_utils;DPSHydra_TaskUpdate;",
                             "-s", self.startFrame, "-e", self.endFrame, "-b",
                             hydraJob.byFrame, "-rl", hydraJob.renderLayers,
-                            taskFile]
+                            hydraJob.taskFile]
 
         elif hydraJob.jobType == "FusionComp":
-            renderList = [execsDict[hydraJob.execName], taskFile]
+            renderList = [execsDict[hydraJob.execName], hydraJob.taskFile]
             renderList += baseCMD
             renderList += ["/render", "/quiet", "/frames",
                             "{0}..{1}".format(self.startFrame, self.endFrame),
                             "/by", hydraJob.byFrame, "/exit", "/log TestLog.txt", "/verbose"]
 
         elif hydraJob.jobType == "BatchFile":
-            renderList = [taskFile, hydraJob.baseCMD]
+            renderList = [hydraJob.taskFile, hydraJob.baseCMD]
 
         else:
             logger.error("Bad Job Type!")

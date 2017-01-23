@@ -264,7 +264,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
             byFrame = 1
             if phase01Status:
-                jobStatusOverride = "U"
+                jobStatusOverride = PAUSED
             else:
                 jobStatusOverride = jobStatus
 
@@ -279,7 +279,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             if phase03Frames:
                 logger.info("Building Phase 03")
                 phase = 3
-                phase03 = submitJob(niceName, projectName, owner, jobStatusOverride,
+                phase03 = submitJob(niceName, projectName, owner, PAUSED,
                                     compatabilityList, execName, baseCMD, phase03Frames[0],
                                     phase03Frames[-1], byFrame, renderLayers, taskFile, priority,
                                     phase, maxNodesP2, timeout, 10, jobType)
