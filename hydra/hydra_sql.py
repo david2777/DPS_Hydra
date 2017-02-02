@@ -360,8 +360,10 @@ class hydra_taskboard(hydraObject):
             renderList += baseCMD
             renderList += ["-postFrame", "source hydra_maya_utils;DPSHydra_TaskUpdate;",
                             "-s", self.startFrame, "-e", self.endFrame, "-b",
-                            hydraJob.byFrame, "-rl", hydraJob.renderLayers,
-                            taskFile]
+                            hydraJob.byFrame, "-rl", hydraJob.renderLayers]
+            if hydraJob.frameDirectory:
+                renderList += ["-rd", hydraJob.frameDirectory]
+            renderList += [taskFile]
 
         elif hydraJob.jobType == "FusionComp":
             renderList = [execsDict[hydraJob.execName], taskFile]

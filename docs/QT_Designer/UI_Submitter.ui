@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>506</width>
-    <height>320</height>
+    <height>351</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -356,14 +356,14 @@
           </item>
          </layout>
         </item>
-        <item row="2" column="0">
+        <item row="3" column="0">
          <widget class="QLabel" name="startStatusLabel">
           <property name="text">
            <string>Start Status:</string>
           </property>
          </widget>
         </item>
-        <item row="2" column="1">
+        <item row="3" column="1">
          <layout class="QHBoxLayout" name="startStatusLayout">
           <item>
            <widget class="QRadioButton" name="startStatusRadioButton">
@@ -384,14 +384,14 @@
           </item>
          </layout>
         </item>
-        <item row="3" column="0" colspan="2">
+        <item row="4" column="0" colspan="2">
          <widget class="Line" name="line">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
+        <item row="6" column="0">
          <widget class="QLabel" name="priorityLabel">
           <property name="text">
            <string>Priority:</string>
@@ -401,7 +401,7 @@
           </property>
          </widget>
         </item>
-        <item row="5" column="1">
+        <item row="6" column="1">
          <widget class="QSpinBox" name="prioritySpinBox">
           <property name="minimum">
            <number>-100</number>
@@ -414,24 +414,24 @@
           </property>
          </widget>
         </item>
-        <item row="7" column="0">
+        <item row="8" column="0">
          <widget class="QLabel" name="executableLabel">
           <property name="text">
            <string>Executable:</string>
           </property>
          </widget>
         </item>
-        <item row="7" column="1">
+        <item row="8" column="1">
          <widget class="QComboBox" name="executableComboBox"/>
         </item>
-        <item row="8" column="0">
+        <item row="9" column="0">
          <widget class="QLabel" name="cmdLabel">
           <property name="text">
            <string>CMD:</string>
           </property>
          </widget>
         </item>
-        <item row="8" column="1">
+        <item row="9" column="1">
          <widget class="QLineEdit" name="cmdLineEdit">
           <property name="text">
            <string/>
@@ -441,7 +441,7 @@
           </property>
          </widget>
         </item>
-        <item row="9" column="1">
+        <item row="10" column="1">
          <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
            <widget class="QLabel" name="maxNodesP1Label">
@@ -494,21 +494,21 @@
           </item>
          </layout>
         </item>
-        <item row="9" column="0">
+        <item row="10" column="0">
          <widget class="QLabel" name="testNodesLabel">
           <property name="text">
            <string>Max Nodes:</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
+        <item row="7" column="0">
          <widget class="QLabel" name="timeoutLabel">
           <property name="text">
            <string>Timeout:</string>
           </property>
          </widget>
         </item>
-        <item row="6" column="1">
+        <item row="7" column="1">
          <widget class="QSpinBox" name="timeoutSpinbox">
           <property name="suffix">
            <string/>
@@ -520,6 +520,31 @@
            <number>170</number>
           </property>
          </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="frameDirLabel">
+          <property name="text">
+           <string>Frame Dir:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <layout class="QGridLayout" name="frameDirLayout">
+          <item row="0" column="0">
+           <widget class="QLineEdit" name="frameDirLineEdit">
+            <property name="placeholderText">
+             <string>Frame Directory</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="frameDirButton">
+            <property name="text">
+             <string>Browse</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </widget>
