@@ -4,7 +4,7 @@ import sys
 
 #Hydra
 from hydra.logging_setup import logger
-from constants import BASEDIR
+from Constants import BASEDIR
 
 #Fix pylint issues from importing based on platform and catch-all exception handling
 #pylint: disable=W0703,E1101,E0602,E0401

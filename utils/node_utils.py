@@ -3,7 +3,7 @@
 import datetime
 
 #Hydra
-from constants import TIMEDICT, TIMEDICT_REV
+from Constants import TIMEDICT, TIMEDICT_REV
 from hydra.logging_setup import logger
 from hydra.hydra_sql import *
 

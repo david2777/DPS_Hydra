@@ -7,7 +7,7 @@ import sys
 import ConfigParser
 
 #Hydra
-from constants import BASELOGDIR, SETTINGS
+from Constants import BASELOGDIR, SETTINGS
 
 #-------------------------------Initialize-------------------------------------#
 logger = logging.getLogger()

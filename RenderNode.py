@@ -10,7 +10,7 @@ import traceback
 import psutil
 
 #Hydra
-import constants
+import Constants
 from hydra.logging_setup import logger
 import hydra.hydra_sql as sql
 import hydra.single_instance as single_instance
@@ -44,8 +44,8 @@ class RenderTCPServer(servers.TCPServer):
             return
 
         #Create RenderLog Directory if it doesn't exit
-        if not os.path.isdir(constants.RENDERLOGDIR):
-            os.makedirs(constants.RENDERLOGDIR)
+        if not os.path.isdir(Constants.RENDERLOGDIR):
+            os.makedirs(Constants.RENDERLOGDIR)
 
         self.unstick_task()
 

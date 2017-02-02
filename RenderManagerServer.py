@@ -43,7 +43,8 @@ class RenderManagementServer(servers.TCPServer):
             idleNodeList = self.check_idle_nodes(idleNodeList)
 
         if renderJobList and len(idleNodeList) < len(renderJobList):
-            self.shuffle_queue(renderJobList, taskList, jobDict)
+            pass
+            #self.shuffle_queue(renderJobList, taskList, jobDict)
 
         if renderJobList:
             self.assign_render_jobs(renderJobList, idleNodeList)
@@ -288,7 +289,8 @@ class RenderManagementServer(servers.TCPServer):
 
         elif updateType == "TaskCompletion" or updateType == "tc":
             taskCols = ["job_id", "host", "exitCode", "endTime", "mpf", "status"]
-            jobCols = ["mpf", "status", "attempts", "failedNodes", "maxAttempts"]
+            jobCols = ["mpf", "status", "attempts", "failedNodes", "maxAttempts",
+                        "startFrame", "endFrame", "byFrame"]
             nodeCols = ["status", "task_id"]
             try:
                 task = sql.hydra_taskboard.fetch("WHERE id = %s", (data["task_id"],),

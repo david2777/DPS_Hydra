@@ -11,7 +11,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 
 #Hydra
-import constants
+import Constants
 from hydra.logging_setup import logger
 from hydra import password_storage
 from networking.questions import KillCurrentTaskQuestion
@@ -344,14 +344,6 @@ class hydra_taskboard(hydraObject):
             execsDict = {ex.name: ex.win32 for ex in execs}
         else:
             execsDict = {ex.name: ex.linux for ex in execs}
-
-        #Not sure if Maya for Linux or Maya 2016 thing but one of the two is
-        #   is appending quotes on the file cmd and messing everything up
-        taskFile = os.path.abspath(hydraJob.taskFile)
-        if platform == "win32":
-            taskFile = "\"{0}\"".format(taskFile)
-        else:
-            taskFile = hydraJob.taskFile
 
         baseCMD = shlex.split(hydraJob.baseCMD)
 
