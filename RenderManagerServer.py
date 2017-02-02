@@ -252,8 +252,7 @@ class RenderManagementServer(servers.TCPServer):
     def is_alive():
         return True
 
-    @staticmethod
-    def progress_update_handler(updateType, data):
+    def progress_update_handler(self, updateType, data):
         logger.debug("Progress Update: %s", str(data))
         if updateType == "TaskProgress" or updateType == "tp":
             renderNode = sql.hydra_rendernode.fetch("WHERE host = %s", (data["thisNode"],),
@@ -264,21 +263,33 @@ class RenderManagementServer(servers.TCPServer):
                                                     "job_id", "frame_count"])
             job = sql.hydra_jobboard.fetch("WHERE id = %s", (task.job_id,),
                                             cols=["frame_count", "startFrame",
-                                                    "endFrame", "byFrame"])
+                                                    "endFrame", "byFrame",
+                                                    "frameDirectory"])
             try:
-                job.frame_count += 1
-                task.frame_count += 1
                 task.currentFrame = data["currentFrame"]
                 task.currentRenderLayer = data["renderLayer"]
+                rlPath = os.path.join(job.frameDirectory, task.currentRenderLayer)
+
+                if os.path.exists(rlPath):
+                    frameList = self.get_frame_list(rlPath)
+                else:
+                    frameList = self.get_frame_list(job.frameDirectory)
+                totalFrameRange = range(job.startFrame, (job.endFrame + 1))[::job.byFrame]
+                frameList = [x for x in frameList if x in totalFrameRange]
+                job.frame_count = len(frameList)
+
                 oldTime = task.last_frame_start_time
                 task.last_frame_start_time = datetime.datetime.now()
                 if oldTime:
                     tdiff = task.last_frame_start_time - oldTime
-                    if task.mpf:
-                        tsecs = ((task.mpf.total_seconds() + tdiff.total_seconds()) / 2)
-                        task.mpf = datetime.timedelta(seconds=tsecs)
-                    else:
-                        task.mpf = tdiff
+                    #I hate doing time based checks but can't think of anything
+                    #   better right now...
+                    if tdiff.total_seconds() > 5:
+                        if task.mpf:
+                            tsecs = ((task.mpf.total_seconds() + tdiff.total_seconds()) / 2)
+                            task.mpf = datetime.timedelta(seconds=tsecs)
+                        else:
+                            task.mpf = tdiff
                 with sql.transaction() as t:
                     task.update(t)
                     job.update(t)
@@ -290,7 +301,7 @@ class RenderManagementServer(servers.TCPServer):
         elif updateType == "TaskCompletion" or updateType == "tc":
             taskCols = ["job_id", "host", "exitCode", "endTime", "mpf", "status"]
             jobCols = ["mpf", "status", "attempts", "failedNodes", "maxAttempts",
-                        "startFrame", "endFrame", "byFrame"]
+                        "startFrame", "endFrame", "byFrame", "frame_count"]
             nodeCols = ["status", "task_id"]
             try:
                 task = sql.hydra_taskboard.fetch("WHERE id = %s", (data["task_id"],),
@@ -322,10 +333,8 @@ class RenderManagementServer(servers.TCPServer):
                 if task.exitCode == 0:
                     task.status = sql.FINISHED
                     #TODO: Cleanup log?
-                    if taskCount <= 0:
+                    if taskCount <= 0 and job.frame_count == targetFrameCount:
                         job.status = sql.FINISHED
-                        if job.frame_count != targetFrameCount and job.byFrame != 1:
-                            logger.warning("Job %s totalFrameRange is %s. %s expected.", job.id, totalFrameRange, targetFrameCount)
                 else:
                     newStatus = data["statusAfterDeath"]
                     task.status = newStatus if newStatus else sql.ERROR
@@ -382,6 +391,35 @@ class RenderManagementServer(servers.TCPServer):
         with sql.transaction() as t:
             task.update(t)
             node.update(t)
+
+    #--------------------------------------------------------------------------#
+    #------------------------Progress Update Helpers---------------------------#
+    #--------------------------------------------------------------------------#
+    @staticmethod
+    def get_frame_list(directory):
+        directory = os.path.abspath(directory)
+        logger.debug(directory)
+        if os.path.exists(directory) and not os.path.isfile(directory):
+            fileList = [f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))]
+            logger.debug(fileList)
+            fileNameList = [os.path.split(f)[1] for f in fileList]
+            frameNumberList = []
+            for frame in fileNameList:
+                try:
+                    frameNumberList.append(int(frame.split(".")[1]))
+                except (ValueError, IndexError):
+                    pass
+
+            #Check for duplicates
+            if len(frameNumberList) != len(set(frameNumberList)):
+                logger.warning("Frame set does not match list in %s", directory)
+                return False
+            else:
+                logger.debug(frameNumberList)
+                return frameNumberList
+        else:
+            logger.critical("%s does not exist or is a file", directory)
+            return False
 
 def main():
     logger.info("starting in %s", os.getcwd())

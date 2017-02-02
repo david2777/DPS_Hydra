@@ -350,11 +350,18 @@ class hydra_taskboard(hydraObject):
         if hydraJob.jobType == "Maya_Render":
             renderList = [execsDict[hydraJob.execName]]
             renderList += baseCMD
+
+            #TODO: do this better
+            if hydraJob.baseCMD.find("-r redshift") > 0:
+                renderList += ["-preRender", "source hydra_maya_utils;DPSHydra_RSPreRender;"]
+
             renderList += ["-postFrame", "source hydra_maya_utils;DPSHydra_TaskUpdate;",
                             "-s", self.startFrame, "-e", self.endFrame, "-b",
                             hydraJob.byFrame, "-rl", hydraJob.renderLayers]
+
             if hydraJob.frameDirectory:
                 renderList += ["-rd", hydraJob.frameDirectory]
+
             renderList += [hydraJob.taskFile]
 
         elif hydraJob.jobType == "FusionComp":

@@ -1,9 +1,13 @@
 global proc DPSHydra_TaskUpdate(){
   int $currentFrame = `currentTime -q`;
   string $currentRenderLayer = `editRenderLayerGlobals -q -currentRenderLayer`;
-  print ("[Hydra] UpdateData: " + $currentFrame + " " + $currentRenderLayer);
-  print "[Hydra] Sending UpdateData to RenderManager...";
-  //TODO:Fix Temp Path
   system(("start python C:\\Users\\David\\Documents\\GitHub\\DPS_Hydra\\TaskUpdater.py TaskProgress " + $currentFrame + " " + $currentRenderLayer));
-  print "[Hydra] UpdateData Sent!";
+}
+global proc DPSHydra_RSPreRender(){
+  if (! `getAttr -l "redshiftOptions.skipExistingFrames"`){
+    setAttr "redshiftOptions.skipExistingFrames" 1;
+  }
+  if (! `getAttr -l "redshiftOptions.logLevel"`){
+    setAttr "redshiftOptions.logLevel" 2;
+  }
 }
