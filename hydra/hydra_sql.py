@@ -355,17 +355,17 @@ class hydra_taskboard(hydraObject):
                             hydraJob.byFrame, "-rl", hydraJob.renderLayers]
             if hydraJob.frameDirectory:
                 renderList += ["-rd", hydraJob.frameDirectory]
-            renderList += [taskFile]
+            renderList += [hydraJob.taskFile]
 
         elif hydraJob.jobType == "FusionComp":
-            renderList = [execsDict[hydraJob.execName], taskFile]
+            renderList = [execsDict[hydraJob.execName], hydraJob.taskFile]
             renderList += baseCMD
             renderList += ["/render", "/quiet", "/frames",
                             "{0}..{1}".format(self.startFrame, self.endFrame),
                             "/by", hydraJob.byFrame, "/exit", "/log TestLog.txt", "/verbose"]
 
         elif hydraJob.jobType == "BatchFile":
-            renderList = [taskFile, hydraJob.baseCMD]
+            renderList = [hydraJob.taskFile, hydraJob.baseCMD]
 
         else:
             logger.error("Bad Job Type!")
@@ -431,7 +431,7 @@ class hydra_taskboard(hydraObject):
 
     def get_log_path(self):
         thisHost = hydra_utils.myHostName()
-        path = os.path.join(constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
+        path = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
         if thisHost == self.host:
             return path
         else:
