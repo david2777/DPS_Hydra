@@ -125,7 +125,6 @@ CREATE TABLE `hydra_rendernode` (
   `schedule_enabled` int(1) DEFAULT '0',
   `week_schedule` varchar(255) DEFAULT '',
   `pulse` datetime DEFAULT NULL COMMENT 'The last time RenderNodeMain.exe was known to be running, if ever',
-  `last_frame_start_time` datetime DEFAULT NULL,
   `software_version` varchar(255) DEFAULT NULL COMMENT 'The version of the RenderNodeMain.exe currently running on this node',
   `is_render_node` int(1) DEFAULT '0' COMMENT 'Is this node used for rendering, 0 = False 1 = True',
   PRIMARY KEY (`host`),
@@ -145,19 +144,15 @@ DROP TABLE IF EXISTS `hydra_taskboard`;
 CREATE TABLE `hydra_taskboard` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'The task id for this task. Auto incremented and created on submission by DB. ',
   `job_id` int(11) NOT NULL COMMENT 'The job_id for this task. ',
-  `host` varchar(128) NOT NULL COMMENT 'Host the task is running on',
-  `status` char(1) NOT NULL DEFAULT 'S' COMMENT 'Current task status',
-  `startTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Time the task started',
+  `status` char(1) NOT NULL DEFAULT 'R' COMMENT 'Current task status',
   `archived` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
   `priority` int(3) NOT NULL DEFAULT '50',
-  `frame_count` int(1) NOT NULL DEFAULT '0' COMMENT 'Farme coutner, inremented when a new frame update is sent to the manager',
+  `host` varchar(128) DEFAULT NULL COMMENT 'Host the task is running on',
   `startFrame` int(4) DEFAULT NULL COMMENT 'The frame for this task',
   `endFrame` int(4) DEFAULT NULL,
-  `currentFrame` int(4) DEFAULT NULL COMMENT 'Current frame being rendered',
-  `currentRenderLayer` varchar(64) DEFAULT NULL COMMENT 'Render layer currently in progress',
   `exitCode` int(1) DEFAULT NULL COMMENT 'Exit code from the subprocess',
+  `startTime` datetime DEFAULT NULL COMMENT 'Time the task started',
   `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',
-  `last_frame_start_time` datetime DEFAULT NULL COMMENT 'Time a frame was last succesfully rendered and pushed to the database. ',
   `mpf` time DEFAULT NULL COMMENT 'Minutes Per Frame',
   PRIMARY KEY (`id`),
   UNIQUE KEY `id_UNIQUE` (`id`),
@@ -176,4 +171,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-01-21 22:18:56
+-- Dump completed on 2017-02-02 19:57:12

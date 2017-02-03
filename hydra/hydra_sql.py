@@ -7,8 +7,6 @@ import os
 
 #Third Party
 import MySQLdb
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
 
 #Hydra
 import Constants
@@ -155,9 +153,14 @@ class hydraObject(object):
         orderClause = ""
         if orderTuples:
             orderClause = "ORDER BY"
+            orderCheck = len(orderTuples) > 1
             for oTuple in orderTuples:
                 orderClause += " %s %s"
+                if orderCheck:
+                    orderClause += ","
                 queryTuple += oTuple
+            if orderCheck:
+                orderClause = orderClause[:-1]
 
         #Limit Clause
         limitClause = ""
@@ -167,8 +170,8 @@ class hydraObject(object):
 
         #Build Select Statement
         select = "SELECT {0} FROM {1} {2} {3} {4}"
-        select = select.format(colStatement, cls.tableName(), whereClause,
-                                orderClause, limitClause)
+        select = select.format(colStatement, "hydra." + cls.tableName(),
+                                whereClause, orderClause, limitClause)
         #pylint: disable=W1201
         logger.debug(select % queryTuple)
 
@@ -251,7 +254,7 @@ class hydra_rendernode(hydraObject):
         newStatus = "P" if self.status == "S" else "O"
         return self.updateAttr("status", newStatus)
 
-    def getOff(self):
+    def get_off(self):
         response = True
         if self.status == "S":
             self.updateAttr("status", PENDING)
@@ -309,20 +312,6 @@ class hydra_jobboard(hydraObject):
 
     def reset(self, resetData):
         logger.debug("Resetting job %s with data: %s", self.id, resetData)
-        self.status = PAUSED
-        self.frame_count = 0
-        self.renderLayers = resetData[0]
-        self.startFrame = resetData[1]
-        self.endFrame = resetData[2]
-        self.byFrame = resetData[3]
-        if resetData[4]:
-            self.failedNodes = ""
-            self.attempts = 0
-
-        with transaction() as t:
-            self.update(t)
-
-        return 0
 
     def archive(self, mode):
         """Function for archiving/unarchiveing job. Accepts binary ints, booleans,

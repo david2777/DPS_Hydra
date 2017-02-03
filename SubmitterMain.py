@@ -6,27 +6,25 @@ import os
 import getopt
 
 #Third Party
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui, QtCore
 
 #Hydra Qt
 from compiled_qt.UI_Submitter import Ui_MainWindow
 
 #Hydra
-from hydra.hydra_sql import *
+import hydra.hydra_sql as sql
 from hydra.logging_setup import logger
 from dialogs_qt.MessageBoxes import aboutBox
 from utils.hydra_utils import findResource
 
-#Doesn't like Qt classes
-#pylint: disable=E0602,E1101,C0302
+#pylint: disable=E1101
 
-class SubmitterMain(QMainWindow, Ui_MainWindow):
+class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
     def __init__(self):
-        QMainWindow.__init__(self)
+        QtGui.QMainWindow.__init__(self)
         #Built-in UI Setup
         self.setupUi(self)
-        self.setWindowIcon(QIcon(findResource("assets/SubmitterMain.png")))
+        self.setWindowIcon(QtGui.QIcon(findResource("assets/SubmitterMain.png")))
 
         #Setup the UI with my fuctions
         self.setup_globals()
@@ -103,13 +101,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
     def populate_reqs(self):
         #Get requirements master list from the DB
-        requirements = hydra_capabilities.fetch(multiReturn=True)
+        requirements = sql.hydra_capabilities.fetch(multiReturn=True)
         requirements = [req.name for req in requirements]
         self.reqChecks = []
         col = 0
         row = 0
         for item in requirements:
-            c = QCheckBox(item)
+            c = QtGui.QCheckBox(item)
             self.reqsGrid.addWidget(c, row, col)
             if col == 2:
                 row += 1
@@ -125,7 +123,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
     def populate_execs(self):
         #Get execs
-        execs = hydra_executable.fetch(multiReturn=True, cols=["name"])
+        execs = sql.hydra_executable.fetch(multiReturn=True, cols=["name"])
         execs.reverse()
 
         for execute in execs:
@@ -137,7 +135,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             self.executableComboBox.setCurrentIndex(index)
 
     def populate_job_types(self):
-        types = hydra_jobtypes.fetch(multiReturn=True, cols=["type"])
+        types = sql.hydra_jobtypes.fetch(multiReturn=True, cols=["type"])
         types.reverse()
 
         for t in types:
@@ -179,7 +177,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         phase = 0 #Placeholder, set this later when building the commands
         jobStatus = self.get_job_status()
         niceName = str(self.niceNameLineEdit.text())
-        owner = transaction().db_username
+        owner = sql.transaction().db_username
         compatabilityList = self.get_reqs()
         maxNodesP1 = int(self.maxNodesP1SpinBox.value())
         maxNodesP2 = int(self.maxNodesP2SpinBox.value())
@@ -233,7 +231,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
             byFrame = 1
             if phase01Status:
-                jobStatusOverride = PAUSED
+                jobStatusOverride = sql.PAUSED
             else:
                 jobStatusOverride = jobStatus
 
@@ -248,7 +246,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             if phase03Frames:
                 logger.info("Building Phase 03")
                 phase = 3
-                phase03 = submitJob(niceName, projectName, owner, PAUSED,
+                phase03 = submit_job(niceName, projectName, owner, sql.PAUSED,
                                     compatabilityList, execName, baseCMD, phase03Frames[0],
                                     phase03Frames[-1], byFrame, renderLayers, taskFile, priority,
                                     phase, maxNodesP2, timeout, 10, jobType, frameDir)
@@ -261,8 +259,9 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         #aboutBox(self, "Submitted!", "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
 
     def browse_file_button_handler(self, QTTarget, startDir, caption, fileFilter):
-        returnDir = QFileDialog.getOpenFileName(self, caption, startDir, fileFilter)
+        returnDir = QtGui.QFileDialog.getOpenFileName(self, caption, startDir, fileFilter)
         if returnDir:
+            returnDir = str(returnDir)
             if returnDir.endswith(".mel"):
                 returnDir, _ = os.path.split(returnDir)
             QTTarget.setText(returnDir)
@@ -272,7 +271,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             return False
 
     def browse_directory_button_handler(self, QTTarget, startDir, caption):
-        returnDir = QFileDialog.getExistingDirectory(self, caption, startDir)
+        returnDir = QtGui.QFileDialog.getExistingDirectory(self, caption, startDir)
         if returnDir:
             QTTarget.setText(returnDir)
             return returnDir
@@ -384,7 +383,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         else:
             wildcard = "qwertyuiop"
 
-        i = self.executableComboBox.findText(wildcard, Qt.MatchWildcard)
+        i = self.executableComboBox.findText(wildcard, QtCore.Qt.MatchWildcard)
         if i > 0:
             self.executableComboBox.setCurrentIndex(i)
     #------------------------------------------------------------------------#
@@ -423,7 +422,7 @@ def submit_job(niceName, projectName, owner, status, requirements, execName,
         execName = "fusion"
         maxNodes = 1
 
-    job = hydra_jobboard(niceName=niceName, projectName=projectName,
+    job = sql.hydra_jobboard(niceName=niceName, projectName=projectName,
                         owner=owner, status=status,
                         requirements=requirements, execName=execName,
                         baseCMD=baseCMD, startFrame=startFrame,
@@ -433,8 +432,15 @@ def submit_job(niceName, projectName, owner, status, requirements, execName,
                         timeout=timeout, maxAttempts=maxAttempts, jobType=jobType,
                         frameDirectory=frameDir)
 
-    with transaction() as t:
+    frameList = range(startFrame, (endFrame + 1))[::byFrame]
+    frameList += [endFrame] if endFrame not in frameList else []
+
+    with sql.transaction() as t:
         job.insert(trans=t)
+        taskList = [sql.hydra_taskboard(job_id=job.id, status=status, priority=priority,
+                                        startFrame=x, endFrame=x) for x in frameList]
+        for task in taskList:
+            task.insert(trans=t)
 
     return job
 
@@ -444,7 +450,7 @@ if __name__ == '__main__':
     except IndexError:
         sys.argv.append("")
 
-    app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
 
     window = SubmitterMain()
     window.show()

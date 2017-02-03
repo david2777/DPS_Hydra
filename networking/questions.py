@@ -1,7 +1,4 @@
 """Questions you can ask TCP Servers"""
-#Standard
-import subprocess
-
 #pylint: disable=R0903,W0613,R0201
 
 class StartRenderQuestion(object):
@@ -10,13 +7,6 @@ class StartRenderQuestion(object):
         self.task = task
     def compute_answer(self, server):
         return server.start_render_task(self.job, self.task)
-
-class CMDQuestion(object):
-    """A Question for running arbitrary commands on a server."""
-    def __init__(self, args):
-        self.args = args
-    def compute_answer(self, server):
-        return subprocess.check_output(self.args, stderr=subprocess.STDOUT)
 
 class IsAliveQuestion(object):
     """A Question for running arbitrary commands on a server."""
@@ -29,26 +19,3 @@ class KillCurrentTaskQuestion(object):
     def compute_answer(self, server):
         server.kill_current_job(self.statusAfterDeath)
         return server.childKilled
-
-class ProgressUpdateQuestion(object):
-    def __init__(self, updateType, data):
-        self.updateType = updateType
-        self.data = data
-    def compute_answer(self, server):
-        return server.progress_update_handler(self.updateType, self.data)
-
-class ChangeNodeStatusQuestion(object):
-    def __init__(self, node, newStatus, force):
-        self.node = node
-        self.newStatus = newStatus
-        self.force = force
-    def compute_answer(self, server):
-        return server.change_node_status(self.node, self.newStatus, self.force)
-
-class UnstickNodeQuestion(object):
-    def __init__(self, node, nodeStatus, taskStatus):
-        self.node = node
-        self.nodeStatus = nodeStatus
-        self.taskStatus = taskStatus
-    def compute_answer(self, server):
-        return server.unstick_node(self.node, self.nodeStatus, self.taskStatus)

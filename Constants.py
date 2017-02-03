@@ -5,7 +5,7 @@ import sys
 import getpass
 
 #Versioning
-VERSION = 0.23
+VERSION = 0.3
 
 #Files
 if sys.platform == "win32":

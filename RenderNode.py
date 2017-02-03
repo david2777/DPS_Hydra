@@ -1,7 +1,6 @@
 #Standard
 import os
 import sys
-import threading
 import datetime
 import subprocess
 import traceback
@@ -15,8 +14,6 @@ from hydra.logging_setup import logger
 import hydra.hydra_sql as sql
 import hydra.single_instance as single_instance
 import networking.servers as servers
-import networking.questions as questions
-import networking.connections as connections
 import utils.hydra_utils as hydra_utils
 import utils.node_utils as node_utils
 
@@ -31,9 +28,6 @@ class RenderTCPServer(servers.TCPServer):
         self.PSUtilProc = None
         self.statusAfterDeath = None
         self.childKilled = 0
-
-        self.managerPort = int(hydra_utils.getInfoFromCFG("manager", "port"))
-        self.managerAddress = str(hydra_utils.getInfoFromCFG("manager", "host"))
 
         #Get this node data from the database and make sure it exists
         self.thisNode = node_utils.getThisNodeOBJ()
@@ -52,27 +46,59 @@ class RenderTCPServer(servers.TCPServer):
         #Run The Server
         port = int(hydra_utils.getInfoFromCFG("network", "port"))
         self.startServerThread(port)
+        self.createIdleLoop("Render_Loop_Thread", self.render_loop, 5)
 
-    def change_this_node_status(self, status, force=False):
-        """Convenience function for changing the status of this node."""
-        conn = connections.TCPConnection(self.managerAddress, self.managerPort)
-        question = questions.ChangeNodeStatusQuestion(self.thisNode, status, force)
-        return conn.get_answer(question)
+    def render_loop(self):
+        #TODO:Reqs,Failed Nodes,Max Nodes
+        #TODO:Priority sorting doesn't work somehow...
+        if self.thisNode.status in [sql.OFFLINE, sql.PENDING, sql.STARTED]:
+            return
 
-    def unstick_task(self, statusAfterDeath=sql.ERROR):
+        taskWhere = "WHERE status = 'R' AND priority > %s"
+        with sql.transaction() as t:
+            renderTask = sql.hydra_taskboard.fetch(taskWhere, (self.thisNode.minPriority,),
+                                                    orderTuples=(("priority", "DESC"), ("id", "ASC")),
+                                                    limit=1, multiReturn=False,
+                                                    explicitTransaction=t)
+            if renderTask:
+                logger.debug("RenderTask found %s", renderTask)
+                renderJob = sql.hydra_jobboard.fetch("WHERE id = %s", (renderTask.job_id,))
+                #Task Updates
+                renderTask.status = "S"
+                renderTask.host = self.thisNode.host
+                renderTask.startTime = datetime.datetime.now().replace(microsecond=0)
+                #Job Updates
+                renderJob.status = "S"
+                #Node Updates
+                self.thisNode.status = "S"
+                self.thisNode.task_id = renderTask.id
+                #Push updates to the db
+                renderTask.update(t)
+                renderJob.update(t)
+                self.thisNode.update(t)
+
+        if renderTask and renderJob:
+            self.launch_render_task(renderJob, renderTask)
+
+    def unstick_task(self, statusAfterDeath=sql.READY):
         """Cleanup task if the node starts with one assigned to it
         (Like if the node crashed/restarted)"""
-        if self.thisNode.task_id:
-            newStatus = sql.IDLE if self.thisNode.status in [sql.STARTED, sql.IDLE] else sql.OFFLINE
-            conn = connections.TCPConnection(self.managerAddress, self.managerPort)
-            question = questions.UnstickNodeQuestion(self.thisNode, newStatus, statusAfterDeath)
-            return conn.get_answer(question)
-        elif self.thisNode.status == sql.PENDING:
-            return self.change_this_node_status(sql.OFFLINE, force=True)
-        elif self.thisNode.status == sql.STARTED:
-            response = self.change_this_node_status(sql.IDLE, force=True)
-            logger.info(response)
-            return response
+        task = None
+        with sql.transaction() as t:
+            if self.thisNode.status in [sql.STARTED, sql.PENDING]:
+                self.thisNode.status = sql.IDLE if self.thisNode.status == sql.STARTED else sql.OFFLINE
+
+            if self.thisNode.task_id:
+                task = sql.hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,),
+                                                multiReturn=False, explicitTransaction=t)
+                task.status = statusAfterDeath
+                task.endTime = datetime.datetime.now().replace(microsecond=0)
+                task.exitCode = 999
+                self.thisNode.task_id = None
+
+            self.thisNode.update(t)
+            if task:
+                task.update(t)
 
     def shutdown(self):
         """Offline node, Kill current job, shutdown servers, reset node status"""
@@ -80,11 +106,14 @@ class RenderTCPServer(servers.TCPServer):
         currentStatus = self.thisNode.status
         newStatus = sql.IDLE if currentStatus in [sql.IDLE, sql.STARTED] else sql.OFFLINE
         if currentStatus in [sql.STARTED, sql.PENDING] or self.childProcess:
-            self.change_this_node_status(sql.GETOFF)
+            self.thisNode.get_off()
         else:
-            self.change_this_node_status(sql.OFFLINE)
+            self.thisNode.offline()
         servers.TCPServer.shutdown(newStatus)
-        self.change_this_node_status(newStatus)
+        if newStatus == sql.IDLE:
+            self.thisNode.online()
+        else:
+            self.thisNode.offline()
         logger.info("RenderNode servers Shutdown")
 
     def launch_render_task(self, job, task):
@@ -103,8 +132,8 @@ class RenderTCPServer(servers.TCPServer):
             log = file(logPath, 'w')
         except (IOError, OSError, WindowsError) as e:
             logger.error(e)
-            response = self.change_this_node_status(sql.OFFLINE)
-            return response
+            self.thisNode.offline()
+            return
 
         log.write('Hydra log file {0} on {1}\n'.format(logPath, self.thisNode.host))
         log.write('RenderNode is {0}\n'.format(sys.argv))
@@ -134,44 +163,55 @@ class RenderTCPServer(servers.TCPServer):
             self.unstick_task()
             return
 
-        #If it gets this far then the subprocess has exited for one reason or another
-        #Get Exit Code, Record the results
-        doneTime = datetime.datetime.now().replace(microsecond=0)
-        exitCode = self.childProcess.returncode if self.childProcess else 1234
+        with sql.transaction() as t:
+            #TODO:Replicate failed node checks to tasks
+            #Task
+            task.endTime = datetime.datetime.now().replace(microsecond=0)
+            task.exitCode = self.childProcess.returncode if self.childProcess else 1234
+            task.mpf = (task.endTime - task.startTime) if task.exitCode == 0 else None
+            task.status = sql.FINISHED if task.exitCode == 0 else sql.READY
+            task.update(t)
+            #Job
+            taskList = sql.hydra_taskboard.fetch("WHERE job_id = %s", (job.id,),
+                                                    cols=["status"],
+                                                    multiReturn=True,
+                                                    explicitTransaction=t)
+            allTaskDone = all([ta.status == sql.FINISHED for ta in taskList])
+            allTaskStart = any([ta.status == sql.STARTED for ta in taskList])
+            if allTaskDone:
+                job.status = sql.FINISHED
+            elif allTaskStart:
+                job.status = sql.STARTED
+            else:
+                job.status = sql.READY
+            job.attempts += 1 if task.exitCode != 0 else 0
+            job.failedNodes += "{},".format(self.thisNode.host) if task.exitCode != 0 else ""
+            if job.attempts >= job.maxAttempts:
+                job.status = sql.ERROR
+            if job.mpf:
+                job.mpf = ((job.mpf + task.mpf) / 2)
+            else:
+                job.mpf = task.mpf
+            job.update(t)
+            #Node
+            self.thisNode.task_id = None
+            self.thisNode.status = sql.OFFLINE if self.thisNode.status == sql.PENDING else sql.IDLE
+            self.thisNode.update(t)
+
         logString = "\nProcess exited with code {0} at {1} on {2}\n"
-        log.write(logString.format(exitCode, doneTime, self.thisNode.host))
+        log.write(logString.format(task.exitCode, task.endTime, self.thisNode.host))
         self.childProcess = None
         self.PSUtilProc = None
 
         log.close()
         logPath = None
 
-        logger.debug("Sending completion data to the manager")
-        data = {"task_id" : task.id, "exitCode" : exitCode, "endTime" : doneTime}
-        conn = connections.TCPConnection(self.managerAddress, self.managerPort)
-        question = questions.ProgressUpdateQuestion("TaskCompletion", data)
-        response = conn.get_answer(question)
-        if not response:
-            logger.critical("An error occured while sending the completion data to the manager!")
-            self.change_this_node_status(sql.GETOFF)
-
         logger.info("Done with render task %s", task.id)
+        return
 
     #--------------------------------------------------------------------------#
     #-------------------------Incoming TCP Handlers----------------------------#
     #--------------------------------------------------------------------------#
-
-    @staticmethod
-    def is_alive():
-        return True
-
-    def start_render_task(self, job, task):
-        """Command sent to the RenderTCPServer, starts the render task in a new
-        thread to prevent thread locking during the render."""
-        self.renderThread = threading.Thread(target=self.launch_render_task,
-                                                args=(job, task))
-        self.renderThread.start()
-        return self.renderThread.isAlive()
 
     def kill_current_job(self, statusAfterDeath):
         """Kills the render node's current job if it's running one.
