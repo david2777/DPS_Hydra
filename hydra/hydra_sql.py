@@ -130,61 +130,36 @@ class hydraObject(object):
         return cls.__name__
 
     @classmethod
-    def fetch(cls, whereClause="", whereTuple=None, cols=None,
-                    orderTuples=None, limit=None, multiReturn=False,
+    def fetch(cls, clause="", arguments=tuple(), cols=None, multiReturn=False,
                     explicitTransaction=None):
         """A fetch function with paramater binding.
         ie. thisNode = hydra_rendernode.fetch("WHERE host = %s", ("test",))
             idAttr = thisNode.id"""
         #Column Clause
         colStatement = "*"
-        if cols and len(cols) > 0:
+        if cols:
             cols = [str(x) for x in cols]
             if cls.primaryKey not in cols:
                 cols += [cls.primaryKey]
             colStatement = ",".join(cols)
 
-        queryTuple = tuple()
-        #Where Clause
-        if whereClause and whereTuple:
-            queryTuple += whereTuple
-
-        #Order Clause
-        orderClause = ""
-        if orderTuples:
-            orderClause = "ORDER BY"
-            orderCheck = len(orderTuples) > 1
-            for oTuple in orderTuples:
-                orderClause += " %s %s"
-                if orderCheck:
-                    orderClause += ","
-                queryTuple += oTuple
-            if orderCheck:
-                orderClause = orderClause[:-1]
-
-        #Limit Clause
-        limitClause = ""
-        if limit:
-            limitClause = "LIMIT %s "
-            queryTuple += (limit,)
-
         #Build Select Statement
-        select = "SELECT {0} FROM {1} {2} {3} {4}"
-        select = select.format(colStatement, "hydra." + cls.tableName(),
-                                whereClause, orderClause, limitClause)
+        select = "SELECT {0} FROM {1} {2}"
+        select = select.format(colStatement, cls.tableName(),
+                                clause)
         #pylint: disable=W1201
-        logger.debug(select % queryTuple)
+        logger.debug(select % arguments)
 
         #Fetch the data
         if explicitTransaction:
-            return cls.doFetch(explicitTransaction, select, queryTuple, multiReturn)
+            return cls.doFetch(explicitTransaction, select, arguments, multiReturn)
         else:
             with transaction() as t:
-                return cls.doFetch(t, select, queryTuple, multiReturn)
+                return cls.doFetch(t, select, arguments, multiReturn)
 
     @classmethod
-    def doFetch(cls, t, select, queryTuple, multiReturn):
-        t.cur.execute(select, queryTuple)
+    def doFetch(cls, t, select, arguments, multiReturn):
+        t.cur.execute(select, arguments)
         names = [desc[0] for desc in t.cur.description]
         returnList = [cls(**dict(zip(names, tup))) for tup in t.cur.fetchall()]
         if multiReturn:
@@ -295,13 +270,39 @@ class hydra_jobboard(hydraObject):
     autoColumn = "id"
     primaryKey = "id"
 
+    def get_tasks(self, cols=None):
+        return hydra_taskboard.fetch("WHERE job_id = %s", (self.id,),
+                                            multiReturn=True, cols=cols)
+
     def start(self):
-        return self.updateAttr("status", "R")
+        if self.status in [PAUSED, KILLED]:
+            self.status = READY
+            taskList = self.get_tasks(["status"])
+            with transaction() as t:
+                self.update(t)
+                for task in taskList:
+                    if task.status in [PAUSED, KILLED]:
+                        task.status = READY
+                        task.update(t)
+            return True
+        else:
+            return None
 
     def pause(self):
-        return self.updateAttr("status", "U")
+        if self.status in [READY, KILLED]:
+            self.status = PAUSED
+            taskList = self.get_tasks(["status"])
+            with transaction() as t:
+                self.update(t)
+                for task in taskList:
+                    if task.status in [READY, KILLED]:
+                        task.status = PAUSED
+                        task.update(t)
+            return True
+        else:
+            return None
 
-    def kill(self, statusAfterDeath="K", TCPKill=True):
+    def kill(self, statusAfterDeath=KILLED, TCPKill=True):
         subTasks = hydra_taskboard.fetch("WHERE job_id = %s AND status = 'S'", (self.id,),
                                         cols=["id", "status", "exitCode", "endTime", "host"],
                                         multiReturn=True)
@@ -310,14 +311,29 @@ class hydra_jobboard(hydraObject):
         responses += [self.updateAttr("status", statusAfterDeath)]
         return responses
 
-    def reset(self, resetData):
-        logger.debug("Resetting job %s with data: %s", self.id, resetData)
+    def reset(self):
+        cols = ["status", "mpf", "host", "startTime", "endTime", "exitCode"]
+        taskList = self.get_tasks(cols)
+        self.status = PAUSED
+        self.mpf = None
+        self.attempts = 0
+        self.failedNodes = ""
+        for task in taskList:
+            task.status = PAUSED
+            task.mpf = None
+            task.host = None
+            task.startTime = None
+            task.endTime = None
+            task.exitCode = None
+        with transaction() as t:
+            self.update(t)
+            _ = [task.update(t) for task in taskList]
 
     def archive(self, mode):
         """Function for archiving/unarchiveing job. Accepts binary ints, booleans,
         or case insensitive true or false strings."""
         if not isinstance(mode, int):
-            mode = 1 if str(mode)[0].lower() == "t" else 0
+            mode = 1 if str(mode).lower().startswith("t") else 0
         return self.updateAttr("archived", mode)
 
     def prioritize(self, priority):
@@ -327,70 +343,37 @@ class hydra_taskboard(hydraObject):
     autoColumn = "id"
     primaryKey = "id"
 
-    def create_task_cmd(self, hydraJob, platform="win32"):
-        execs = hydra_executable.fetch(multiReturn=True)
-        if platform == "win32":
-            execsDict = {ex.name: ex.win32 for ex in execs}
+    def get_job(self, cols=None):
+        return hydra_jobboard.fetch("WHERE id = %s", (self.job_id,),
+                                    multiReturn=False, cols=cols)
+
+    def start(self):
+        if self.status in [PAUSED, KILLED]:
+            job = self.get_job(["status"])
+            self.status = READY
+            with transaction() as t:
+                self.update(t)
+                if job.status in [PAUSED, KILLED]:
+                    job.status = READY
+                    job.update(t)
+            return True
         else:
-            execsDict = {ex.name: ex.linux for ex in execs}
-
-        baseCMD = shlex.split(hydraJob.baseCMD)
-
-        if hydraJob.jobType == "Maya_Render":
-            renderList = [execsDict[hydraJob.execName]]
-            renderList += baseCMD
-
-            #TODO: do this better
-            if hydraJob.baseCMD.find("-r redshift") > 0:
-                renderList += ["-preRender", "source hydra_maya_utils;DPSHydra_RSPreRender;"]
-
-            renderList += ["-postFrame", "source hydra_maya_utils;DPSHydra_TaskUpdate;",
-                            "-s", self.startFrame, "-e", self.endFrame, "-b",
-                            hydraJob.byFrame, "-rl", hydraJob.renderLayers]
-
-            if hydraJob.frameDirectory:
-                renderList += ["-rd", hydraJob.frameDirectory]
-
-            renderList += [hydraJob.taskFile]
-
-        elif hydraJob.jobType == "FusionComp":
-            renderList = [execsDict[hydraJob.execName], hydraJob.taskFile]
-            renderList += baseCMD
-            renderList += ["/render", "/quiet", "/frames",
-                            "{0}..{1}".format(self.startFrame, self.endFrame),
-                            "/by", hydraJob.byFrame, "/exit", "/log TestLog.txt", "/verbose"]
-
-        elif hydraJob.jobType == "BatchFile":
-            renderList = [hydraJob.taskFile, hydraJob.baseCMD]
-
-        else:
-            logger.error("Bad Job Type!")
             return None
 
-        if hydraJob.jobType == "BatchFile":
-            return " ".join([str(x) for x in renderList])
+    def pause(self):
+        if self.status in [READY, KILLED]:
+            job = self.get_job(["status"])
+            self.status = PAUSED
+            with transaction() as t:
+                self.update(t)
+                if job.status in [READY, KILLED]:
+                    job.status = PAUSED
+                    job.update(t)
+            return True
         else:
-            return [str(x) for x in renderList]
+            return None
 
-    def send_kill_question(self, newStatus):
-        """Kill the current task running on the renderhost. Return True if successful,
-        else False"""
-        logger.debug('Kill task on %s', self.host)
-        node = hydra_rendernode.fetch("WHERE task_id = %s", (self.id,),
-                                        cols=["ip_addr"])
-        connection = TCPConnection(address=node.ip_addr)
-        answer = connection.get_answer(KillCurrentTaskQuestion(newStatus))
-        if answer is None:
-            logger.debug("%s appears to be offline or unresponsive. Treating as dead.", self.host)
-        else:
-            logger.debug("Child killed return code '%s' for node '%s'", answer, self.host)
-            if answer < 0:
-                logger.warning("%s tried to kill its job but failed for some reason.", self.host)
-
-        return answer
-
-
-    def kill(self, statusAfterDeath="K", TCPKill=True):
+    def kill(self, statusAfterDeath=KILLED, TCPKill=True):
         if self.status == STARTED:
             killed = False
             updateNode = True
@@ -425,19 +408,99 @@ class hydra_taskboard(hydraObject):
             logger.debug("Task Kill is skipping task %s because of status %s", self.id, self.status)
             return True
 
+    def reset(self):
+        if self.status != STARTED:
+            job = self.get_job()
+            self.status = PAUSED
+            self.mpf = None
+            self.host = None
+            self.startTime = None
+            self.endTime = None
+            self.exitCode = None
+            with transaction() as t:
+                self.update(t)
+                if job.status in [KILLED, READY]:
+                    job.status = PAUSED
+                    job.update(t)
+            return True
+        else:
+            return None
+
+    def send_kill_question(self, newStatus):
+        """Kill the current task running on the renderhost. Return True if successful,
+        else False"""
+        logger.debug('Kill task on %s', self.host)
+        node = hydra_rendernode.fetch("WHERE task_id = %s", (self.id,),
+                                        cols=["ip_addr"])
+        connection = TCPConnection(address=node.ip_addr)
+        answer = connection.get_answer(KillCurrentTaskQuestion(newStatus))
+        if answer is None:
+            logger.debug("%s appears to be offline or unresponsive. Treating as dead.", self.host)
+        else:
+            logger.debug("Child killed return code '%s' for node '%s'", answer, self.host)
+            if answer < 0:
+                logger.warning("%s tried to kill its job but failed for some reason.", self.host)
+
+        return answer
+
+    def create_task_cmd(self, hydraJob, platform="win32"):
+        execs = hydra_executable.fetch(multiReturn=True)
+        if platform == "win32":
+            execsDict = {ex.name: ex.win32 for ex in execs}
+        else:
+            execsDict = {ex.name: ex.linux for ex in execs}
+
+        baseCMD = shlex.split(hydraJob.baseCMD, posix=False)
+        map(os.path.normpath, baseCMD)
+
+        taskFile = os.path.normpath(hydraJob.taskFile)
+
+        if hydraJob.jobType == "Maya_Render":
+            renderList = [execsDict[hydraJob.execName]]
+            renderList += baseCMD
+
+            if hydraJob.baseCMD.find("-r redshift") > 0:
+                renderList += ["-preRender", "source hydra_maya_utils;DPSHydra_RSPreRender;"]
+
+            renderList += ["-s", self.startFrame, "-e", self.endFrame, "-b",
+                            hydraJob.byFrame, "-rl", hydraJob.renderLayers]
+
+            if hydraJob.frameDirectory:
+                frameDir = os.path.normpath(hydraJob.frameDirectory)
+                renderList += ["-rd", frameDir]
+
+            renderList += [taskFile]
+
+        elif hydraJob.jobType == "FusionComp":
+            renderList = [execsDict[hydraJob.execName], taskFile]
+            renderList += baseCMD
+            renderList += ["/render", "/quiet", "/frames",
+                            "{0}..{1}".format(self.startFrame, self.endFrame),
+                            "/by", hydraJob.byFrame, "/exit", "/log TestLog.txt", "/verbose"]
+
+        elif hydraJob.jobType == "BatchFile":
+            renderList = [taskFile, hydraJob.baseCMD]
+
+        else:
+            logger.error("Bad Job Type!")
+            return None
+
+        if hydraJob.jobType == "BatchFile":
+            return " ".join([str(x) for x in renderList])
+        else:
+            return [str(x) for x in renderList]
+
     def get_log_path(self):
         thisHost = hydra_utils.myHostName()
         path = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
-        if thisHost == self.host:
+        if self.host and thisHost == self.host:
             return path
-        else:
+        elif self.host:
             _, shortPath = os.path.splitdrive(path)
             newPath = os.path.join("\\\\{}".format(self.host), shortPath)
-            newPath = os.path.normpath(newPath)
-            if sys.platform == "win32":
-                return "\\{}".format(newPath)
-            else:
-                return newPath
+            return os.path.normpath(newPath)
+        else:
+            return None
 
 class hydra_capabilities(hydraObject):
     autoColumn = None

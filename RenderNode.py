@@ -50,19 +50,20 @@ class RenderTCPServer(servers.TCPServer):
 
     def render_loop(self):
         #TODO:Reqs,Failed Nodes,Max Nodes
-        #TODO:Priority sorting doesn't work somehow...
+        self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,),
+                                                    multiReturn=False)
+
         if self.thisNode.status in [sql.OFFLINE, sql.PENDING, sql.STARTED]:
             return
 
-        taskWhere = "WHERE status = 'R' AND priority > %s"
+        taskWhere = "WHERE status = 'R' AND priority > %s ORDER BY priority DESC, id ASC LIMIT 1"
         with sql.transaction() as t:
             renderTask = sql.hydra_taskboard.fetch(taskWhere, (self.thisNode.minPriority,),
-                                                    orderTuples=(("priority", "DESC"), ("id", "ASC")),
-                                                    limit=1, multiReturn=False,
+                                                    multiReturn=False,
                                                     explicitTransaction=t)
             if renderTask:
                 logger.debug("RenderTask found %s", renderTask)
-                renderJob = sql.hydra_jobboard.fetch("WHERE id = %s", (renderTask.job_id,))
+                renderJob = renderTask.get_job()
                 #Task Updates
                 renderTask.status = "S"
                 renderTask.host = self.thisNode.host
@@ -194,6 +195,7 @@ class RenderTCPServer(servers.TCPServer):
                 job.mpf = task.mpf
             job.update(t)
             #Node
+            self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
             self.thisNode.task_id = None
             self.thisNode.status = sql.OFFLINE if self.thisNode.status == sql.PENDING else sql.IDLE
             self.thisNode.update(t)
@@ -271,4 +273,4 @@ if __name__ == "__main__":
 
     #Start the Render Server and Heartbeat Thread
     socketServer = RenderTCPServer()
-    socketServer.createIdleLoop("Pulse_Thread", heartbeat, 60)
+    #socketServer.createIdleLoop("Pulse_Thread", heartbeat, 60)

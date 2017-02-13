@@ -45,10 +45,9 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
     def setup_globals(self):
         #Scene file should be first sys.argv
-        try:
-            self.scene = sys.argv[1]
-            self.scene = self.scene.replace('\\', '/')
-        except IndexError:
+        if len(sys.argv) > 1:
+            self.scene = os.path.normpath(str(sys.argv[1]))
+        else:
             self.scene = ""
 
         #Get the -flag args
@@ -61,7 +60,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             sys.exit(2)
 
         #Defaults
-        defName = self.scene.split("/")[-1]
+        _, defName = os.path.split(self.scene)
         self.settingsDict = {"-s":101,      #Start Frame (Int)
                             "-e":101,       #End Frame (Int)
                             "-n":defName,   #Nice Name (Str)
@@ -83,8 +82,8 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             logger.debug("Setting Key '%s' with opt: '%s'", key, str(optsDict[key]))
 
         #Fix paths
-        self.settingsDict["-p"] = self.settingsDict["-p"].replace('\\', '/')
-        self.settingsDict["-d"] = self.settingsDict["-d"].replace('\\', '/')
+        self.settingsDict["-p"] = os.path.normpath(self.settingsDict["-p"])
+        self.settingsDict["-d"] = os.path.normpath(self.settingsDict["-d"])
         #Fix Compatabilities
         self.settingsDict["-c"] = self.settingsDict["-c"].split(",")
         #Add underscores to niceName
@@ -258,26 +257,6 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
         self.submitButton.setText("Job Submitted! Please close window.")
         #aboutBox(self, "Submitted!", "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
 
-    def browse_file_button_handler(self, QTTarget, startDir, caption, fileFilter):
-        returnDir = QtGui.QFileDialog.getOpenFileName(self, caption, startDir, fileFilter)
-        if returnDir:
-            returnDir = str(returnDir)
-            if returnDir.endswith(".mel"):
-                returnDir, _ = os.path.split(returnDir)
-            QTTarget.setText(returnDir)
-            return returnDir
-
-        else:
-            return False
-
-    def browse_directory_button_handler(self, QTTarget, startDir, caption):
-        returnDir = QtGui.QFileDialog.getExistingDirectory(self, caption, startDir)
-        if returnDir:
-            QTTarget.setText(returnDir)
-            return returnDir
-        else:
-            return None
-
     def scene_button_handler(self):
         currentDir = str(self.sceneLineEdit.text())
         startDir = None
@@ -290,13 +269,17 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
         else:
             startDir = currentDir
 
-        sceneFile = self.browse_file_button_handler(self.sceneLineEdit,
-                                                startDir,
-                                                "Find scene file...",
-                                                "All Files(*);;Maya Files (*.ma *.mb);;Batch File (*.bat);;Fusion Comp (*.comp)")
-        if sceneFile and str(self.niceNameLineEdit.text()) == "":
-            defName = sceneFile.split("/")[-1]
-            self.niceNameLineEdit.setText(defName)
+        fileFilter = "All Files(*);;Maya Files (*.ma *.mb);;Batch File (*.bat);;Fusion Comp (*.comp)"
+
+        sceneFile = QtGui.QFileDialog.getOpenFileName(self, "Find scene file...",
+                                                        startDir, fileFilter)
+
+        if sceneFile:
+            sceneFile = os.path.normpath(str(sceneFile))
+            self.sceneLineEdit.setText(sceneFile)
+            if str(self.niceNameLineEdit.text()) == "":
+                defName = sceneFile.split("/")[-1]
+                self.niceNameLineEdit.setText(defName)
 
     def proj_button_handler(self):
         currentDir = str(self.projLineEdit.text())
@@ -309,10 +292,17 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
                 startDir = sceneDir
         else:
             startDir = currentDir
-        self.browse_file_button_handler(self.projLineEdit,
-                                    startDir,
-                                    "Find maya workspace.mel in project directory...",
-                                    "workspace.mel;;All Files(*)")
+
+        projDir = QtGui.QFileDialog.getOpenFileName(self,
+                                                    "Find maya workspace.mel in project directory...",
+                                                    startDir, "workspace.mel;;All Files(*)")
+
+        if projDir:
+            projDir = os.path.normpath(str(projDir))
+            if str(projDir).endswith(".mel"):
+                projDir, _ = os.path.split(projDir)
+            self.projLineEdit.setText(projDir)
+
 
     def frame_dir_button_handler(self):
         currentDir = str(self.frameDirLineEdit.text())
@@ -325,8 +315,14 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
                 startDir = projDir
         else:
             startDir = currentDir
-        self.browse_directory_button_handler(self.frameDirLineEdit, startDir,
-                                    "Select the directory where you want your frames to be rendered...")
+
+        caption = "Select the directory where you want your frames to be rendered..."
+
+        frameDir = QtGui.QFileDialog.getExistingDirectory(self, caption, startDir)
+
+        if frameDir:
+            frameDir = os.path.normpath(str(frameDir))
+            self.frameDirLineEdit.setText(frameDir)
 
     def toggle_test_boxes(self):
         if self.testFramesSpinBox.isEnabled():
