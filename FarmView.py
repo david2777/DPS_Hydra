@@ -80,9 +80,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         menu.addAction(action)
         return action
 
-    #---------------------------------------------------------------------#
-    #--------------------------UI SETUP FUNCTIONS-------------------------#
-    #---------------------------------------------------------------------#
+    #--------------------------------------------------------------------------#
+    #----------------------------UI SETUP FUNCTIONS----------------------------#
+    #--------------------------------------------------------------------------#
     def setup_tree_views(self):
         """Setup the QTreeViewWidgets headers, column spans, and margins"""
         #jobTree header and column widths
@@ -186,9 +186,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+L"), self, self.get_task_log)
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+T"), self, self.tail_task_log)
 
-    #---------------------------------------------------------------------#
-    #---------------------------MISC FUNCTIONS----------------------------#
-    #---------------------------------------------------------------------#
+    #--------------------------------------------------------------------------#
+    #-----------------------------MISC FUNCTIONS-------------------------------#
+    #--------------------------------------------------------------------------#
 
     def central_context_handler(self):
         """Create main Context Menu and add actions to it."""
@@ -223,9 +223,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         dataList = sqlTable.fetch(sqlWhere, (data_ids,))
         DataTableDialog.create(dataList)
 
-    #---------------------------------------------------------------------#
-    #----------------------------JOB HANDLERS-----------------------------#
-    #---------------------------------------------------------------------#
+    #--------------------------------------------------------------------------#
+    #------------------------------JOB HANDLERS--------------------------------#
+    #--------------------------------------------------------------------------#
 
     def job_context_menu(self):
         """Create a Context Menu for the jobTree"""
@@ -508,9 +508,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         self.job_action_handler("priority")
 
 
-    #---------------------------------------------------------------------#
-    #---------------------------TASK HANDLERS-----------------------------#
-    #---------------------------------------------------------------------#
+    #--------------------------------------------------------------------------#
+    #-----------------------------TASK HANDLERS--------------------------------#
+    #--------------------------------------------------------------------------#
     def task_context_menu(self):
         """Create a Context Menu for the taskTree"""
         self.taskMenu = QtGui.QMenu(self)
@@ -519,12 +519,14 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         self.add_item(self.taskMenu, "Start Tasks", self.start_task,
                 "Start all tasks selected in the Task Table", "Ctrl+Shift+S")
-        self.add_item(self.taskMenu, "Pause", self.pause_task,
+        self.add_item(self.taskMenu, "Pause Tasks", self.pause_task,
                 "Pause all tasks selected in the Task Table", "Ctrl+Shift+P")
         self.add_item(self.taskMenu, "Kill Tasks", self.kill_task,
                 "Kill all tasks selected in the Task Table", "Ctrl+Shift+K")
         self.add_item(self.taskMenu, "Reset Tasks", self.reset_task,
                 "Reset all tasks selected in the Task Table", "Ctrl+Shift+R")
+        self.taskMenu.addSeparator()
+
         self.add_item(self.taskMenu, "Reveal Detailed Data...", self.task_detailed_data,
                 "Opens a dialog window the detailed data for the selected tasks.",
                 "Ctrl+Shift+D")
@@ -705,9 +707,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                                     "Log could not be found for Task {}".format(int(task.id)))
             logger.warning("Log file does not exist or is unreachable.")
 
-    #---------------------------------------------------------------------#
-    #---------------------------NODE HANDLERS-----------------------------#
-    #---------------------------------------------------------------------#
+    #--------------------------------------------------------------------------#
+    #-----------------------------NODE HANDLERS--------------------------------#
+    #--------------------------------------------------------------------------#
 
     def node_context_handler(self):
         """Create a Context Menu for the nodeTree"""
@@ -940,9 +942,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                     self.renderNodeTree.setRangeSelected(mySel, True)
                     logger.debug("Selecting %s matched with %s", item, searchString)
 
-    #---------------------------------------------------------------------#
-    #----------------------THIS NODE BUTTON HANDLERS----------------------#
-    #---------------------------------------------------------------------#
+    #--------------------------------------------------------------------------#
+    #------------------------THIS NODE BUTTON HANDLERS-------------------------#
+    #--------------------------------------------------------------------------#
 
     def auto_update_handler(self):
         """Toggles Auto Updater
@@ -994,9 +996,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if self.thisNodeExists:
             self.node_editor(self.thisNodeName)
 
-    #---------------------------------------------------------------------#
-    #--------------------------UPDATE HANDLERS----------------------------#
-    #---------------------------------------------------------------------#
+    #--------------------------------------------------------------------------#
+    #----------------------------UPDATE HANDLERS-------------------------------#
+    #--------------------------------------------------------------------------#
 
     def find_this_node(self):
         """Makes sure this node exists in the hydra_rendernode board. Alerts
@@ -1029,7 +1031,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         curTab = self.tabWidget.currentIndex()
 
         thisNode = sql.hydra_rendernode.fetch("WHERE host = %s",
-                                            (self.thisNodeName,))
+                                                (self.thisNodeName,))
         self.update_status_bar(thisNode)
         if curTab == 0:
             #Main View
@@ -1065,7 +1067,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         """Loads data into the taskGrid (Second tab in the UI)"""
         command = "WHERE archived = '0' ORDER BY id DESC LIMIT %s"
         records = sql.hydra_jobboard.fetch(command, (self.limitSpinBox.value(),),
-                                        multiReturn=True)
+                                            multiReturn=True)
         try:
             columns = records[0].__dict__.keys()
         except IndexError:
@@ -1121,9 +1123,9 @@ niceColors = {sql.PAUSED: QtGui.QColor(240,230,200),      #Light Orange
              sql.TIMEOUT: QtGui.QColor(220,90,90),        #Dark Red
              }
 
-#------------------------------------------------------------------------#
-#----------------------------------MAIN----------------------------------#
-#------------------------------------------------------------------------#
+#------------------------------------------------------------------------------#
+#-------------------------------------MAIN-------------------------------------#
+#------------------------------------------------------------------------------#
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)

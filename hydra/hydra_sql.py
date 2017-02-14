@@ -122,6 +122,20 @@ class hydraObject(object):
             self.__dirty__.add(k)
             #logger.debug(('dirty', k, v))
 
+    def __getattr__(self, attr):
+        logger.info(attr)
+        if attr in self.__dict__.keys():
+            return self.attr
+        else:
+            logger.warning("%s not found in %s, trying to find in database...", attr, self)
+            value = self.find_attr(attr)
+            if value:
+                self.__dict__[attr] = value[0]
+                return value[0]
+            else:
+                logger.warning("Could not find %s in database...", attr)
+                return None
+
     def __repr__(self):
         return "{0} {1}".format(self.tableName(), getattr(self, self.primaryKey))
 
@@ -166,6 +180,16 @@ class hydraObject(object):
             return returnList
         else:
             return returnList[0] if len(returnList) == 1 else returnList
+
+    def find_attr(self, attr):
+        try:
+            with transaction() as t:
+                x = "SELECT {0} FROM {1} WHERE {2} = %s".format(attr, self.tableName(), self.primaryKey)
+                t.cur.execute(x, (getattr(self, self.primaryKey),))
+                tup = t.cur.fetchone()
+                return tup if tup else None
+        except MySQLdb.Error:
+            return None
 
     def attributes(self):
         return filter(hydra_utils.nonFlanged, self.__dict__.keys())
@@ -212,9 +236,20 @@ class hydraObject(object):
         self.__dict__[attr] = value
         return True
 
+#------------------------------------------------------------------------------#
+#-----------------------------HYDRA TABLE CLASSES------------------------------#
+#------------------------------------------------------------------------------#
+
 class hydra_rendernode(hydraObject):
     autoColumn = None
     primaryKey = "host"
+
+    def get_task(self, cols=None):
+        if self.task_id:
+            return hydra_taskboard.fetch("WHERE id = %s", (self.task_id,),
+                                            multiReturn=False, cols=cols)
+        else:
+            return None
 
     def online(self):
         if self.status == "O":
@@ -233,8 +268,7 @@ class hydra_rendernode(hydraObject):
         response = True
         if self.status == "S":
             self.updateAttr("status", PENDING)
-            task = hydra_taskboard.fetch("WHERE id  = %s", (self.task_id,),
-                                        cols=["id", "status", "exitCode", "endTime", "host"])
+            task = self.get_task(["id", "status", "exitCode", "endTime", "host"])
             response = task.kill()
 
             if response:
@@ -247,9 +281,7 @@ class hydra_rendernode(hydraObject):
 
     def kill_task(self, statusAfterDeath=KILLED):
         if self.status == "S" and self.task_id:
-            taskOBJ = hydra_taskboard.fetch("WHERE id = %s", self.task_id,
-                                            cols=["host", "status", "exitCode",
-                                                    "endTime"])
+            taskOBJ = self.get_task(["host", "status", "exitCode", "endTime"])
             logger.debug("Killing task %d on %s", self.task_id, self.host)
             return taskOBJ.kill(statusAfterDeath, True)
         else:
@@ -303,9 +335,7 @@ class hydra_jobboard(hydraObject):
             return None
 
     def kill(self, statusAfterDeath=KILLED, TCPKill=True):
-        subTasks = hydra_taskboard.fetch("WHERE job_id = %s AND status = 'S'", (self.id,),
-                                        cols=["id", "status", "exitCode", "endTime", "host"],
-                                        multiReturn=True)
+        subTasks = self.get_tasks(["id", "status", "exitCode", "endTime", "host"])
         responses = [task.kill(statusAfterDeath, TCPKill) for task in subTasks]
 
         responses += [self.updateAttr("status", statusAfterDeath)]
@@ -347,6 +377,13 @@ class hydra_taskboard(hydraObject):
         return hydra_jobboard.fetch("WHERE id = %s", (self.job_id,),
                                     multiReturn=False, cols=cols)
 
+    def get_host(self, cols=None):
+        if self.host:
+            return hydra_rendernode.fetch("WHERE host = %s", (self.host,),
+                                            multiReturn=False, cols=cols)
+        else:
+            return None
+
     def start(self):
         if self.status in [PAUSED, KILLED]:
             job = self.get_job(["status"])
@@ -377,8 +414,7 @@ class hydra_taskboard(hydraObject):
         if self.status == STARTED:
             killed = False
             updateNode = True
-            node = hydra_rendernode.fetch("WHERE host = %s", (self.host,),
-                                            cols=["status", "task_id"])
+            node = self.get_host(["status", "task_id"])
 
             if TCPKill:
                 if node.task_id != self.id:
@@ -430,8 +466,7 @@ class hydra_taskboard(hydraObject):
         """Kill the current task running on the renderhost. Return True if successful,
         else False"""
         logger.debug('Kill task on %s', self.host)
-        node = hydra_rendernode.fetch("WHERE task_id = %s", (self.id,),
-                                        cols=["ip_addr"])
+        node = self.get_host(["ip_addr"])
         connection = TCPConnection(address=node.ip_addr)
         answer = connection.get_answer(KillCurrentTaskQuestion(newStatus))
         if answer is None:
