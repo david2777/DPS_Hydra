@@ -4,8 +4,7 @@ import os
 import logging
 
 #Third Party
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui, QtCore
 
 #Hydra Qt
 from compiled_qt.UI_RenderNodeMain import Ui_RenderNodeMainWindow
@@ -14,25 +13,26 @@ from dialogs_qt.MessageBoxes import aboutBox, yesNoBox
 
 #Hydra
 import RenderNode
-from hydra.logging_setup import logger, outputWindowFormatter
-from hydra.hydra_sql import *
-from hydra.threads import *
-from hydra.single_instance import InstanceLock
+import hydra.hydra_sql as sql
 import utils.node_utils as node_utils
 import utils.hydra_utils as hydra_utils
+from hydra import threads
+from hydra.long_strings import RenderNodeError_String
+from hydra.logging_setup import logger, outputWindowFormatter
+from hydra.single_instance import InstanceLock
 
 #Doesn't like Qt classes
 #pylint: disable=E0602,E1101
 
-class EmittingStream(QObject):
+class EmittingStream(QtCore.QObject):
     """For writing text to the console output"""
-    textWritten = pyqtSignal(str)
+    textWritten = QtCore.pyqtSignal(str)
     def write(self, text):
         self.textWritten.emit(str(text))
 
-class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
+class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
     def __init__(self):
-        QMainWindow.__init__(self)
+        QtGui.QMainWindow.__init__(self)
         self.setupUi(self)
 
         with open(hydra_utils.findResource("assets/styleSheet.css"), "r") as myStyles:
@@ -46,74 +46,73 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.schedThreadStatus = False
         self.autoUpdateStatus = False
 
-        if not self.thisNode:
-            self.offlineButton.setEnabled(False)
-            self.getoffButton.setEnabled(False)
-            logger.error("Node does not exist in database!")
-            aboutBox(self, "Error",
-                "This node was not found in the database! If you wish to render  "
-                "on this node it must be registered with the databse. Run "
-                "Register.exe or Register.py to regiester this node and "
-                " try again.")
+        if not self.thisNode or not bool(self.thisNode.is_render_node):
+            logger.error("Node Error!")
+            aboutBox(self, "Error", RenderNodeError_String)
             sys.exit(1)
 
-        self.currentSchedule = self.thisNode.weekSchedule
-        self.currentScheduleEnabled = self.thisNode.scheduleEnabled
+        self.currentSchedule = self.thisNode.week_schedule
+        self.currentScheduleEnabled = self.thisNode.schedule_enabled
 
-        self.buildUI()
-        self.connectButtons()
-        self.updateThisNodeInfo()
-        self.startupServers()
+        self.build_ui()
+        self.connect_buttons()
+        self.update_thisnode()
+        self.startup_servers()
 
         logger.info("Render Node Main is live! Waiting for tasks...")
 
         try:
             autoHide = True if str(sys.argv[1]).lower() == "true" else False
-            logger.info(autoHide)
         except IndexError:
             autoHide = False
 
         if autoHide and self.trayIconBool:
             logger.info("Autohide is enabled!")
-            self.sendToTrayHandler()
+            self.hide_window()
         else:
             self.show()
 
-    def normalOutputWritten(self, text):
+    def write_to_window_logger(self, text):
         """Append text to the QTextEdit."""
         cursor = self.outputTextEdit.textCursor()
-        cursor.movePosition(QTextCursor.End)
+        cursor.movePosition(QtGui.QTextCursor.End)
         cursor.insertText(text)
         self.outputTextEdit.setTextCursor(cursor)
         self.outputTextEdit.ensureCursorVisible()
 
-    def buildUI(self):
+    def clear_window_logger(self):
+        choice = yesNoBox(self, "Confirm", "Really clear output?")
+        if choice == QtGui.QMessageBox.Yes:
+            self.outputTextEdit.clear()
+            logger.info("Output cleared")
+
+    def build_ui(self):
         def addItem(name, handler, statusTip, menu):
-            action = QAction(name, self)
+            action = QtGui.QAction(name, self)
             action.setStatusTip(statusTip)
             action.triggered.connect(handler)
             menu.addAction(action)
 
         #Add Logging handlers for output field
-        emStream = EmittingStream(textWritten=self.normalOutputWritten)
+        emStream = EmittingStream(textWritten=self.write_to_window_logger)
         handler = logging.StreamHandler(emStream)
         handler.setLevel(logging.INFO)
         handler.setFormatter(outputWindowFormatter)
         logger.addHandler(handler)
 
-        sys.stdout = EmittingStream(textWritten=self.normalOutputWritten)
-        sys.stderr = EmittingStream(textWritten=self.normalOutputWritten)
+        sys.stdout = EmittingStream(textWritten=self.write_to_window_logger)
+        sys.stderr = EmittingStream(textWritten=self.write_to_window_logger)
 
         #Get Pixmaps and Icon
-        self.donePixmap = QPixmap(hydra_utils.findResource("assets/status/done.png"))
-        self.inProgPixmap = QPixmap(hydra_utils.findResource("assets/status/inProgress.png"))
-        self.needsAttentionPixmap = QPixmap(hydra_utils.findResource("assets/status/needsAttention.png"))
-        self.nonePixmap = QPixmap(hydra_utils.findResource("assets/status/none.png"))
-        self.notStartedPixmap = QPixmap(hydra_utils.findResource("assets/status/notStarted.png"))
-        self.refreshPixmap = QPixmap(hydra_utils.findResource("assets/refresh.png"))
-        self.refreshIcon = QIcon()
+        self.donePixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/done.png"))
+        self.inProgPixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/inProgress.png"))
+        self.needsAttentionPixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/needsAttention.png"))
+        self.nonePixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/none.png"))
+        self.notStartedPixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/notStarted.png"))
+        self.refreshPixmap = QtGui.QPixmap(hydra_utils.findResource("assets/refresh.png"))
+        self.refreshIcon = QtGui.QIcon()
         self.refreshIcon.addPixmap(self.refreshPixmap)
-        self.RIcon = QIcon(hydra_utils.findResource("assets/RenderNodeMain.png"))
+        self.RIcon = QtGui.QIcon(hydra_utils.findResource("assets/RenderNodeMain.png"))
 
         self.isVisable = True
 
@@ -125,7 +124,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         self.setWindowIcon(self.RIcon)
 
         #Setup tray icon
-        self.trayIcon = QSystemTrayIcon()
+        self.trayIcon = QtGui.QSystemTrayIcon()
         self.trayIconBool = self.trayIcon.isSystemTrayAvailable()
         if self.trayIconBool:
             self.trayIcon.setIcon(self.RIcon)
@@ -135,19 +134,19 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.trayIcon.messageClicked.connect(self.activate)
 
             #Tray Icon Context Menu
-            self.taskIconMenu = QMenu(self)
+            self.taskIconMenu = QtGui.QMenu(self)
 
-            addItem("Open", self.showWindowHandler,
+            addItem("Open", self.show_window,
                     "Show the RenderNodeMain Window", self.taskIconMenu)
             self.taskIconMenu.addSeparator()
-            addItem("Update", self.updateThisNodeInfo,
+            addItem("Update", self.update_thisnode,
                     "Fetch the latest information from the Database", self.taskIconMenu)
             self.taskIconMenu.addSeparator()
-            addItem("Online", self.onlineThisNodeHandler,
+            addItem("Online", self.online_thisnode,
                     "Online this node", self.taskIconMenu)
-            addItem("Offline", self.offlineThisNodeHandler,
+            addItem("Offline", self.offline_thisnode,
                     "Offline this node", self.taskIconMenu)
-            addItem("GetOff!", self.getOffThisNodeHandler,
+            addItem("GetOff!", self.get_off_thisnode,
                     "Kill the current task and offline this node", self.taskIconMenu)
 
             self.trayIcon.setContextMenu(self.taskIconMenu)
@@ -157,21 +156,22 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
                     "Could not create tray icon. Minimizing to tray has been disabled.")
             self.trayButton.setEnabled(False)
 
-    def connectButtons(self):
-        self.trayButton.clicked.connect(self.sendToTrayHandler)
-        self.onlineButton.clicked.connect(self.onlineThisNodeHandler)
-        self.offlineButton.clicked.connect(self.offlineThisNodeHandler)
-        self.getoffButton.clicked.connect(self.getOffThisNodeHandler)
-        self.clearButton.clicked.connect(self.clearOutputHandler)
-        self.refreshButton.clicked.connect(self.updateThisNodeInfo)
-        self.editThisNodeButton.clicked.connect(self.nodeEditorHandler)
-        self.autoUpdateCheckBox.stateChanged.connect(self.autoUpdateHandler)
+    def connect_buttons(self):
+        self.trayButton.clicked.connect(self.hide_window)
+        self.onlineButton.clicked.connect(self.online_thisnode)
+        self.offlineButton.clicked.connect(self.offline_thisnode)
+        self.getoffButton.clicked.connect(self.get_off_thisnode)
+        self.clearButton.clicked.connect(self.clear_window_logger)
+        self.refreshButton.clicked.connect(self.update_thisnode)
+        self.editThisNodeButton.clicked.connect(self.open_node_editor)
+        self.autoUpdateCheckBox.stateChanged.connect(self.auto_update_handler)
         if not self.trayIconBool:
             self.trayButton.setEnabled(False)
 
+    #DO NOT RENAME THIS FUNCTION
     def closeEvent(self, event):
         choice = yesNoBox(self, "Confirm", "Really exit the RenderNodeMain server?")
-        if choice == QMessageBox.Yes:
+        if choice == QtGui.QMessageBox.Yes:
             self.shutdown()
         else:
             event.ignore()
@@ -189,7 +189,7 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         event.accept()
         sys.exit(0)
 
-    def autoUpdateHandler(self):
+    def auto_update_handler(self):
         """Toggles Auto Updater
         Note that this is run AFTER the CheckState is changed so when we do
         .isChecked() it's looking for the state after it has been checked."""
@@ -200,63 +200,49 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             self.autoUpdateStatus = True
             self.autoUpdateThread.restart()
 
-    def showWindowHandler(self):
+    def show_window(self):
         self.isVisable = True
         self.show()
-        self.updateThisNodeInfo()
+        self.update_thisnode()
 
-    def activate(self, reason):
-        if reason == 2:
-            self.showWindowHandler()
-
-    def __icon_activated(self, reason):
-        if reason == QSystemTrayIcon.DoubleClick:
-            self.showWindowHandler()
-
-    def sendToTrayHandler(self):
+    def hide_window(self):
         self.isVisable = False
         self.trayIcon.show()
         self.hide()
 
-    def onlineThisNodeHandler(self):
+    def activate(self, reason):
+        if reason == 2:
+            self.show_window()
+
+    def __icon_activated(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.show_window()
+
+    def online_thisnode(self):
         response = self.thisNode.online()
-        self.updateThisNodeInfo()
+        self.update_thisnode()
         if response:
             logger.info("Node Onlined")
         else:
             logger.error("Node could not be Onlined!")
 
-    def offlineThisNodeHandler(self):
+    def offline_thisnode(self):
         response = self.thisNode.offline()
-        self.updateThisNodeInfo()
+        self.update_thisnode()
         if response:
             logger.info("Node Offlined")
         else:
             logger.error("Node could not be Offlined!")
 
-    def getOffThisNodeHandler(self):
+    def get_off_thisnode(self):
         response = self.thisNode.getOff()
-        self.updateThisNodeInfo()
+        self.update_thisnode()
         if response:
             logger.info("Node Offlined and Task Killed")
         else:
             logger.error("Node could not be Onlined or the Task could not be killed!")
 
-    def clearOutputHandler(self):
-        choice = yesNoBox(self, "Confirm", "Really clear output?")
-        if choice == QMessageBox.Yes:
-            self.outputTextEdit.clear()
-            logger.info("Output cleared")
-
-    def nodeEditorHandler(self):
-        response = self.nodeEditor()
-        if response:
-            logger.info("Updating this node...")
-            logger.info("Node updated!")
-        else:
-            logger.info("No changes detected. Nothing was changed.")
-
-    def startupServers(self):
+    def startup_servers(self):
         logger.debug("Firing up main threads")
         #Start Render Server
         self.renderServer = RenderNode.RenderTCPServer()
@@ -271,19 +257,19 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
         logger.info("Pulse Thread started!")
 
         #Start Auto Update Thread
-        SIGNAL("updateThisNodeInfo")
-        QObject.connect(self, SIGNAL("updateThisNodeInfo"), self.updateThisNodeInfo)
+        QtCore.SIGNAL("update_thisnode")
+        QtCore.QObject.connect(self, QtCore.SIGNAL("update_thisnode"), self.update_thisnode)
         self.autoUpdateStatus = True
 
-        self.autoUpdateThread = stoppableThread(self.updateThisNodeInfoSignaler, 1,
+        self.autoUpdateThread = threads.stoppableThread(self.update_thisnode_signaler, 10,
                                                 "AutoUpdate_Thread")
-        self.startScheduleThread()
+        self.start_schedule_thread()
 
-    def startScheduleThread(self):
+    def start_schedule_thread(self):
         """This is in it's own function because it starts and stops often"""
         #pylint: disable=W0703,W0201
         if bool(self.currentScheduleEnabled) and self.currentSchedule:
-            self.schedThread = schedulerThread(self.schedulerMain,
+            self.schedThread = schedulerThread(self.scheduler_main,
                                                 "Schedule_Thread", None)
             self.schedThreadStatus = True
             self.scheduleThreadPixmap.setPixmap(self.donePixmap)
@@ -292,13 +278,21 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             logger.info("Schedule disabled. Running in manual control mode.")
             self.scheduleThreadPixmap.setPixmap(self.nonePixmap)
 
-    def nodeEditor(self):
+    def open_node_editor(self):
+        response = self.node_editor()
+        if response:
+            logger.info("Updating this node...")
+            logger.info("Node updated!")
+        else:
+            logger.info("No changes detected. Nothing was changed.")
+
+    def node_editor(self):
         comps = self.thisNode.capabilities.split(" ")
         defaults = {"host" : self.thisNode.host,
                     "priority" : self.thisNode.minPriority,
                     "comps" : comps,
-                    "scheduleEnabled" : int(self.thisNode.scheduleEnabled),
-                    "weekSchedule" : self.thisNode.weekSchedule}
+                    "scheduleEnabled" : int(self.thisNode.schedule_enabled),
+                    "weekSchedule" : self.thisNode.week_schedule}
         edits = NodeEditorDialog.create(defaults)
         #logger.debug(edits)
         if edits:
@@ -310,63 +304,60 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             query += ", scheduleEnabled = %s, capabilities = %s"
             query += " WHERE host = %s"
             editsTuple = (edits["priority"], schedEnabled, edits["comps"], self.thisNode.host)
-            with transaction() as t:
+            with sql.transaction() as t:
                 t.cur.execute(query, editsTuple)
-            self.updateThisNodeInfo()
+            self.update_thisnode()
             return True
         else:
             return False
 
-    def updateThisNodeInfoSignaler(self):
-        self.emit(SIGNAL("updateThisNodeInfo"))
+    def update_thisnode_signaler(self):
+        self.emit(QtCore.SIGNAL("update_thisnode"))
 
-    def updateThisNodeInfo(self):
-        self.thisNode = hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
+    def update_thisnode(self):
+        self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
 
         #Check for changes in schedule
-        if self.thisNode.weekSchedule != self.currentSchedule or self.thisNode.scheduleEnabled != self.currentScheduleEnabled:
-            self.currentSchedule = self.thisNode.weekSchedule
-            self.currentScheduleEnabled = self.thisNode.scheduleEnabled
+        if self.thisNode.week_schedule != self.currentSchedule or self.thisNode.schedule_enabled != self.currentScheduleEnabled:
+            self.currentSchedule = self.thisNode.week_schedule
+            self.currentScheduleEnabled = self.thisNode.schedule_enabled
             if self.schedThreadStatus:
                 self.schedThread.terminate()
                 app.processEvents()
-            self.startScheduleThread()
+            self.start_schedule_thread()
 
         self.nodeNameLabel.setText(self.thisNode.host)
-        self.nodeStatusLabel.setText(niceNames[self.thisNode.status])
-        if self.thisNode.task_id:
-            taskText = str(self.thisNode.task_id)
-        else:
-            taskText = "None"
+        self.nodeStatusLabel.setText(sql.niceNames[self.thisNode.status])
+        taskText = str(self.thisNode.task_id)
         self.taskIDLabel.setText(taskText)
         self.nodeVersionLabel.setText(str(self.thisNode.software_version))
         self.minPriorityLabel.setText(str(self.thisNode.minPriority))
         self.capabilitiesLabel.setText(self.thisNode.capabilities)
-        self.scheduleEnabled.setText(str(self.thisNode.scheduleEnabled))
+        self.scheduleEnabled.setText(str(self.thisNode.schedule_enabled))
         self.pulseLabel.setText(str(self.thisNode.pulse))
 
         if self.trayIconBool:
-            niceStatus = niceNames[self.thisNode.status]
+            niceStatus = sql.niceNames[self.thisNode.status]
             iconStatus = "Hydra RenderNodeMain\nNode: {0}\nStatus: {1}\nTask: {2}"
             self.trayIcon.setToolTip(iconStatus.format(self.thisNode.host,
                                                     niceStatus,
                                                     taskText))
 
-    def aboutBoxHidden(self, title="", msg=""):
+    def hidden_about_box(self, title="", msg=""):
         """Creates a window that has been minimzied to the tray"""
         if self.isVisable:
             aboutBox(self, title, msg)
         else:
             self.trayIcon.showMessage(title, msg)
 
-    def schedulerMain(self):
+    def scheduler_main(self):
         if not self.thisNode:
             self.scheduleThreadPixmap.setPixmap(self.needsAttentionPixmap)
-            logger.error("Node OBJ not found by schedulerMain! Checking again in 24 hours.")
+            logger.error("Node OBJ not found by scheduler_main! Checking again in 24 hours.")
             #Sleep for 24 hours
             return 86400
 
-        self.updateThisNodeInfo()
+        self.update_thisnode()
 
         sleepTime, nowStatus = node_utils.calcuateSleepTimeFromNode(self.thisNode.host)
         if not sleepTime or not nowStatus:
@@ -374,26 +365,26 @@ class RenderNodeMainUI(QMainWindow, Ui_RenderNodeMainWindow):
             return 86400
 
         if nowStatus == READY:
-            self.startupEvent()
+            self.startup_event()
         else:
-            self.shutdownEvent()
+            self.shutdown_event()
 
         #Add an extra minute just in case
         return sleepTime + 60
 
-    def startupEvent(self):
+    def startup_event(self):
         logger.info("Triggering Startup Event")
-        self.onlineThisNodeHandler()
+        self.online_thisnode()
 
-    def shutdownEvent(self):
+    def shutdown_event(self):
         logger.info("Triggering Shutdown Event")
-        self.offlineThisNodeHandler()
+        self.offline_thisnode()
 
-class schedulerThread(stoppableThread):
+class schedulerThread(threads.stoppableThread):
     """Modified version of the stoppableThread"""
     def tgt(self):
         while not self.stopEvent.is_set():
-            #target = schedulerMain from the RenderNodeMainUI class
+            #target = scheduler_main from the RenderNodeMainUI class
             self.interval = self.targetFunction()
             hours = int(self.interval / 60 / 60)
             minutes = int(self.interval / 60 % 60)
@@ -402,7 +393,7 @@ class schedulerThread(stoppableThread):
 
 def pulse():
     host = hydra_utils.myHostName()
-    with transaction() as t:
+    with sql.transaction() as t:
         t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
                     "WHERE host = '{0}'".format(host))
 
@@ -410,7 +401,7 @@ if __name__ == "__main__":
     logger.info("Starting in %s", os.getcwd())
     logger.info("arglist is %s", sys.argv)
 
-    app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     app.quitOnLastWindowClosed = False
 
     lockFile = InstanceLock("HydraRenderNode")

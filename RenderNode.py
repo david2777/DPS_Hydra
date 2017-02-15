@@ -110,11 +110,14 @@ class RenderTCPServer(servers.TCPServer):
             self.thisNode.get_off()
         else:
             self.thisNode.offline()
-        servers.TCPServer.shutdown(newStatus)
+
+        servers.TCPServer.shutdown(self)
+
         if newStatus == sql.IDLE:
             self.thisNode.online()
         else:
             self.thisNode.offline()
+
         logger.info("RenderNode servers Shutdown")
 
     def launch_render_task(self, job, task):

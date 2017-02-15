@@ -20,9 +20,9 @@ import dialogs_qt.MessageBoxes as MessageBoxes
 import dialogs_qt.WidgetFactories as WidgetFactories
 
 #Hydra
-import Constants
 from hydra.logging_setup import logger
 import hydra.hydra_sql as sql
+import hydra.long_strings as longstr
 import hydra.threads as hydra_threads
 import utils.hydra_utils as hydra_utils
 import utils.node_utils as node_utils
@@ -854,7 +854,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if not hosts:
             return
 
-        choice = MessageBoxes.yesNoBox(self, "Confirm", Constants.GETOFF_STRING + str(hosts))
+        choice = MessageBoxes.yesNoBox(self, "Confirm", longstr.GetOff_String + str(hosts))
         if choice == QtGui.QMessageBox.No:
             return
 
@@ -880,7 +880,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if not hosts:
             return None
         elif len(hosts) > 1:
-            choice = MessageBoxes.yesNoBox(self, "Confirm", Constants.MULTINODEEDIT_STRING)
+            choice = MessageBoxes.yesNoBox(self, "Confirm", longstr.MultiNodeEdit_String)
             if choice == QtGui.QMessageBox.Yes:
                 for host in hosts:
                     self.node_editor(host)
@@ -982,7 +982,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if not thisNode:
             return
 
-        choice = MessageBoxes.yesNoBox(self, "Confirm", Constants.GETOFFLOCAL_STRING)
+        choice = MessageBoxes.yesNoBox(self, "Confirm", longstr.GetOffLocal_String)
         if choice == QtGui.QMessageBox.Yes:
             response = thisNode.getOff()
             if not response:
@@ -1007,7 +1007,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if thisNode:
             return thisNode
         else:
-            MessageBoxes.warningBox(self, title="Notice", msg=Constants.DOESNOTEXISTERR_STRING)
+            MessageBoxes.warningBox(self, title="Notice", msg=longstr.DoesNotExist_Str)
             self.set_this_node_buttons_enabled(False)
             return None
 
