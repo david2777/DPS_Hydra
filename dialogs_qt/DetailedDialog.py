@@ -1,19 +1,15 @@
 #Standard
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui
 
 #Hydra Qt
 from compiled_qt.UI_DetailedDialog import Ui_detailedDialog
 
 #Hydra
-from dialogs_qt.WidgetFactories import labelFactory, clearLayout, setupDataGrid
+from dialogs_qt.WidgetFactories import labelFactory, clear_layout, setup_data_grid
 
-#Doesn't like Qt classes
-#pylint: disable=E0602,E1101,C0302
-
-class DetailedDialog(QDialog, Ui_detailedDialog):
+class DetailedDialog(QtGui.QDialog, Ui_detailedDialog):
     def __init__(self, data, parent=None):
-        QDialog.__init__(self, parent)
+        QtGui.QDialog.__init__(self, parent)
         self.setupUi(self)
 
         self.data = data
@@ -29,8 +25,8 @@ class DetailedDialog(QDialog, Ui_detailedDialog):
         columns = self.data[0].__dict__.keys()
         columns = [labelFactory(col) for col in columns if col.find("__") is not 0]
 
-        clearLayout(self.detailedGridLayout)
-        setupDataGrid(self.data, columns, self.detailedGridLayout)
+        clear_layout(self.detailedGridLayout)
+        setup_data_grid(self.data, columns, self.detailedGridLayout)
 
     @classmethod
     def create(cls, data):

@@ -14,8 +14,8 @@ from compiled_qt.UI_Submitter import Ui_MainWindow
 #Hydra
 import hydra.hydra_sql as sql
 from hydra.logging_setup import logger
-from dialogs_qt.MessageBoxes import aboutBox
-from utils.hydra_utils import findResource
+from dialogs_qt.MessageBoxes import about_box
+from hydra.hydra_utils import find_resource
 
 #pylint: disable=E1101
 
@@ -24,7 +24,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
         QtGui.QMainWindow.__init__(self)
         #Built-in UI Setup
         self.setupUi(self)
-        self.setWindowIcon(QtGui.QIcon(findResource("assets/SubmitterMain.png")))
+        self.setWindowIcon(QtGui.QIcon(find_resource("assets/SubmitterMain.png")))
 
         #Setup the UI with my fuctions
         self.setup_globals()
@@ -55,7 +55,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             opts = getopt.getopt(sys.argv[2:], "s:e:n:p:l:x:m:d:c:q:t:")[0]
         except getopt.GetoptError:
             logger.error("Bad Opt!")
-            aboutBox(self, "Bad Opt!", "One of the command line options you entered was invalid.\n"+
+            about_box(self, "Bad Opt!", "One of the command line options you entered was invalid.\n"+
                 "\nPlease remove any unkown opts and try again.")
             sys.exit(2)
 
@@ -189,7 +189,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
         #Error Checking
         if startFrame > endFrame:
-            aboutBox(self, "startFrame is greater than endFrame!", "startFrame must be less than the endFrame!")
+            about_box(self, "startFrame is greater than endFrame!", "startFrame must be less than the endFrame!")
             logger.error("startFrame is greater than endFrame!")
             return
 
@@ -255,7 +255,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")
-        #aboutBox(self, "Submitted!", "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
+        #about_box(self, "Submitted!", "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
 
     def scene_button_handler(self):
         currentDir = str(self.sceneLineEdit.text())

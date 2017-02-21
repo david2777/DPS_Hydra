@@ -1,16 +1,12 @@
 #Third Party
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui
 
 #Hydra Qt
 from compiled_qt.UI_DataTableDialog import Ui_DataTableWidget
 
-#Doesn't like Qt classes
-#pylint: disable=E0602,E1101,C0302
-
-class DataTableDialog(QDialog, Ui_DataTableWidget):
+class DataTableDialog(QtGui.QDialog, Ui_DataTableWidget):
     def __init__(self, data, parent=None):
-        QDialog.__init__(self, parent)
+        QtGui.QDialog.__init__(self, parent)
         self.setupUi(self)
 
         self.data = data
@@ -29,7 +25,7 @@ class DataTableDialog(QDialog, Ui_DataTableWidget):
         self.DataTable.setVerticalHeaderLabels(rows)
 
         for pos, row in enumerate(rows):
-            self.DataTable.setItem(pos, 0, QTableWidgetItem(str(getattr(self.data, row))))
+            self.DataTable.setItem(pos, 0, QtGui.QTableWidgetItem(str(getattr(self.data, row))))
 
     @classmethod
     def create(cls, data):

@@ -3,28 +3,24 @@
 import sys
 
 #Third Party
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui
 
 #Hydra
-from utils.node_utils import simplifyScheduleData, expandScheduleData
-from utils.hydra_utils import findResource
+from hydra.node_scheduling import simplify_schedule_data, expand_schedule_data
+from hydra.hydra_utils import find_resource
 
 #Hydra Qt
 from compiled_qt.UI_NodeScheduler import Ui_nodeSchedulerDialog
 
-#Doesn't like Qt classes
-#pylint: disable=E0602,E1101,C0302
-
-class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
+class NodeSchedulerDialog(QtGui.QDialog, Ui_nodeSchedulerDialog):
     def __init__(self, defaults, parent=None):
-        QDialog.__init__(self, parent)
+        QtGui.QDialog.__init__(self, parent)
         self.setupUi(self)
         self.defaults = defaults
 
         if self.defaults:
             self.editorGroup.setTitle("Week Schedule for {0}".format(self.defaults["host"]))
-            self.defaultSchedule = expandScheduleData(self.defaults["week_schedule"])
+            self.defaultSchedule = expand_schedule_data(self.defaults["week_schedule"])
 
         self.buildUI()
 
@@ -33,13 +29,13 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
 
     def buildUI(self):
         #Load style sheet
-        with open(findResource("assets/styleSheet.css"), "r") as myStyles:
+        with open(find_resource("assets/styleSheet.css"), "r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
         #Global colors
-        self.onlineColor = QColor(200, 240, 200)
-        self.offlineColor = QColor(240, 200, 200)
-        self.whiteColor = QColor(255, 255, 255)
+        self.onlineColor = QtGui.QColor(200, 240, 200)
+        self.offlineColor = QtGui.QColor(240, 200, 200)
+        self.whiteColor = QtGui.QColor(255, 255, 255)
 
         #Connect Buttons
         self.cancelButton.clicked.connect(self.cancelButtonHandler)
@@ -48,15 +44,15 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
         self.offlineButton.clicked.connect(self.offlineButtonHandler)
 
         #Set properties
-        self.scheduleTable.horizontalHeader().setResizeMode(QHeaderView.Fixed)
-        self.scheduleTable.verticalHeader().setResizeMode(QHeaderView.Fixed)
+        self.scheduleTable.horizontalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
+        self.scheduleTable.verticalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
 
         #Make items in scheduleTable
         rowCount = self.scheduleTable.rowCount()
         colCount = self.scheduleTable.columnCount()
         for i in range(0, rowCount):
             for j in range(0, colCount):
-                self.scheduleTable.setItem(i, j, QTableWidgetItem())
+                self.scheduleTable.setItem(i, j, QtGui.QTableWidgetItem())
                 if not self.defaultSchedule:
                     self.scheduleTable.item(i, j).setBackgroundColor(self.onlineColor)
                     self.scheduleTable.item(i, j).setText("1")
@@ -144,7 +140,7 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
                     current = item
                     valueList.append("{0}:{1}:{2}".format(i, j, item))
 
-        scheduleData = simplifyScheduleData(valueList)
+        scheduleData = simplify_schedule_data(valueList)
         return scheduleData
 
     @classmethod
@@ -155,7 +151,7 @@ class NodeSchedulerDialog(QDialog, Ui_nodeSchedulerDialog):
             return dialog.getValues()
 
 def main():
-    app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     window = NodeSchedulerDialog(None, None)
     window.show()
     retcode = app.exec_()

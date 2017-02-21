@@ -1,18 +1,15 @@
 #Third Party
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui
 
-from hydra.logging_setup import logger
-
-def clearLayout(layout):
+def clear_layout(layout):
     while layout.count():
         child = layout.takeAt(0)
         if child.widget() is not None:
             child.widget().deleteLater()
         elif child.layout() is not None:
-            clearLayout(child.layout())
+            clear_layout(child.layout())
 
-def setupDataGrid(records, columns, grid):
+def setup_data_grid(records, columns, grid):
     """Populate a data grid. "colums" is a list of widget factory objects."""
     #Build the header row
     for(column, attr) in enumerate(columns):
@@ -20,7 +17,7 @@ def setupDataGrid(records, columns, grid):
         if item:
             grid.removeItem(item)
             item.widget().hide()
-        grid.addWidget(attr.headerWidget(), 0, column)
+        grid.addWidget(attr.header_widget(), 0, column)
 
     #Build the data rows
     for(row, record) in enumerate(records):
@@ -29,26 +26,26 @@ def setupDataGrid(records, columns, grid):
             if item:
                 grid.removeItem(item)
                 item.widget().hide()
-            grid.addWidget(attr.dataWidget(record),row + 1, column,)
+            grid.addWidget(attr.data_widget(record), row + 1, column)
 
-class widgetFactory():
+class widgetFactory(object):
     """A widget building class intended to be subclassed for building particular
     types of widgets. 'name' must be the name of a database column."""
 
-    def __init__(self, name, intention = None):
+    def __init__(self, name, intention=None):
         self.name = name
         self.intention = intention
 
-    def headerWidget(self):
+    def header_widget(self):
         """Makes a label for the header row of the display."""
 
-        return QLabel('<b>' + self.name + '</b>')
+        return QtGui.QLabel('<b>' + self.name + '</b>')
 
     def data(self, record):
 
         return str(getattr(record, self.name))
 
-    def dataWidget(self, record):
+    def data_widget(self, record):
         """Create a QWidget instance and return a reference to it. To make a
         widget, given a record, extract the named attribute from the record
         with the data method, and use that as the widget's text/data."""
@@ -59,5 +56,5 @@ class labelFactory(widgetFactory):
     """A label widget factory. The object's name is the name of a database
     column."""
 
-    def dataWidget(self, record):
-        return QLabel(self.data(record))
+    def data_widget(self, record):
+        return QtGui.QLabel(self.data(record))

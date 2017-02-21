@@ -13,9 +13,8 @@ import Constants
 from hydra.logging_setup import logger
 import hydra.hydra_sql as sql
 import hydra.single_instance as single_instance
+import hydra.hydra_utils as hydra_utils
 import networking.servers as servers
-import utils.hydra_utils as hydra_utils
-import utils.node_utils as node_utils
 
 class RenderTCPServer(servers.TCPServer):
     """RenderTCPServer waits for a TCP connection from the RenderManagerServer
@@ -30,7 +29,7 @@ class RenderTCPServer(servers.TCPServer):
         self.childKilled = 0
 
         #Get this node data from the database and make sure it exists
-        self.thisNode = node_utils.getThisNodeOBJ()
+        self.thisNode = sql.get_this_node()
         logger.debug(self.thisNode)
         if not self.thisNode:
             logger.critical("This node does not exist in the database! Please Register this node and try again.")
@@ -44,7 +43,7 @@ class RenderTCPServer(servers.TCPServer):
         self.unstick_task()
 
         #Run The Server
-        port = int(hydra_utils.getInfoFromCFG("network", "port"))
+        port = int(hydra_utils.get_info_from_cfg("network", "port"))
         self.startServerThread(port)
         self.createIdleLoop("Render_Loop_Thread", self.render_loop, 5)
 
@@ -103,7 +102,7 @@ class RenderTCPServer(servers.TCPServer):
 
     def shutdown(self):
         """Offline node, Kill current job, shutdown servers, reset node status"""
-        self.thisNode = node_utils.getThisNodeOBJ()
+        self.thisNode = sql.get_this_node()
         currentStatus = self.thisNode.status
         newStatus = sql.IDLE if currentStatus in [sql.IDLE, sql.STARTED] else sql.OFFLINE
         if currentStatus in [sql.STARTED, sql.PENDING] or self.childProcess:
@@ -142,13 +141,13 @@ class RenderTCPServer(servers.TCPServer):
         log.write('Hydra log file {0} on {1}\n'.format(logPath, self.thisNode.host))
         log.write('RenderNode is {0}\n'.format(sys.argv))
         log.write('Command: {0}\n\n'.format(renderTaskCMD))
-        hydra_utils.flushOut(log)
+        flush_out(log)
 
         try:
             #Run the job and keep track of the process
             self.childProcess = subprocess.Popen(renderTaskCMD,
                                                 stdout=log, stderr=log,
-                                                **hydra_utils.buildSubprocessArgs(False))
+                                                **build_subprocess_args(False))
 
             logger.info("Started PID %s to do Task %s", self.childProcess.pid, task.id)
 
@@ -261,6 +260,28 @@ class RenderTCPServer(servers.TCPServer):
 def heartbeat():
     #TODO Make this do the thing
     pass
+
+def build_subprocess_args(include_stdout=False):
+    if hasattr(subprocess, 'STARTUPINFO'):
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        env = os.environ
+    else:
+        si = None
+        env = None
+
+    ret = {'stdin': subprocess.PIPE,
+            'startupinfo': si, 'env': env}
+
+    if include_stdout:
+        ret.update({'stdout:': subprocess.PIPE})
+
+    return ret
+
+def flush_out(f):
+    """Flush and sync a file to disk"""
+    f.flush()
+    os.fsync(f.fileno())
 
 if __name__ == "__main__":
     logger.info("Starting in %s", os.getcwd())

@@ -3,22 +3,18 @@
 import sys
 
 #Third Party
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui
 
 #Hydra Qt
 from compiled_qt.UI_NodeEditor import Ui_nodeEditorDialog
 from dialogs_qt.NodeSchedulerDialog import NodeSchedulerDialog
 
 #Hydra
-from hydra.hydra_sql import *
+import hydra.hydra_sql as sql
 
-#Doesn't like Qt classes
-#pylint: disable=E0602,E1101,C0302
-
-class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
+class NodeEditorDialog(QtGui.QDialog, Ui_nodeEditorDialog):
     def __init__(self, defaults, parent=None):
-        QDialog.__init__(self, parent)
+        QtGui.QDialog.__init__(self, parent)
         self.setupUi(self)
 
         self.schedEnabled = False
@@ -50,13 +46,13 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
 
     def populateComps(self):
         #Get requirements master list from the DB
-        compatabilities = hydra_capabilities.fetch()
+        compatabilities = sql.hydra_capabilities.fetch()
         compatabilities = [comp.name for comp in compatabilities]
         self.compChecks = []
         col = 0
         row = 0
         for item in compatabilities:
-            c = QCheckBox(item)
+            c = QtGui.QCheckBox(item)
             self.compGrid.addWidget(c, row, col)
             if col == 2:
                 row += 1
@@ -76,7 +72,7 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
     def getValues(self):
         comps = " ".join(self.getComps())
         rDict = {"priority" : int(self.minPrioritySpinbox.value()),
-                "schedEnabled" : self.schedEnabled,
+                "schedule_enabled" : self.schedEnabled,
                 "comps" : comps}
         return rDict
 
@@ -90,11 +86,11 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
             editsFormat = ",".join(edits)
             if editsFormat != self.defaults["week_schedule"]:
                 self.defaults["week_schedule"] = editsFormat
-                with transaction() as t:
+                with sql.transaction() as t:
                     cmd = "UPDATE hydra_rendernode SET week_schedule = %s WHERE host = %s"
                     t.cur.execute(cmd, (editsFormat, self.defaults["host"]))
         else:
-            with transaction() as t:
+            with sql.transaction() as t:
                 cmd = "UPDATE hydra_rendernode SET week_schedule = %s, schedule_enabled = 0 WHERE host = %s"
                 t.cur.execute(cmd, (None, self.defaults["host"]))
             self.schedCheckBox.setCheckState(0)
@@ -122,7 +118,7 @@ class NodeEditorDialog(QDialog, Ui_nodeEditorDialog):
             return dialog.getValues()
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
 
     window = NodeEditorDialog(None, None)
     window.show()

@@ -3,32 +3,28 @@ import sys
 
 #Third Party
 import MySQLdb
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui
 
 #Hydra Qt
 from compiled_qt.UI_Login import Ui_Login
 
 #Hydra
-from utils.hydra_utils import getInfoFromCFG
+from hydra.hydra_utils import get_info_from_cfg
 from hydra.logging_setup import logger
-from dialogs_qt.MessageBoxes import aboutBox
+from dialogs_qt.MessageBoxes import about_box
 
-#Doesn't like Qt classes
-#pylint: disable=E0602,E1101,C0302
+#pylint: disable=E1101
 
-class DatabaseLogin(QWidget, Ui_Login):
-    #Set autoLogin and get default DB info from .cfg
+class DatabaseLogin(QtGui.QWidget, Ui_Login):
     def __init__(self):
-        QWidget.__init__(self)
+        QtGui.QWidget.__init__(self)
         self.setupUi(self)
 
-        self.host = getInfoFromCFG("database", "host")
-        self.databaseName = getInfoFromCFG("database", "db")
-        self.port = int(getInfoFromCFG("database", "port"))
+        self.host = get_info_from_cfg("database", "host")
+        self.databaseName = get_info_from_cfg("database", "db")
+        self.port = int(get_info_from_cfg("database", "port"))
 
-        QObject.connect(self.loginButton, SIGNAL("clicked()"),
-                        self.loginButtonHandler)
+        self.loginButton.clicked.connect(self.loginButtonHandler)
 
         self.loginSuccess = False
 
@@ -64,5 +60,5 @@ class DatabaseLogin(QWidget, Ui_Login):
 
         except MySQLdb.Error:
             logger.error("Could not login!")
-            aboutBox(self, "Could Not Login",
+            about_box(self, "Could Not Login",
             "Invalid username/password or server is down...")

@@ -12,9 +12,9 @@ import MySQLdb
 import Constants
 from hydra.logging_setup import logger
 from hydra import password_storage
+import hydra.hydra_utils as hydra_utils
 from networking.questions import KillCurrentTaskQuestion
 from networking.connections import TCPConnection
-import utils.hydra_utils as hydra_utils
 
 #pylint: disable=E1101,E0203
 
@@ -52,20 +52,20 @@ niceNames = {STARTED: 'Started',
 
 niceNamesRev = {v: k for k, v in niceNames.items()}
 
-def getDatabaseInfo():
+def get_database_info():
     logger.debug("Finding login information...")
 
     #Get databse information
-    host = hydra_utils.getInfoFromCFG("database", "host")
-    domain = hydra_utils.getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
+    host = hydra_utils.get_info_from_cfg("database", "host")
+    domain = hydra_utils.get_info_from_cfg("network", "dnsDomainExtension").replace(" ", "")
     if domain != "" and host != "localhost":
         host += ".{}".format(domain)
-    databaseName = hydra_utils.getInfoFromCFG("database", "db")
-    port = int(hydra_utils.getInfoFromCFG("database", "port"))
-    db_username = hydra_utils.getInfoFromCFG("database", "username")
+    databaseName = hydra_utils.get_info_from_cfg("database", "db")
+    port = int(hydra_utils.get_info_from_cfg("database", "port"))
+    db_username = hydra_utils.get_info_from_cfg("database", "username")
 
     #Get login information
-    autoLogin = hydra_utils.getInfoFromCFG("database", "autologin")
+    autoLogin = hydra_utils.get_info_from_cfg("database", "autologin")
     autoLogin = True if str(autoLogin).lower()[0] == "t" else False
     if autoLogin:
         _db_password = password_storage.loadCredentials(db_username)
@@ -83,9 +83,19 @@ def getDatabaseInfo():
 
     return host, db_username, _db_password, databaseName, port
 
+def get_this_node():
+    """Returns the current node's info from the DB, None if not found in the DB."""
+    thisNode = hydra_rendernode.fetch("WHERE host = %s", (hydra_utils.my_host_name(),),
+                                        multiReturn=False)
+    #If it's an empty list just return None
+    if not thisNode:
+        return None
+    else:
+        return thisNode
+
 class transaction(object):
     #pylint: disable=R0903
-    host, db_username, _db_password, databaseName, port = getDatabaseInfo()
+    host, db_username, _db_password, databaseName, port = get_database_info()
 
     def __init__(self):
         #Open DB Connection
@@ -118,7 +128,7 @@ class hydraObject(object):
 
     def __setattr__(self, k, v):
         self.__dict__[k] = v
-        if hydra_utils.nonFlanged(k):
+        if hydra_utils.non_flanged(k):
             self.__dirty__.add(k)
             #logger.debug(('dirty', k, v))
 
@@ -192,7 +202,7 @@ class hydraObject(object):
             return None
 
     def attributes(self):
-        return filter(hydra_utils.nonFlanged, self.__dict__.keys())
+        return filter(hydra_utils.non_flanged, self.__dict__.keys())
 
     def vals(self):
         return self.__dict__
@@ -526,7 +536,7 @@ class hydra_taskboard(hydraObject):
             return [str(x) for x in renderList]
 
     def get_log_path(self):
-        thisHost = hydra_utils.myHostName()
+        thisHost = hydra_utils.my_host_name()
         path = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
         if self.host and thisHost == self.host:
             return path

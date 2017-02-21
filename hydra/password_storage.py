@@ -4,19 +4,17 @@ from getpass import getpass
 
 #Third Party
 import MySQLdb
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui
 import keyring
 
 #Hydra
 from hydra.logging_setup import logger
-import utils.hydra_utils as hydra_utils
+import hydra.hydra_utils as hydra_utils
 
 #Hydra Qt
 from dialogs_qt.LoginWidget import DatabaseLogin
 
-#Doesn't like Qt classes
-#pylint: disable=E0602,E1101,C0302
+#pylint: disable=E1101
 
 def storeCredentials(username, _password):
     keyring.set_password("Hydra", username, _password)
@@ -27,8 +25,8 @@ def loadCredentials(username):
     return keyring.get_password("Hydra", username)
 
 def updateAutologinUser(newUsername):
-    if hydra_utils.getInfoFromCFG("database", "username") != newUsername:
-        return hydra_utils.writeInfoToCFG("database", "username", newUsername)
+    if hydra_utils.get_info_from_cfg("database", "username") != newUsername:
+        return hydra_utils.write_info_to_cfg("database", "username", newUsername)
 
 def consolePrompt():
     print "\n\nStore Auto Login information?"
@@ -36,12 +34,12 @@ def consolePrompt():
     username = raw_input("Username: ")
     _password = getpass("Password: ")
     #Get DB Info
-    host = hydra_utils.getInfoFromCFG("database", "host")
-    domain = hydra_utils.getInfoFromCFG("network", "dnsDomainExtension").replace(" ", "")
+    host = hydra_utils.get_info_from_cfg("database", "host")
+    domain = hydra_utils.get_info_from_cfg("network", "dnsDomainExtension").replace(" ", "")
     if domain != "" and host != "localhost":
         host += ".{}".format(domain)
-    databaseName = hydra_utils.getInfoFromCFG("database", "db")
-    port = int(hydra_utils.getInfoFromCFG("database", "port"))
+    databaseName = hydra_utils.get_info_from_cfg("database", "db")
+    port = int(hydra_utils.get_info_from_cfg("database", "port"))
 
     #Check  if login is valid
     try:
@@ -54,12 +52,12 @@ def consolePrompt():
         print "Login information was invalid!"
 
 def qtPrompt():
-    app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
     loginWin = DatabaseLogin()
     loginWin.show()
     app.exec_()
     username, _password = loginWin.getValues()
-    autoLogin = hydra_utils.getInfoFromCFG("database", "autologin")
+    autoLogin = hydra_utils.get_info_from_cfg("database", "autologin")
     autoLogin = True if str(autoLogin).lower().startswith("t") else False
     if username and autoLogin:
         updateAutologinUser(username)

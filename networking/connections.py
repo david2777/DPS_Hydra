@@ -6,7 +6,7 @@ import pickle
 #Hydra
 import Constants
 from hydra.logging_setup import logger
-from utils.hydra_utils import getInfoFromCFG
+from hydra.hydra_utils import get_info_from_cfg
 
 #pylint: disable=R0903
 
@@ -15,9 +15,9 @@ class TCPConnection(object):
     def __init__(self, address=None, port=None):
         """Constructor. Supply a address to connect to another computer."""
         if not address:
-            address = getInfoFromCFG("database", "host")
+            address = get_info_from_cfg("database", "host")
         if not port:
-            port = int(getInfoFromCFG("network", "port"))
+            port = int(get_info_from_cfg("network", "port"))
         self.address = address
         self.port = port
 

@@ -9,17 +9,17 @@ from PyQt4 import QtGui, QtCore
 #Hydra Qt
 from compiled_qt.UI_RenderNodeMain import Ui_RenderNodeMainWindow
 from dialogs_qt.NodeEditorDialog import NodeEditorDialog
-from dialogs_qt.MessageBoxes import aboutBox, yesNoBox
+from dialogs_qt.MessageBoxes import about_box, yes_no_box
 
 #Hydra
 import RenderNode
 import hydra.hydra_sql as sql
-import utils.node_utils as node_utils
-import utils.hydra_utils as hydra_utils
 from hydra import threads
 from hydra.long_strings import RenderNodeError_String
 from hydra.logging_setup import logger, outputWindowFormatter
 from hydra.single_instance import InstanceLock
+import hydra.node_scheduling as node_scheduling
+import hydra.hydra_utils as hydra_utils
 
 #Doesn't like Qt classes
 #pylint: disable=E0602,E1101
@@ -35,10 +35,10 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         QtGui.QMainWindow.__init__(self)
         self.setupUi(self)
 
-        with open(hydra_utils.findResource("assets/styleSheet.css"), "r") as myStyles:
+        with open(hydra_utils.find_resource("assets/styleSheet.css"), "r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
-        self.thisNode = node_utils.getThisNodeOBJ()
+        self.thisNode = sql.get_this_node()
         self.isVisable = True
 
         self.pulseThreadStatus = False
@@ -48,7 +48,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
 
         if not self.thisNode or not bool(self.thisNode.is_render_node):
             logger.error("Node Error!")
-            aboutBox(self, "Error", RenderNodeError_String)
+            about_box(self, "Error", RenderNodeError_String)
             sys.exit(1)
 
         self.currentSchedule = self.thisNode.week_schedule
@@ -81,7 +81,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         self.outputTextEdit.ensureCursorVisible()
 
     def clear_window_logger(self):
-        choice = yesNoBox(self, "Confirm", "Really clear output?")
+        choice = yes_no_box(self, "Confirm", "Really clear output?")
         if choice == QtGui.QMessageBox.Yes:
             self.outputTextEdit.clear()
             logger.info("Output cleared")
@@ -104,15 +104,15 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         sys.stderr = EmittingStream(textWritten=self.write_to_window_logger)
 
         #Get Pixmaps and Icon
-        self.donePixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/done.png"))
-        self.inProgPixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/inProgress.png"))
-        self.needsAttentionPixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/needsAttention.png"))
-        self.nonePixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/none.png"))
-        self.notStartedPixmap = QtGui.QPixmap(hydra_utils.findResource("assets/status/notStarted.png"))
-        self.refreshPixmap = QtGui.QPixmap(hydra_utils.findResource("assets/refresh.png"))
+        self.donePixmap = QtGui.QPixmap(hydra_utils.find_resource("assets/status/done.png"))
+        self.inProgPixmap = QtGui.QPixmap(hydra_utils.find_resource("assets/status/inProgress.png"))
+        self.needsAttentionPixmap = QtGui.QPixmap(hydra_utils.find_resource("assets/status/needsAttention.png"))
+        self.nonePixmap = QtGui.QPixmap(hydra_utils.find_resource("assets/status/none.png"))
+        self.notStartedPixmap = QtGui.QPixmap(hydra_utils.find_resource("assets/status/notStarted.png"))
+        self.refreshPixmap = QtGui.QPixmap(hydra_utils.find_resource("assets/refresh.png"))
         self.refreshIcon = QtGui.QIcon()
         self.refreshIcon.addPixmap(self.refreshPixmap)
-        self.RIcon = QtGui.QIcon(hydra_utils.findResource("assets/RenderNodeMain.png"))
+        self.RIcon = QtGui.QIcon(hydra_utils.find_resource("assets/RenderNodeMain.png"))
 
         self.isVisable = True
 
@@ -152,7 +152,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
             self.trayIcon.setContextMenu(self.taskIconMenu)
         else:
             logger.error("Tray Icon Error! Could not create tray icon.")
-            aboutBox(self, "Tray Icon Error",
+            about_box(self, "Tray Icon Error",
                     "Could not create tray icon. Minimizing to tray has been disabled.")
             self.trayButton.setEnabled(False)
 
@@ -170,7 +170,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
 
     #DO NOT RENAME THIS FUNCTION
     def closeEvent(self, event):
-        choice = yesNoBox(self, "Confirm", "Really exit the RenderNodeMain server?")
+        choice = yes_no_box(self, "Confirm", "Really exit the RenderNodeMain server?")
         if choice == QtGui.QMessageBox.Yes:
             self.shutdown()
         else:
@@ -235,7 +235,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
             logger.error("Node could not be Offlined!")
 
     def get_off_thisnode(self):
-        response = self.thisNode.getOff()
+        response = self.thisNode.get_off()
         self.update_thisnode()
         if response:
             logger.info("Node Offlined and Task Killed")
@@ -291,17 +291,17 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         defaults = {"host" : self.thisNode.host,
                     "priority" : self.thisNode.minPriority,
                     "comps" : comps,
-                    "scheduleEnabled" : int(self.thisNode.schedule_enabled),
-                    "weekSchedule" : self.thisNode.week_schedule}
+                    "schedule_enabled" : int(self.thisNode.schedule_enabled),
+                    "week_schedule" : self.thisNode.week_schedule}
         edits = NodeEditorDialog.create(defaults)
         #logger.debug(edits)
         if edits:
-            if edits["schedEnabled"]:
+            if edits["schedule_enabled"]:
                 schedEnabled = 1
             else:
                 schedEnabled = 0
             query = "UPDATE hydra_rendernode SET minPriority = %s"
-            query += ", scheduleEnabled = %s, capabilities = %s"
+            query += ", schedule_enabled = %s, capabilities = %s"
             query += " WHERE host = %s"
             editsTuple = (edits["priority"], schedEnabled, edits["comps"], self.thisNode.host)
             with sql.transaction() as t:
@@ -346,7 +346,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
     def hidden_about_box(self, title="", msg=""):
         """Creates a window that has been minimzied to the tray"""
         if self.isVisable:
-            aboutBox(self, title, msg)
+            about_box(self, title, msg)
         else:
             self.trayIcon.showMessage(title, msg)
 
@@ -359,12 +359,12 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
 
         self.update_thisnode()
 
-        sleepTime, nowStatus = node_utils.calcuateSleepTimeFromNode(self.thisNode.host)
+        sleepTime, nowStatus = node_scheduling.calcuate_sleep_time_from_node(self.thisNode.host)
         if not sleepTime or not nowStatus:
             logger.error("Could not find schdule! Checking again in 24 hours.")
             return 86400
 
-        if nowStatus == READY:
+        if nowStatus == sql.READY:
             self.startup_event()
         else:
             self.shutdown_event()
@@ -392,7 +392,7 @@ class schedulerThread(threads.stoppableThread):
             self.stopEvent.wait(self.interval)
 
 def pulse():
-    host = hydra_utils.myHostName()
+    host = hydra_utils.my_host_name()
     with sql.transaction() as t:
         t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
                     "WHERE host = '{0}'".format(host))
@@ -409,7 +409,7 @@ if __name__ == "__main__":
     logger.debug("Lock File Status: %s", lockStatus)
     if not lockStatus:
         logger.critical("Only one RenderNode is allowed to run at a time! Exiting...")
-        aboutBox(None, "ERROR", "Only one RenderNode is allowed to run at a time! Exiting...")
+        about_box(None, "ERROR", "Only one RenderNode is allowed to run at a time! Exiting...")
         sys.exit(-1)
 
     window = RenderNodeMainUI()

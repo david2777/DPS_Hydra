@@ -10,14 +10,14 @@ from MySQLdb import IntegrityError
 #Hydra
 from hydra.logging_setup import logger
 from hydra.hydra_sql import hydra_rendernode, transaction
-import utils.hydra_utils as hydra_utils
+import hydra.hydra_utils as hydra_utils
 
 if __name__ == "__main__":
-    me = hydra_utils.myHostName()
+    me = hydra_utils.my_host_name()
     platform = sys.platform
     hydraPath, execFile = os.path.split(sys.argv[0])
     logger.info(hydraPath)
-    response = hydra_utils.changeHydraEnviron(hydraPath)
+    response = hydra_utils.change_hydra_environ(hydraPath)
     if response:
         try:
             with transaction() as t:

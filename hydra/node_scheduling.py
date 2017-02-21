@@ -5,9 +5,9 @@ import datetime
 #Hydra
 from Constants import TIMEDICT, TIMEDICT_REV
 from hydra.logging_setup import logger
-from hydra.hydra_sql import *
+import hydra.hydra_sql as sql
 
-def simplifyScheduleData(qtDataList):
+def simplify_schedule_data(qtDataList):
     """Take data from the QTableWidget, simplifty it for storage in the DB"""
     if not qtDataList:
         return None
@@ -27,7 +27,7 @@ def simplifyScheduleData(qtDataList):
 
     return simpleDataList
 
-def expandScheduleData(dbData):
+def expand_schedule_data(dbData):
     """Take schedule data from the database and encode it for application to
     the QTableWidget schedule UI"""
     if not dbData:
@@ -50,8 +50,8 @@ def expandScheduleData(dbData):
 
     return expandedDataList
 
-def findSchedule(dayOfWeek, dataDict):
-    """Take and ISOWeekday and a dictionary from within findNextEvent and finds
+def find_schedule(dayOfWeek, dataDict):
+    """Take and ISOWeekday and a dictionary from within find_next_event and finds
     the next event during the given ISOWeekday and in the dataDict."""
     schedule = None
     i = 0
@@ -74,7 +74,7 @@ def findSchedule(dayOfWeek, dataDict):
 
     return schedule, dayOfWeek
 
-def findNextEvent(now, dbData):
+def find_next_event(now, dbData):
     """Take the current datetime and the decoded schedule data from the DB and
     find the next scheduling event"""
     nowDayOfWeek = now.isoweekday()
@@ -97,7 +97,7 @@ def findNextEvent(now, dbData):
             dataDict[dayOfWeek] = [[timeObject, action]]
 
     #scheule is a nested list like [[time, action], [time,action]]
-    todaySchedule, newDayOfWeek = findSchedule(nowDayOfWeek, dataDict)
+    todaySchedule, newDayOfWeek = find_schedule(nowDayOfWeek, dataDict)
     if not todaySchedule:
         return None
 
@@ -113,7 +113,7 @@ def findNextEvent(now, dbData):
     #Iterate the day of week and look again.
     if not sched:
         newDayOfWeek += 1
-        todaySchedule, newDayOfWeek = findSchedule(newDayOfWeek, dataDict)
+        todaySchedule, newDayOfWeek = find_schedule(newDayOfWeek, dataDict)
         sched = todaySchedule[0]
 
     if not sched:
@@ -122,10 +122,10 @@ def findNextEvent(now, dbData):
 
     return [newDayOfWeek] + sched
 
-def calcuateSleepTime(now, dbData):
+def calcuate_sleep_time(now, dbData):
     """Takes the current datetime and the decoded schedule data from the DB
     and finds the time to sleep until the next event"""
-    nextEvent = findNextEvent(now, dbData)
+    nextEvent = find_next_event(now, dbData)
 
     if not nextEvent or nextEvent[-1] is None:
         return None, None
@@ -147,25 +147,15 @@ def calcuateSleepTime(now, dbData):
 
     #These are reversed as they're going to be the oposite of the status after the event
     if nextEvent[2] == 1:
-        status = OFFLINE
+        status = sql.OFFLINE
     else:
-        status = READY
+        status = sql.READY
 
     return sleepyTime, status
 
-def calcuateSleepTimeFromNode(nodeName):
-    """A convience function that does calcuateSleepTime given a host name"""
-    thisNode = hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
-                                        cols=["weekSchedule", "host"])
+def calcuate_sleep_time_from_node(nodeName):
+    """A convience function that does calcuate_sleep_time given a host name"""
+    thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
+                                        cols=["week_schedule", "host"])
     nowDateTime = datetime.datetime.now().replace(microsecond=0)
-    return calcuateSleepTime(nowDateTime, thisNode.weekSchedule)
-
-def getThisNodeOBJ():
-    """Returns the current node's info from the DB, None if not found in the DB."""
-    thisNode = hydra_rendernode.fetch("WHERE host = %s", (hydra_utils.myHostName(),),
-                                        multiReturn=False)
-    #If it's an empty list just return None
-    if not thisNode:
-        return None
-    else:
-        return thisNode
+    return calcuate_sleep_time(nowDateTime, thisNode.week_schedule)

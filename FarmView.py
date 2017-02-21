@@ -24,8 +24,7 @@ from hydra.logging_setup import logger
 import hydra.hydra_sql as sql
 import hydra.long_strings as longstr
 import hydra.threads as hydra_threads
-import utils.hydra_utils as hydra_utils
-import utils.node_utils as node_utils
+import hydra.hydra_utils as hydra_utils
 
 #Doesn't like Qt classes
 #pylint: disable=E1101,C0302
@@ -41,22 +40,22 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         self.setupUi(self)
 
         #Class Variables
-        self.thisNodeName = hydra_utils.myHostName()
+        self.thisNodeName = hydra_utils.my_host_name()
         logger.info("This host is %s", self.thisNodeName)
-        self.username = hydra_utils.getInfoFromCFG("database", "username")
+        self.username = hydra_utils.get_info_from_cfg("database", "username")
         self.userFilter = False
         self.showArchivedFilter = False
         self.statusMsg = "ERROR"
         self.currentJobSel = None
 
-        with open(hydra_utils.findResource("assets/styleSheet.css"), "r") as myStyles:
+        with open(hydra_utils.find_resource("assets/styleSheet.css"), "r") as myStyles:
             self.setStyleSheet(myStyles.read())
 
         #My UI Setup Functions
         self.setup_tree_views()
         self.connect_buttons()
         self.setup_hotkeys()
-        self.setWindowIcon(QtGui.QIcon(hydra_utils.findResource("assets/FarmView.png")))
+        self.setWindowIcon(QtGui.QIcon(hydra_utils.find_resource("assets/FarmView.png")))
 
         #Make sure this node exists
         self.thisNodeButtonsEnabled = True
@@ -381,7 +380,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         self.reset_status_bar()
         mySel = self.jobTree.selectedItems()
         if not mySel:
-            MessageBoxes.warningBox(self, "Selection Error",
+            MessageBoxes.warning_box(self, "Selection Error",
                         "Please select something from the Job Tree and try again.")
             return None
 
@@ -413,7 +412,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         #Kill
         elif mode == "kill":
-            choice = MessageBoxes.yesNoBox(self, "Confirm", "Really kill the selected jobs?")
+            choice = MessageBoxes.yes_no_box(self, "Confirm", "Really kill the selected jobs?")
             if choice == QtGui.QMessageBox.No:
                 return None
 
@@ -435,12 +434,12 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                     respString += taskString
 
                 logger.error(respString)
-                MessageBoxes.warningBox(self, "Job Kill Errors!", respString)
+                MessageBoxes.warning_box(self, "Job Kill Errors!", respString)
 
         #Reset
         elif mode == "reset":
             jobIDs = [int(job.id) for job in jobOBJs]
-            choice = MessageBoxes.yesNoBox(self, "Confirm", "Really reset the following jobs?\n{}".format(jobIDs))
+            choice = MessageBoxes.yes_no_box(self, "Confirm", "Really reset the following jobs?\n{}".format(jobIDs))
             if choice == QtGui.QMessageBox.No:
                 return None
 
@@ -455,7 +454,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         #Toggle Archive on Job
         elif mode in ["archive", "unarchive"]:
-            choice = MessageBoxes.yesNoBox(self, "Confirm",
+            choice = MessageBoxes.yes_no_box(self, "Confirm",
                             "Really {0} the selected jobs?".format(mode))
             if choice == QtGui.QMessageBox.No:
                 return None
@@ -473,7 +472,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         elif mode == "priority":
             for job in jobOBJs:
                 msgString = "Priority for job {0}:".format(job.id)
-                reply = MessageBoxes.intBox(self, "Set Job Priority", msgString, job.priority)
+                reply = MessageBoxes.int_box(self, "Set Job Priority", msgString, job.priority)
                 if reply[1]:
                     job.prioritize(reply[0])
                     self.populate_job_tree()
@@ -598,7 +597,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         self.reset_status_bar()
         mySel = self.taskTree.selectedItems()
         if not mySel:
-            MessageBoxes.warningBox(self, "Selection Error",
+            MessageBoxes.warning_box(self, "Selection Error",
                         "Please select something from the Task Tree and try again.")
             return None
 
@@ -610,7 +609,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             data = [sel for sel in mySel if sel.text(0) != "None"]
 
         if not data:
-            MessageBoxes.warningBox(self, "Selection Error",
+            MessageBoxes.warning_box(self, "Selection Error",
                         "Please select one or more tasks from the TaskTree and try again.")
             return None
 
@@ -632,13 +631,13 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             _ = [task.pause() for task in taskOBJs]
 
         elif mode == "reset":
-            response = MessageBoxes.yesNoBox(self, "Confirm", "Are you sure you want to reset the following tasks?\n{}".format(taskIDs))
+            response = MessageBoxes.yes_no_box(self, "Confirm", "Are you sure you want to reset the following tasks?\n{}".format(taskIDs))
             if response == QtGui.QMessageBox.No:
                 return None
             _ = [task.reset() for task in taskOBJs]
 
         elif mode == "kill":
-            response = MessageBoxes.yesNoBox(self, "Confirm", "Are you sure you want to kill these tasks?\n{}".format(taskIDs))
+            response = MessageBoxes.yes_no_box(self, "Confirm", "Are you sure you want to kill these tasks?\n{}".format(taskIDs))
             if response == QtGui.QMessageBox.No:
                 return None
             responses = [task.kill() for task in taskOBJs]
@@ -646,12 +645,12 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                 failureIDXes = [i for i, x in enumerate(responses) if not x]
                 failureIDs = [taskIDs[i] for i in failureIDXes]
                 logger.error("Task Kill failed on %s", failureIDs)
-                MessageBoxes.warningBox(self, "Task Kill Error!",
+                MessageBoxes.warning_box(self, "Task Kill Error!",
                             "Task Kill failed on task(s) with IDs {}".format(failureIDs))
 
         elif mode in ["log", "tail"]:
             if len(taskOBJs) > 1:
-                choice = MessageBoxes.yesNoBox(self, "Confirm", "You have {0} tasks selected. Are you sure you want to open {0} logs?".format(len(taskIDs)))
+                choice = MessageBoxes.yes_no_box(self, "Confirm", "You have {0} tasks selected. Are you sure you want to open {0} logs?".format(len(taskIDs)))
                 if choice == QtGui.QMessageBox.No:
                     return None
             _ = [self.open_log_file(task, mode) for task in taskOBJs]
@@ -698,12 +697,12 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                     cmd = " ".join(["start powershell Get-Content", logPath, "-Wait"])
                     os.system(cmd)
                 else:
-                    MessageBoxes.aboutBox(self, "Sorry", "This platform doesn't support tail yet...")
+                    MessageBoxes.about_box(self, "Sorry", "This platform doesn't support tail yet...")
             else:
-                MessageBoxes.aboutBox(self, "Error", "Bad arg given to open_log_file")
+                MessageBoxes.about_box(self, "Error", "Bad arg given to open_log_file")
                 logger.critical("Bad arg given to open_log_file")
         else:
-            MessageBoxes.warningBox(self, "Log Not Found",
+            MessageBoxes.warning_box(self, "Log Not Found",
                                     "Log could not be found for Task {}".format(int(task.id)))
             logger.warning("Log file does not exist or is unreachable.")
 
@@ -810,7 +809,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         rows = self.renderNodeTree.selectedItems()
 
         if not rows:
-            MessageBoxes.warningBox(self, "Selection Error",
+            MessageBoxes.warning_box(self, "Selection Error",
                     "Please select something from the Render Node Table and try again.")
             return None
         else:
@@ -822,7 +821,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if not hosts:
             return
 
-        choice = MessageBoxes.yesNoBox(self, "Confirm", "Are you sure you want to online"
+        choice = MessageBoxes.yes_no_box(self, "Confirm", "Are you sure you want to online"
                           " these nodes?\n" + str(hosts))
 
         if choice == QtGui.QMessageBox.Yes:
@@ -838,7 +837,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if not hosts:
             return
 
-        choice = MessageBoxes.yesNoBox(self, "Confirm", "Are you sure you want to offline"
+        choice = MessageBoxes.yes_no_box(self, "Confirm", "Are you sure you want to offline"
                           " these nodes?\n" + str(hosts))
 
         if choice == QtGui.QMessageBox.Yes:
@@ -854,7 +853,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if not hosts:
             return
 
-        choice = MessageBoxes.yesNoBox(self, "Confirm", longstr.GetOff_String + str(hosts))
+        choice = MessageBoxes.yes_no_box(self, "Confirm", longstr.GetOff_String + str(hosts))
         if choice == QtGui.QMessageBox.No:
             return
 
@@ -868,7 +867,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             failureIDXes = [i for i, x in enumerate(responses) if not x]
             failureHosts = [renderHosts[i] for i in failureIDXes]
             logger.error("Could not get off %s", failureHosts)
-            MessageBoxes.warningBox(self, "GetOff Error!",
+            MessageBoxes.warning_box(self, "GetOff Error!",
                         "Could not get off the following hosts: {}".format(failureHosts))
 
         self.populate_node_tree()
@@ -880,7 +879,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if not hosts:
             return None
         elif len(hosts) > 1:
-            choice = MessageBoxes.yesNoBox(self, "Confirm", longstr.MultiNodeEdit_String)
+            choice = MessageBoxes.yes_no_box(self, "Confirm", longstr.MultiNodeEdit_String)
             if choice == QtGui.QMessageBox.Yes:
                 for host in hosts:
                     self.node_editor(host)
@@ -906,7 +905,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         edits = NodeEditorDialog.create(defaults)
 
         if edits:
-            if edits["schedEnabled"]:
+            if edits["schedule_enabled"]:
                 schedEnabled = 1
             else:
                 schedEnabled = 0
@@ -930,7 +929,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
     def select_by_host_handler(self):
         """Selects hosts in the nodeTree via host name"""
-        reply = MessageBoxes.strBox(self, "Select By Host Name", "Host (using * as wildcard):")
+        reply = MessageBoxes.str_box(self, "Select By Host Name", "Host (using * as wildcard):")
         if reply[1]:
             colCount = self.renderNodeTree.columnCount() - 1
             searchString = str(reply[0])
@@ -958,7 +957,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
     def online_this_node_handler(self):
         """Changes the local render node's status to online if it was offline,
         goes back to started if it was pending offline."""
-        thisNode = node_utils.getThisNodeOBJ()
+        thisNode = sql.get_this_node()
         if thisNode:
             thisNode.online()
             self.update_status_bar(thisNode)
@@ -968,7 +967,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         """Changes the local render node's status to offline if it was idle,
         pending if it was working on something."""
         #Get the most current info from the database
-        thisNode = node_utils.getThisNodeOBJ()
+        thisNode = sql.get_this_node()
         if thisNode:
             thisNode.offline()
             self.update_status_bar(thisNode)
@@ -978,16 +977,16 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         """Offlines the node and sends a message to the render node server
         running on localhost to kill its current task(task will be
         resubmitted)"""
-        thisNode = node_utils.getThisNodeOBJ()
+        thisNode = sql.get_this_node()
         if not thisNode:
             return
 
-        choice = MessageBoxes.yesNoBox(self, "Confirm", longstr.GetOffLocal_String)
+        choice = MessageBoxes.yes_no_box(self, "Confirm", longstr.GetOffLocal_String)
         if choice == QtGui.QMessageBox.Yes:
             response = thisNode.getOff()
             if not response:
                 logger.error("Could not GetOff this node!")
-                MessageBoxes.warningBox(self, "GetOff Error", "Could not GetOff this node!")
+                MessageBoxes.warning_box(self, "GetOff Error", "Could not GetOff this node!")
             self.populate_node_tree()
             self.update_status_bar(thisNode)
 
@@ -1003,11 +1002,11 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
     def find_this_node(self):
         """Makes sure this node exists in the hydra_rendernode board. Alerts
         the user if not."""
-        thisNode = node_utils.getThisNodeOBJ()
+        thisNode = sql.get_this_node()
         if thisNode:
             return thisNode
         else:
-            MessageBoxes.warningBox(self, title="Notice", msg=longstr.DoesNotExist_Str)
+            MessageBoxes.warning_box(self, title="Notice", msg=longstr.DoesNotExist_Str)
             self.set_this_node_buttons_enabled(False)
             return None
 
@@ -1075,8 +1074,8 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         columns = [WidgetFactories.labelFactory(col) for col in columns if col.find("__") is not 0]
 
-        WidgetFactories.clearLayout(self.taskGrid)
-        WidgetFactories.setupDataGrid(records, columns, self.taskGrid)
+        WidgetFactories.clear_layout(self.taskGrid)
+        WidgetFactories.setup_data_grid(records, columns, self.taskGrid)
 
     def update_status_bar(self, thisNode=None):
         """Updates the statusbar with the latest status on the farm"""

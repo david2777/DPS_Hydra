@@ -1,10 +1,6 @@
 #Standard
 import threading
 
-#Third Party
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
-
 #Hydra
 from hydra.logging_setup import logger
 
