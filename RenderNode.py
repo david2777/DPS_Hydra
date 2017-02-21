@@ -48,18 +48,35 @@ class RenderTCPServer(servers.TCPServer):
         self.createIdleLoop("Render_Loop_Thread", self.render_loop, 5)
 
     def render_loop(self):
-        #TODO:Reqs,Failed Nodes,Max Nodes
         self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,),
                                                     multiReturn=False)
 
         if self.thisNode.status in [sql.OFFLINE, sql.PENDING, sql.STARTED]:
             return
 
-        taskWhere = "WHERE status = 'R' AND priority > %s ORDER BY priority DESC, id ASC LIMIT 1"
+        sqlQuery = """SELECT T.* FROM hydra.hydra_taskboard T
+                        JOIN (SELECT id, failedNodes, attempts, maxAttempts,
+                                    maxNodes, requirements
+                                FROM hydra.hydra_jobboard) J
+                        ON (T.job_id = J.id)
+                        WHERE T.status = 'R'
+                            AND J.archived = 0
+                            AND T.priority > %s
+                            AND J.maxAttempts > J.attempts
+                            AND J.failedNodes NOT LIKE %s
+                            AND %s LIKE J.requirements
+                            AND J.maxNodes > (SELECT COUNT(*)
+                                            FROM hydra.hydra_taskboard
+                                            WHERE job_id = T.job_id
+                                                AND status = 'S')
+                        ORDER BY T.priority DESC, T.id ASC
+                        LIMIT 1;"""
+
+        sqlTuple = (self.thisNode.minPriority, self.thisNode.get_sql_selector(), self.thisNode.capabilities)
+
         with sql.transaction() as t:
-            renderTask = sql.hydra_taskboard.fetch(taskWhere, (self.thisNode.minPriority,),
-                                                    multiReturn=False,
-                                                    explicitTransaction=t)
+            renderTask = sql.hydra_taskboard.doFetch(t, sqlQuery, sqlTuple,
+                                                        multiReturn=False)
             if renderTask:
                 logger.debug("RenderTask found %s", renderTask)
                 renderJob = renderTask.get_job()
@@ -188,7 +205,7 @@ class RenderTCPServer(servers.TCPServer):
             else:
                 job.status = sql.READY
             job.attempts += 1 if task.exitCode != 0 else 0
-            job.failedNodes += "{},".format(self.thisNode.host) if task.exitCode != 0 else ""
+            job.failedNodes += "{} ".format(self.thisNode.host) if task.exitCode != 0 else ""
             if job.attempts >= job.maxAttempts:
                 job.status = sql.ERROR
             if job.mpf:

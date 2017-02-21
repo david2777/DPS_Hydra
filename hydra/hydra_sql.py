@@ -298,6 +298,9 @@ class hydra_rendernode(hydraObject):
             logger.info("No task to kill on %s", self.host)
             return True
 
+    def get_sql_selector(self):
+        return "%{}%".format(self.host)
+
     @staticmethod
     def is_rendering():
         #TODO:Open connection to render node and check status of self.childProcess

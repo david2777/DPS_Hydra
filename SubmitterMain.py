@@ -14,8 +14,8 @@ from compiled_qt.UI_Submitter import Ui_MainWindow
 #Hydra
 import hydra.hydra_sql as sql
 from hydra.logging_setup import logger
-from dialogs_qt.MessageBoxes import about_box
 from hydra.hydra_utils import find_resource
+from dialogs_qt.MessageBoxes import about_box
 
 #pylint: disable=E1101
 
@@ -392,7 +392,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             if check.isChecked():
                 reqList.append(str(check.text()))
 
-        return ",".join(sorted(reqList))
+        return "%{}%".format("%".join(sorted(reqList)))
 
     def get_job_status(self):
         if self.startStatusRadioButton.isChecked():
