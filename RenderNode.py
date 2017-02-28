@@ -36,6 +36,9 @@ class RenderTCPServer(servers.TCPServer):
             sys.exit(-1)
             return
 
+        self.keepAllLogs = hydra_utils.get_info_from_cfg("hydra", "keep_all_render_logs")
+        self.keepAllLogs = True if self.keepAllLogs.lower().startswith("t") else False
+
         #Create RenderLog Directory if it doesn't exit
         if not os.path.isdir(Constants.RENDERLOGDIR):
             os.makedirs(Constants.RENDERLOGDIR)
@@ -56,7 +59,7 @@ class RenderTCPServer(servers.TCPServer):
 
         sqlQuery = """SELECT T.* FROM hydra.hydra_taskboard T
                         JOIN (SELECT id, failedNodes, attempts, maxAttempts,
-                                    maxNodes, requirements
+                                    maxNodes, requirements, archived
                                 FROM hydra.hydra_jobboard) J
                         ON (T.job_id = J.id)
                         WHERE T.status = 'R'
@@ -65,16 +68,18 @@ class RenderTCPServer(servers.TCPServer):
                             AND J.maxAttempts > J.attempts
                             AND J.failedNodes NOT LIKE %s
                             AND %s LIKE J.requirements
-                            AND J.maxNodes > (SELECT COUNT(*)
-                                            FROM hydra.hydra_taskboard
-                                            WHERE job_id = T.job_id
-                                                AND status = 'S')
+                            AND (J.maxNodes = 0
+                                OR J.maxNodes > (SELECT COUNT(*)
+                                                FROM hydra.hydra_taskboard
+                                                WHERE job_id = T.job_id
+                                                    AND status = 'S'))
                         ORDER BY T.priority DESC, T.id ASC
                         LIMIT 1;"""
 
         sqlTuple = (self.thisNode.minPriority, self.thisNode.get_sql_selector(), self.thisNode.capabilities)
 
         with sql.transaction() as t:
+            logger.debug("Checking for tasks")
             renderTask = sql.hydra_taskboard.doFetch(t, sqlQuery, sqlTuple,
                                                         multiReturn=False)
             if renderTask:
@@ -184,18 +189,21 @@ class RenderTCPServer(servers.TCPServer):
             return
 
         with sql.transaction() as t:
-            #TODO:Replicate failed node checks to tasks
             #Task
+            logger.debug("childKilled = %s", self.childKilled)
             task.endTime = datetime.datetime.now().replace(microsecond=0)
-            task.exitCode = self.childProcess.returncode if self.childProcess else 1234
+            if self.childProcess:
+                if self.childKilled == 0:
+                    task.exitCode = self.childProcess.returncode
+                else:
+                    task.exitCode = 1
+            else:
+                task.exitCode = 1234
             task.mpf = (task.endTime - task.startTime) if task.exitCode == 0 else None
             task.status = sql.FINISHED if task.exitCode == 0 else sql.READY
             task.update(t)
             #Job
-            taskList = sql.hydra_taskboard.fetch("WHERE job_id = %s", (job.id,),
-                                                    cols=["status"],
-                                                    multiReturn=True,
-                                                    explicitTransaction=t)
+            taskList = task.get_other_subtasks(["status"], t)
             allTaskDone = all([ta.status == sql.FINISHED for ta in taskList])
             allTaskStart = any([ta.status == sql.STARTED for ta in taskList])
             if allTaskDone:
@@ -204,14 +212,19 @@ class RenderTCPServer(servers.TCPServer):
                 job.status = sql.STARTED
             else:
                 job.status = sql.READY
-            job.attempts += 1 if task.exitCode != 0 else 0
-            job.failedNodes += "{} ".format(self.thisNode.host) if task.exitCode != 0 else ""
+
+            if task.exitCode != 0 and self.childKilled == 0:
+                job.attempts += 1
+                job.failedNodes += "{} ".format(self.thisNode.host)
+
             if job.attempts >= job.maxAttempts:
                 job.status = sql.ERROR
-            if job.mpf:
-                job.mpf = ((job.mpf + task.mpf) / 2)
-            else:
-                job.mpf = task.mpf
+
+            if task.exitCode == 0:
+                if job.mpf:
+                    job.mpf = ((job.mpf + task.mpf) / 2)
+                else:
+                    job.mpf = task.mpf
             job.update(t)
             #Node
             self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
@@ -225,6 +238,12 @@ class RenderTCPServer(servers.TCPServer):
         self.PSUtilProc = None
 
         log.close()
+        if not self.keepAllLogs:
+            try:
+                os.remove(logPath)
+            except (OSError, WindowsError):
+                logger.warning("Unable to remove log")
+
         logPath = None
 
         logger.info("Done with render task %s", task.id)

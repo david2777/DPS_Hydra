@@ -291,7 +291,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                                             "endFrame", "maxNodes",
                                             "projectName", "archived",
                                             "renderLayers", "attempts", "mpf",
-                                            "byFrame", "frame_count"])
+                                            "byFrame"])
 
     def user_filter_action(self):
         """Toggle fetching only jobs owned by this user"""
@@ -567,7 +567,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                 taskItem = QtGui.QTreeWidgetItem(self.taskTree, taskData)
 
             taskItem.setBackgroundColor(2, niceColors[task.status])
-            if task.host == self.thisNodeName:
+            if task.host == self.thisNodeName and task.status != sql.READY:
                 taskItem.setFont(2, QtGui.QFont('Segoe UI', 8, QtGui.QFont.DemiBold))
 
         self.set_node_task_colors(taskList)

@@ -147,7 +147,7 @@ CREATE TABLE `hydra_taskboard` (
   `priority` int(3) NOT NULL DEFAULT '50',
   `host` varchar(128) DEFAULT NULL COMMENT 'Host the task is running on',
   `startFrame` int(4) DEFAULT NULL COMMENT 'The start frame for this task',
-  `endFrame` int(4) DEFAULT NULL 'The end frame for this task',
+  `endFrame` int(4) DEFAULT NULL COMMENT 'The end frame for this task',
   `exitCode` int(1) DEFAULT NULL COMMENT 'Exit code from the subprocess',
   `startTime` datetime DEFAULT NULL COMMENT 'Time the task started',
   `endTime` datetime DEFAULT NULL COMMENT 'The the task ended',

@@ -17,15 +17,11 @@ if __name__ == "__main__":
     platform = sys.platform
     hydraPath, execFile = os.path.split(sys.argv[0])
     logger.info(hydraPath)
-    response = hydra_utils.change_hydra_environ(hydraPath)
-    if response:
-        try:
-            with transaction() as t:
-                hydra_rendernode(host=me, platform=platform).insert(t)
-                logger.info("Node inserted into database!")
-        except IntegrityError:
-            logger.info("Host %s already exists in the hydra_rendernode table on the database", me)
-    else:
-        logger.error("Could not set Hydra Environ! No changes where made. Exiting...")
+    try:
+        with transaction() as t:
+            hydra_rendernode(host=me, platform=platform).insert(t)
+            logger.info("Node inserted into database!")
+    except IntegrityError:
+        logger.info("Host %s already exists in the hydra_rendernode table on the database", me)
 
     raw_input("\nPress enter to exit...")

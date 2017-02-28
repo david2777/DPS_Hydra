@@ -45,7 +45,8 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
     def setup_globals(self):
         #Scene file should be first sys.argv
-        if len(sys.argv) > 1:
+        logger.debug(sys.argv)
+        if len(sys.argv) > 1 and sys.argv[1]:
             self.scene = os.path.normpath(str(sys.argv[1]))
         else:
             self.scene = ""
@@ -60,7 +61,11 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             sys.exit(2)
 
         #Defaults
-        _, defName = os.path.split(self.scene)
+        if self.scene:
+            _, defName = os.path.split(self.scene)
+        else:
+            defName = ""
+
         self.settingsDict = {"-s":101,      #Start Frame (Int)
                             "-e":101,       #End Frame (Int)
                             "-n":defName,   #Nice Name (Str)
@@ -82,8 +87,8 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             logger.debug("Setting Key '%s' with opt: '%s'", key, str(optsDict[key]))
 
         #Fix paths
-        self.settingsDict["-p"] = os.path.normpath(self.settingsDict["-p"])
-        self.settingsDict["-d"] = os.path.normpath(self.settingsDict["-d"])
+        self.settingsDict["-p"] = os.path.normpath(self.settingsDict["-p"]) if self.settingsDict["-p"]  else ""
+        self.settingsDict["-d"] = os.path.normpath(self.settingsDict["-d"]) if self.settingsDict["-d"]  else ""
         #Fix Compatabilities
         self.settingsDict["-c"] = self.settingsDict["-c"].split(",")
         #Add underscores to niceName

@@ -242,6 +242,7 @@ class hydraObject(object):
             updateStr = "UPDATE {0} SET {1} = %s WHERE {2} = %s"
             t.cur.execute(updateStr.format(self.tableName(), attr, self.primaryKey),
                             (value, getattr(self, self.primaryKey)))
+            logger.debug("done")
 
         self.__dict__[attr] = value
         return True
@@ -254,10 +255,11 @@ class hydra_rendernode(hydraObject):
     autoColumn = None
     primaryKey = "host"
 
-    def get_task(self, cols=None):
+    def get_task(self, cols=None, explicitTransaction=None):
         if self.task_id:
             return hydra_taskboard.fetch("WHERE id = %s", (self.task_id,),
-                                            multiReturn=False, cols=cols)
+                                            multiReturn=False, cols=cols,
+                                            explicitTransaction=explicitTransaction)
         else:
             return None
 
@@ -315,9 +317,10 @@ class hydra_jobboard(hydraObject):
     autoColumn = "id"
     primaryKey = "id"
 
-    def get_tasks(self, cols=None):
+    def get_tasks(self, cols=None, explicitTransaction=None):
         return hydra_taskboard.fetch("WHERE job_id = %s", (self.id,),
-                                            multiReturn=True, cols=cols)
+                                            multiReturn=True, cols=cols,
+                                            explicitTransaction=explicitTransaction)
 
     def start(self):
         if self.status in [PAUSED, KILLED]:
@@ -350,8 +353,11 @@ class hydra_jobboard(hydraObject):
     def kill(self, statusAfterDeath=KILLED, TCPKill=True):
         subTasks = self.get_tasks(["id", "status", "exitCode", "endTime", "host"])
         responses = [task.kill(statusAfterDeath, TCPKill) for task in subTasks]
-
         responses += [self.updateAttr("status", statusAfterDeath)]
+        for task in subTasks:
+            if task.status != FINISHED:
+                responses += [task.updateAttr("status", statusAfterDeath)]
+
         return responses
 
     def reset(self):
@@ -386,16 +392,23 @@ class hydra_taskboard(hydraObject):
     autoColumn = "id"
     primaryKey = "id"
 
-    def get_job(self, cols=None):
+    def get_job(self, cols=None, explicitTransaction=None):
         return hydra_jobboard.fetch("WHERE id = %s", (self.job_id,),
-                                    multiReturn=False, cols=cols)
+                                    multiReturn=False, cols=cols,
+                                    explicitTransaction=explicitTransaction)
 
-    def get_host(self, cols=None):
+    def get_host(self, cols=None, explicitTransaction=None):
         if self.host:
             return hydra_rendernode.fetch("WHERE host = %s", (self.host,),
-                                            multiReturn=False, cols=cols)
+                                            multiReturn=False, cols=cols,
+                                            explicitTransaction=explicitTransaction)
         else:
             return None
+
+    def get_other_subtasks(self, cols=None, explicitTransaction=None):
+        return hydra_taskboard.fetch("WHERE job_id = %s AND id != %s",
+                                        (self.job_id, self.id), cols=cols,
+                                        explicitTransaction=explicitTransaction)
 
     def start(self):
         if self.status in [PAUSED, KILLED]:
@@ -459,7 +472,9 @@ class hydra_taskboard(hydraObject):
 
     def reset(self):
         if self.status != STARTED:
-            job = self.get_job()
+            job = self.get_job(["status"])
+            otherTasks = self.get_other_subtasks(["status"])
+            statusCheck = any([task.status == STARTED for task in otherTasks])
             self.status = PAUSED
             self.mpf = None
             self.host = None
@@ -468,7 +483,7 @@ class hydra_taskboard(hydraObject):
             self.exitCode = None
             with transaction() as t:
                 self.update(t)
-                if job.status in [KILLED, READY]:
+                if job.status == KILLED and not statusCheck:
                     job.status = PAUSED
                     job.update(t)
             return True
