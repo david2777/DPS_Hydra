@@ -238,7 +238,7 @@ class RenderTCPServer(servers.TCPServer):
         self.PSUtilProc = None
 
         log.close()
-        if not self.keepAllLogs:
+        if not self.keepAllLogs and task.exitCode == 0:
             try:
                 os.remove(logPath)
             except (OSError, WindowsError):

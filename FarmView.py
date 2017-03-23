@@ -183,7 +183,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+R"), self, self.reset_task)
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+D"), self, self.task_detailed_data)
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+L"), self, self.get_task_log)
-        QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+T"), self, self.tail_task_log)
+        #QtGui.QShortcut(QtGui.QKeySequence("Ctrl+Shift+T"), self, self.tail_task_log)
 
     #--------------------------------------------------------------------------#
     #-----------------------------MISC FUNCTIONS-------------------------------#
@@ -532,9 +532,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         self.add_item(self.taskMenu, "Load LogFile...", self.get_task_log,
                 "Load the log file for all tasks selected in the Task Tree",
                 "Ctrl+Shift+L")
-        self.add_item(self.taskMenu, "Tail LogFile...", self.tail_task_log,
-                "Tail the log file for all tasks selected in the Task Tree",
-                "Ctrl+Shift+T")
+        #self.add_item(self.taskMenu, "Tail LogFile...", self.tail_task_log,
+        #        "Tail the log file for all tasks selected in the Task Tree",
+        #        "Ctrl+Shift+T")
         self.taskMenu.popup(QtGui.QCursor.pos())
 
     def job_tree_clicked_handler(self):
