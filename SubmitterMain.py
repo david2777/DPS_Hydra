@@ -165,7 +165,6 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
     #------------------------------------------------------------------------#
 
     def submit_button_handler(self):
-
         #######################################################################
         #TODO: Rework this to work with multiple job types
         #######################################################################
@@ -191,6 +190,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
         jobType = str(self.jobTypeComboBox.currentText())
         proj = str(self.projLineEdit.text())
         frameDir = str(self.frameDirLineEdit.text())
+        singleTask = bool(self.singleTaskRadio.isChecked())
 
         #Error Checking
         if startFrame > endFrame:
@@ -209,14 +209,14 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
-            #This is cool at least for now because anything with a phase one SHOULD be a Maya Job
-            baseCMDOverride = baseCMD + " -x 640 -y 360"
+            
+            #baseCMDOverride = baseCMD + " -x 640 -y 360"
 
             phase01 = submit_job(niceName, projectName, owner, jobStatus,
-                                compatabilityList, execName, baseCMDOverride,
+                                compatabilityList, execName, baseCMD,
                                 startFrame, endFrame, byFrame, renderLayers,
                                 taskFile, int(priority * 1.25), phase, maxNodesP1,
-                                timeout, 10, jobType, frameDir)
+                                timeout, 10, jobType, frameDir, singleTask)
 
             logger.info("Phase 01 submitted with id: %s", phase01.id)
 
@@ -243,7 +243,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             phase02 = submit_job(niceName, projectName, owner, jobStatusOverride,
                                 compatabilityList, execName, baseCMD, phase02Frames[0],
                                 phase02Frames[-1], byFrame, renderLayers, taskFile, priority,
-                                phase, maxNodesP2, timeout, 10, jobType, frameDir)
+                                phase, maxNodesP2, timeout, 10, jobType, frameDir, singleTask)
 
             logger.info("Phase 02 submitted with id: %s", phase02.id)
 
@@ -253,7 +253,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
                 phase03 = submit_job(niceName, projectName, owner, sql.PAUSED,
                                     compatabilityList, execName, baseCMD, phase03Frames[0],
                                     phase03Frames[-1], byFrame, renderLayers, taskFile, priority,
-                                    phase, maxNodesP2, timeout, 10, jobType, frameDir)
+                                    phase, maxNodesP2, timeout, 10, jobType, frameDir, singleTask)
 
                 logger.info("Phase 03 submitted with id: %s", phase03.id)
 
@@ -407,7 +407,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
 def submit_job(niceName, projectName, owner, status, requirements, execName,
                 baseCMD, startFrame, endFrame, byFrame, renderLayers, taskFile,
-                priority, phase, maxNodes, timeout, maxAttempts, jobType, frameDir):
+                priority, phase, maxNodes, timeout, maxAttempts, jobType, frameDir, singleTask):
     """A simple function for submitting a job to the jobBoard"""
     niceName = "{0}_PHASE{1:02d}".format(niceName, phase)
 
@@ -433,14 +433,19 @@ def submit_job(niceName, projectName, owner, status, requirements, execName,
                         timeout=timeout, maxAttempts=maxAttempts, jobType=jobType,
                         frameDirectory=frameDir)
 
-    frameList = range(startFrame, (endFrame + 1))[::byFrame]
-    frameList += [endFrame] if endFrame not in frameList else []
+    if singleTask and phase > 1:
+        frameList = [startFrame]
+    else:
+        frameList = range(startFrame, (endFrame + 1))[::byFrame]
+        frameList += [endFrame] if endFrame not in frameList else []
 
     with sql.transaction() as t:
         job.insert(trans=t)
         taskList = [sql.hydra_taskboard(job_id=job.id, status=status, priority=priority,
                                         startFrame=x, endFrame=x) for x in frameList]
         for task in taskList:
+            if singleTask and phase > 1:
+                task.endFrame = endFrame
             task.insert(trans=t)
 
     return job

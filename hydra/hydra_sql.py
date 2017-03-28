@@ -16,7 +16,7 @@ import hydra.hydra_utils as hydra_utils
 from networking.questions import KillCurrentTaskQuestion
 from networking.connections import TCPConnection
 
-#pylint: disable=E1101,E0203
+#pylint: disable=E1101,E0203,R0903
 
 #Statuses for either jobs/tasks or render nodes
 STARTED = 'S'               #Working on a job/job in progress
@@ -53,9 +53,10 @@ niceNames = {STARTED: 'Started',
 niceNamesRev = {v: k for k, v in niceNames.items()}
 
 def get_database_info():
-    logger.debug("Finding login information...")
+    """Return host, username, password, database name, and port for logging into database"""
+    logger.debug("Getting database info...")
 
-    #Get databse information
+    #Get database information
     host = hydra_utils.get_info_from_cfg("database", "host")
     domain = hydra_utils.get_info_from_cfg("network", "dnsDomainExtension").replace(" ", "")
     if domain != "" and host != "localhost":
@@ -84,7 +85,7 @@ def get_database_info():
     return host, db_username, _db_password, databaseName, port
 
 def get_this_node():
-    """Returns the current node's info from the DB, None if not found in the DB."""
+    """Return a hydra_rendernode class of the current host, None if host not found in the database"""
     thisNode = hydra_rendernode.fetch("WHERE host = %s", (hydra_utils.my_host_name(),),
                                         multiReturn=False)
     #If it's an empty list just return None
@@ -94,7 +95,9 @@ def get_this_node():
         return thisNode
 
 class transaction(object):
-    #pylint: disable=R0903
+    """Handle transactions with the database"""
+    
+    #Setup db/login info as class variables so that all instnaces already have it
     host, db_username, _db_password, databaseName, port = get_database_info()
 
     def __init__(self):
@@ -121,6 +124,7 @@ class transaction(object):
         self.db.close()
 
 class hydraObject(object):
+    """Generic hydra database table class"""
     def __init__(self, **kwargs):
         self.__dict__['__dirty__'] = set()
         for k, v in kwargs.iteritems():
@@ -133,6 +137,7 @@ class hydraObject(object):
             #logger.debug(('dirty', k, v))
 
     def __getattr__(self, attr):
+        """Return the requested attribute if available, searche the database if not, return None if still not found"""
         logger.info(attr)
         if attr in self.__dict__.keys():
             return self.attr
@@ -151,14 +156,14 @@ class hydraObject(object):
 
     @classmethod
     def tableName(cls):
+        """Return database table name which is the same as the class name"""
         return cls.__name__
 
     @classmethod
     def fetch(cls, clause="", arguments=tuple(), cols=None, multiReturn=False,
                     explicitTransaction=None):
-        """A fetch function with paramater binding.
-        ie. thisNode = hydra_rendernode.fetch("WHERE host = %s", ("test",))
-            idAttr = thisNode.id"""
+        """Fetch data from the database and return class object(s)
+        ie. thisNode = hydra_rendernode.fetch("WHERE host = %s", ("test",))"""
         #Column Clause
         colStatement = "*"
         if cols:
@@ -252,6 +257,7 @@ class hydraObject(object):
 #------------------------------------------------------------------------------#
 
 class hydra_rendernode(hydraObject):
+    """Class representing render node records as listed in the hydra_rendernode table on the database"""
     autoColumn = None
     primaryKey = "host"
 
@@ -314,6 +320,7 @@ class hydra_rendernode(hydraObject):
         return True
 
 class hydra_jobboard(hydraObject):
+    """Class representing render job records as listed in the hydra_jobboard table on the database"""
     autoColumn = "id"
     primaryKey = "id"
 
@@ -389,6 +396,7 @@ class hydra_jobboard(hydraObject):
         return self.updateAttr("priority", priority)
 
 class hydra_taskboard(hydraObject):
+    """Class representing render task records as listed in the hydra_taskboard table on the database"""
     autoColumn = "id"
     primaryKey = "id"
 
@@ -566,17 +574,21 @@ class hydra_taskboard(hydraObject):
             return None
 
 class hydra_capabilities(hydraObject):
+    """Simple class representing capability records as listed in the hydra_capabilties table on the database"""
     autoColumn = None
     primaryKey = "name"
 
 class hydra_jobtypes(hydraObject):
+    """Simple class representing job type records as listed in the hydra_jobtypes table on the database"""
     autoColumn = None
     primaryKey = "type"
 
 class hydra_executable(hydraObject):
+    """Simple class representing executeable records as listed in the hydra_executeable table on the database"""
     autoColumn = None
     primaryKey = "name"
 
 class hydra_holidays(hydraObject):
+    """Simple class representing holiday records as listed in the hydra_holidays table on the database"""
     autoColumn = None
     primaryKey = "id"

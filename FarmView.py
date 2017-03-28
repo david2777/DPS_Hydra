@@ -570,7 +570,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             if task.host == self.thisNodeName and task.status != sql.READY:
                 taskItem.setFont(2, QtGui.QFont('Segoe UI', 8, QtGui.QFont.DemiBold))
 
-        self.set_node_task_colors(taskList)
+        self.set_node_task_colors(taskList, job_id)
 
     @staticmethod
     def format_task_data(task):
@@ -733,12 +733,21 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         self.nodeMenu.popup(QtGui.QCursor.pos())
 
-    def set_node_task_colors(self, tasks):
+    def set_node_task_colors(self, tasks, job_id):
         #Reset colors
         for i in range(self.renderNodeTree.topLevelItemCount()):
             self.renderNodeTree.topLevelItem(i).setBackgroundColor(0, niceColors[sql.READY])
 
-        #Set new colors
+        #Set Job Colors
+        job = sql.hydra_jobboard.fetch("WHERE id = %s", (job_id,), cols=["failedNodes"])
+        failedNodes = [x.strip() for x in job.failedNodes.split(",")]
+        for node in failedNodes:
+            nodeSearch = self.renderNodeTree.findItems(node, QtCore.Qt.MatchExactly)
+            if nodeSearch:
+                nodeItem = nodeSearch[0]
+                nodeItem.setBackgroundColor(0, niceColors[sql.ERROR])
+
+        #Set Task Colors
         if not tasks:
             return
         taskGroups = defaultdict(list)
@@ -746,10 +755,11 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             taskGroups[str(task.host)].append(task)
         taskGroups = {k : sorted(v, key=attrgetter("id"), reverse=True)[0].status for k, v in taskGroups.iteritems()}
         for node, status in taskGroups.iteritems():
-            nodeSearch = self.renderNodeTree.findItems(str(node), QtCore.Qt.MatchExactly)
-            if nodeSearch:
-                nodeItem = nodeSearch[0]
-                nodeItem.setBackgroundColor(0, niceColors[status])
+            if node not in failedNodes:
+                nodeSearch = self.renderNodeTree.findItems(str(node), QtCore.Qt.MatchExactly)
+                if nodeSearch:
+                    nodeItem = nodeSearch[0]
+                    nodeItem.setBackgroundColor(0, niceColors[status])
 
 
     def populate_node_tree(self, clear=False):

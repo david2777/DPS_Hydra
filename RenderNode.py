@@ -19,7 +19,7 @@ import networking.servers as servers
 class RenderTCPServer(servers.TCPServer):
     """RenderTCPServer waits for a TCP connection from the RenderManagerServer
     telling it to start a render task. The render task is processed and the results
-    updated in the databse."""
+    updated in the database."""
     def __init__(self):
         #Setup Class Variables
         self.renderThread = None
@@ -199,11 +199,17 @@ class RenderTCPServer(servers.TCPServer):
                     task.exitCode = 1
             else:
                 task.exitCode = 1234
-            task.mpf = (task.endTime - task.startTime) if task.exitCode == 0 else None
-            task.status = sql.FINISHED if task.exitCode == 0 else sql.READY
+
+            if task.exitCode == 0:
+                task.status = sql.FINISHED
+                task.mpf = (task.endTime - task.startTime)
+            else:
+                task.status = sql.READY
+                task.host = ""
             task.update(t)
             #Job
             taskList = task.get_other_subtasks(["status"], t)
+            taskList += [task]
             allTaskDone = all([ta.status == sql.FINISHED for ta in taskList])
             allTaskStart = any([ta.status == sql.STARTED for ta in taskList])
             if allTaskDone:
