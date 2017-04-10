@@ -9,10 +9,11 @@ Loosely based off of the [Project Hydra RenderFarm](https://github.com/CogswellP
   <li>PyQt4</li>
   <li>pip:</li>
   <ul>
-    <li>keyring==9.3</li>
+    <li>keyring==10.3.1</li>
     <li>MySQL-python==1.2.5</li>
-    <li>passlib==1.6.5</li>
-    <li>psutil==3.3.0</li>
-    <li>PyInstaller==3.2</li>
+    <li>passlib==1.7.1</li>
+    <li>psutil==5.2.1</li>
+    <li>configparser==3.5.0</li>
+    <li>PyInstaller==3.2.1</li>
   </ul>
 </ul>

@@ -203,6 +203,10 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
         if jobType not in ["BatchFile", "FusionComp"]:
             baseCMD += " -proj {0}".format(proj)
+        #To prevent phase 3 from being generated accidentally
+        elif jobType == "BatchFile":
+            startFrame = 1
+            endFrame = 1
 
         phase01Status = False
         if self.testCheckBox.isChecked():
@@ -226,8 +230,11 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 02")
             #Phase specific overrides
             frameRange = range(startFrame, endFrame + 1)
-            phase02Frames = frameRange[:10]
-            phase03Frames = frameRange[10:]
+            if not singleTask:
+                phase02Frames = frameRange[:10]
+                phase03Frames = frameRange[10:]
+            else:
+                phase02Frames = frameRange
 
             if jobType == "FusionComp":
                 phase02Frames = frameRange
@@ -283,8 +290,8 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             sceneFile = os.path.normpath(str(sceneFile))
             self.sceneLineEdit.setText(sceneFile)
             if str(self.niceNameLineEdit.text()) == "":
-                defName = sceneFile.split("/")[-1]
-                self.niceNameLineEdit.setText(defName)
+                _, tail = os.path.split(sceneFile)
+                self.niceNameLineEdit.setText(tail)
 
     def proj_button_handler(self):
         currentDir = str(self.projLineEdit.text())
@@ -409,7 +416,7 @@ def submit_job(niceName, projectName, owner, status, requirements, execName,
                 baseCMD, startFrame, endFrame, byFrame, renderLayers, taskFile,
                 priority, phase, maxNodes, timeout, maxAttempts, jobType, frameDir, singleTask):
     """A simple function for submitting a job to the jobBoard"""
-    niceName = "{0}_PHASE{1:02d}".format(niceName, phase)
+    niceName = "{0}_Phase_{1:02d}".format(niceName, phase)
 
     if jobType == "BatchFile":
         renderLayers = "Batch"
