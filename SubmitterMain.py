@@ -6,35 +6,33 @@ import os
 import getopt
 
 #Third Party
-from PyQt4.QtGui import *
-from PyQt4.QtCore import *
+from PyQt4 import QtGui, QtCore
 
 #Hydra Qt
-from CompiledUI.UI_Submitter import Ui_MainWindow
+from compiled_qt.UI_Submitter import Ui_MainWindow
 
 #Hydra
-from Setups.MySQLSetup import *
-from Setups.LoggingSetup import logger
-from Dialogs.MessageBoxes import aboutBox
-from Utilities.Utils import findResource
+import hydra.hydra_sql as sql
+from hydra.logging_setup import logger
+from hydra.hydra_utils import find_resource
+from dialogs_qt.MessageBoxes import about_box
 
-#Doesn't like Qt classes
-#pylint: disable=E0602,E1101,C0302
+#pylint: disable=E1101
 
-class SubmitterMain(QMainWindow, Ui_MainWindow):
+class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
     def __init__(self):
-        QMainWindow.__init__(self)
+        QtGui.QMainWindow.__init__(self)
         #Built-in UI Setup
         self.setupUi(self)
-        self.setWindowIcon(QIcon(findResource("Images/SubmitterMain.png")))
+        self.setWindowIcon(QtGui.QIcon(find_resource("assets/SubmitterMain.png")))
 
         #Setup the UI with my fuctions
-        self.setupGlobals()
-        self.hookupButtons()
-        self.populateReqs()
-        self.populateExecs()
-        self.populateJobTypes()
-        self.setupForms()
+        self.setup_globals()
+        self.hookup_buttons()
+        self.populate_reqs()
+        self.populate_execs()
+        self.populate_job_types()
+        self.setup_forms()
 
     @staticmethod
     def closeEvent(event):
@@ -45,12 +43,12 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
     #---------------------------UI Setup Functions---------------------------#
     #------------------------------------------------------------------------#
 
-    def setupGlobals(self):
+    def setup_globals(self):
         #Scene file should be first sys.argv
-        try:
-            self.scene = sys.argv[1]
-            self.scene = self.scene.replace('\\', '/')
-        except IndexError:
+        logger.debug(sys.argv)
+        if len(sys.argv) > 1 and sys.argv[1]:
+            self.scene = os.path.normpath(str(sys.argv[1]))
+        else:
             self.scene = ""
 
         #Get the -flag args
@@ -58,12 +56,16 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             opts = getopt.getopt(sys.argv[2:], "s:e:n:p:l:x:m:d:c:q:t:")[0]
         except getopt.GetoptError:
             logger.error("Bad Opt!")
-            aboutBox(self, "Bad Opt!", "One of the command line options you entered was invalid.\n"+
+            about_box(self, "Bad Opt!", "One of the command line options you entered was invalid.\n"+
                 "\nPlease remove any unkown opts and try again.")
             sys.exit(2)
 
         #Defaults
-        defName = self.scene.split("/")[-1]
+        if self.scene:
+            _, defName = os.path.split(self.scene)
+        else:
+            defName = ""
+
         self.settingsDict = {"-s":101,      #Start Frame (Int)
                             "-e":101,       #End Frame (Int)
                             "-n":defName,   #Nice Name (Str)
@@ -85,33 +87,31 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.debug("Setting Key '%s' with opt: '%s'", key, str(optsDict[key]))
 
         #Fix paths
-        self.settingsDict["-p"] = self.settingsDict["-p"].replace('\\', '/')
+        self.settingsDict["-p"] = os.path.normpath(self.settingsDict["-p"]) if self.settingsDict["-p"]  else ""
+        self.settingsDict["-d"] = os.path.normpath(self.settingsDict["-d"]) if self.settingsDict["-d"]  else ""
         #Fix Compatabilities
         self.settingsDict["-c"] = self.settingsDict["-c"].split(",")
         #Add underscores to niceName
         self.settingsDict["-n"] = self.settingsDict["-n"].replace(" ", "_")
-        #Move RenderDir to Base CMD
-        if self.settingsDict["-d"] != "":
-            self.settingsDict["-d"] = self.settingsDict["-d"].replace('\\', '/')
-            self.settingsDict["-m"] += " -rd \"{0}\"".format(self.settingsDict["-d"])
 
-    def hookupButtons(self):
-        QObject.connect(self.submitButton, SIGNAL("clicked()"), self.submitButtonHandler)
-        QObject.connect(self.testCheckBox, SIGNAL("stateChanged(int)"), self.toggleTestBoxes)
-        QObject.connect(self.finalCheckBox, SIGNAL("stateChanged(int)"), self.toggleFinalBoxes)
-        QObject.connect(self.sceneButton, SIGNAL("clicked()"), self.sceneButtonHandler)
-        QObject.connect(self.projButton, SIGNAL("clicked()"), self.projButtonHandler)
-        self.jobTypeComboBox.currentIndexChanged.connect(self.jobTypeSwitcher)
+    def hookup_buttons(self):
+        self.submitButton.clicked.connect(self.submit_button_handler)
+        self.testCheckBox.stateChanged.connect(self.toggle_test_boxes)
+        self.finalCheckBox.stateChanged.connect(self.toggle_final_boxes)
+        self.sceneButton.clicked.connect(self.scene_button_handler)
+        self.projButton.clicked.connect(self.proj_button_handler)
+        self.frameDirButton.clicked.connect(self.frame_dir_button_handler)
+        self.jobTypeComboBox.currentIndexChanged.connect(self.job_type_switcher)
 
-    def populateReqs(self):
+    def populate_reqs(self):
         #Get requirements master list from the DB
-        requirements = hydra_capabilities.fetch(multiReturn=True)
+        requirements = sql.hydra_capabilities.fetch(multiReturn=True)
         requirements = [req.name for req in requirements]
         self.reqChecks = []
         col = 0
         row = 0
         for item in requirements:
-            c = QCheckBox(item)
+            c = QtGui.QCheckBox(item)
             self.reqsGrid.addWidget(c, row, col)
             if col == 2:
                 row += 1
@@ -125,9 +125,9 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
             self.reqChecks.append(c)
 
-    def populateExecs(self):
+    def populate_execs(self):
         #Get execs
-        execs = hydra_executable.fetch(multiReturn=True, cols=["name"])
+        execs = sql.hydra_executable.fetch(multiReturn=True, cols=["name"])
         execs.reverse()
 
         for execute in execs:
@@ -138,8 +138,8 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         if index > 0:
             self.executableComboBox.setCurrentIndex(index)
 
-    def populateJobTypes(self):
-        types = hydra_jobtypes.fetch(multiReturn=True, cols=["type"])
+    def populate_job_types(self):
+        types = sql.hydra_jobtypes.fetch(multiReturn=True, cols=["type"])
         types.reverse()
 
         for t in types:
@@ -149,7 +149,7 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         if index > 0:
             self.jobTypeComboBox.setCurrentIndex(index)
 
-    def setupForms(self):
+    def setup_forms(self):
         self.sceneLineEdit.setText(self.scene)
         self.projLineEdit.setText(self.settingsDict["-p"])
         self.niceNameLineEdit.setText(self.settingsDict["-n"])
@@ -158,13 +158,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         self.renderLayersLineEdit.setText(self.settingsDict["-l"])
         self.cmdLineEdit.setText(self.settingsDict["-m"])
         self.projectNameLineEdit.setText(self.settingsDict["-q"])
+        self.frameDirLineEdit.setText(self.settingsDict["-d"])
 
     #------------------------------------------------------------------------#
     #----------------------------Button Handlers-----------------------------#
     #------------------------------------------------------------------------#
 
-    def submitButtonHandler(self):
-
+    def submit_button_handler(self):
         #######################################################################
         #TODO: Rework this to work with multiple job types
         #######################################################################
@@ -178,10 +178,10 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         taskFile = str(self.sceneLineEdit.text())
         priority = int(self.prioritySpinBox.value())
         phase = 0 #Placeholder, set this later when building the commands
-        jobStatus = self.getJobStatus()
+        jobStatus = self.get_job_status()
         niceName = str(self.niceNameLineEdit.text())
-        owner = transaction().db_username
-        compatabilityList = self.getReqs()
+        owner = sql.transaction().db_username
+        compatabilityList = self.get_reqs()
         maxNodesP1 = int(self.maxNodesP1SpinBox.value())
         maxNodesP2 = int(self.maxNodesP2SpinBox.value())
         timeout = int(self.timeoutSpinbox.value())
@@ -189,42 +189,13 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
         renderLayers = str(self.renderLayersLineEdit.text()).replace(" ", "")
         jobType = str(self.jobTypeComboBox.currentText())
         proj = str(self.projLineEdit.text())
+        frameDir = str(self.frameDirLineEdit.text())
+        singleTask = bool(self.singleTaskRadio.isChecked())
 
         #Error Checking
-        if len(baseCMD) > 1000:
-            aboutBox(self, "baseCMD too long!", "baseCMD must be less than 1000 characters!")
-            logger.error("baseCMD too long! baseCMD must be less than 1000 characters!")
-            return
         if startFrame > endFrame:
-            aboutBox(self, "startFrame is greater than endFrame!", "startFrame must be less than the endFrame!")
+            about_box(self, "startFrame is greater than endFrame!", "startFrame must be less than the endFrame!")
             logger.error("startFrame is greater than endFrame!")
-            return
-        if startFrame > 65535 or endFrame > 65535 or startFrame < 0 or endFrame < 0:
-            aboutBox(self, "Frame range out of range!", "Start/End frames must be between 0 and 65535!")
-            logger.error("Frame range out of range! Start/End frames must be between 0 and 65535!")
-            return
-        if byFrame > 255 or byFrame < 0:
-            aboutBox(self, "byFrame out of range!", "byFrame must be between 0 and 255!")
-            logger.error("byFrame out of range! byFrame must be between 0 and 255!")
-            return
-        if len(taskFile) > 255 or len(taskFile) < 5:
-            aboutBox(self, "taskFile out of range!", "taskFile must be greater than 5 and less than 255 characters")
-            logger.error("taskFile out of range! taskFile path must be greater than 5 and less than 255 characters!")
-            return
-        if priority > 255 or priority < 0:
-            aboutBox(self, "Priority out of range!", "Priority must be between 0 and 255!")
-            logger.error("Priority out of range! Priority must be between 0 and 255!")
-            return
-        if len(niceName) > 60 or len(niceName) < 2:
-            aboutBox(self, "NiceName out of range!", "NiceName must be more than 1 and less than 60 characters!")
-            logger.error("NiceName out of range! NiceName must be more than 1 and less than 60 characters!")
-            return
-        if len(owner) > 45:
-            aboutBox(self, "Owner out of range!", "Owner must be less than 45 characters!")
-            logger.error("Owner out of range! Owner must be less than 45 characters!")
-            return
-        if len(projectName) > 60:
-            aboutBox(self, "Project Name out of range!", "Project name must be less than 60 characters!")
             return
 
         if projectName == "":
@@ -232,20 +203,24 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
         if jobType not in ["BatchFile", "FusionComp"]:
             baseCMD += " -proj {0}".format(proj)
+        #To prevent phase 3 from being generated accidentally
+        elif jobType == "BatchFile":
+            startFrame = 1
+            endFrame = 1
 
         phase01Status = False
         if self.testCheckBox.isChecked():
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
-            #This is cool at least for now because anything with a phase one SHOULD be a Maya Job
-            baseCMDOverride = baseCMD + " -x 640 -y 360"
+            
+            #baseCMDOverride = baseCMD + " -x 640 -y 360"
 
-            phase01 = submitJob(niceName, projectName, owner, jobStatus,
-                                compatabilityList, execName, baseCMDOverride,
+            phase01 = submit_job(niceName, projectName, owner, jobStatus,
+                                compatabilityList, execName, baseCMD,
                                 startFrame, endFrame, byFrame, renderLayers,
                                 taskFile, int(priority * 1.25), phase, maxNodesP1,
-                                timeout, 10, jobType)
+                                timeout, 10, jobType, frameDir, singleTask)
 
             logger.info("Phase 01 submitted with id: %s", phase01.id)
 
@@ -255,8 +230,11 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 02")
             #Phase specific overrides
             frameRange = range(startFrame, endFrame + 1)
-            phase02Frames = frameRange[:10]
-            phase03Frames = frameRange[10:]
+            if not singleTask:
+                phase02Frames = frameRange[:10]
+                phase03Frames = frameRange[10:]
+            else:
+                phase02Frames = frameRange
 
             if jobType == "FusionComp":
                 phase02Frames = frameRange
@@ -264,90 +242,101 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
 
             byFrame = 1
             if phase01Status:
-                jobStatusOverride = "U"
+                jobStatusOverride = sql.PAUSED
             else:
                 jobStatusOverride = jobStatus
 
             phase = 2
-            phase02 = submitJob(niceName, projectName, owner, jobStatusOverride,
+            phase02 = submit_job(niceName, projectName, owner, jobStatusOverride,
                                 compatabilityList, execName, baseCMD, phase02Frames[0],
                                 phase02Frames[-1], byFrame, renderLayers, taskFile, priority,
-                                phase, maxNodesP2, timeout, 10, jobType)
+                                phase, maxNodesP2, timeout, 10, jobType, frameDir, singleTask)
 
             logger.info("Phase 02 submitted with id: %s", phase02.id)
 
             if phase03Frames:
                 logger.info("Building Phase 03")
                 phase = 3
-                phase03 = submitJob(niceName, projectName, owner, jobStatusOverride,
+                phase03 = submit_job(niceName, projectName, owner, sql.PAUSED,
                                     compatabilityList, execName, baseCMD, phase03Frames[0],
                                     phase03Frames[-1], byFrame, renderLayers, taskFile, priority,
-                                    phase, maxNodesP2, timeout, 10, jobType)
+                                    phase, maxNodesP2, timeout, 10, jobType, frameDir, singleTask)
 
                 logger.info("Phase 03 submitted with id: %s", phase03.id)
 
 
         self.submitButton.setEnabled(False)
         self.submitButton.setText("Job Submitted! Please close window.")
-        #aboutBox(self, "Submitted!", "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
+        #about_box(self, "Submitted!", "Your jobs have been submitted!\nCheck FarmView to view the status of your Jobs!")
 
-    def browseFileButtonHandler(self, QTTarget, startDir, caption, fileFilter):
-        returnDir = QFileDialog.getOpenFileName(parent=self, caption=caption,
-            directory=startDir, filter=fileFilter)
-        if returnDir:
-            if fileFilter == "workspace.mel;;All Files(*)":
-                # remove "workspace.mel" from the end of the path
-                returnDir = str(returnDir).split('/')
-                returnDir.pop()
-                returnDir = '/'.join(returnDir) + '/'
-
-            QTTarget.setText(returnDir)
-            return returnDir
-
-        else:
-            return False
-
-    def sceneButtonHandler(self):
+    def scene_button_handler(self):
         currentDir = str(self.sceneLineEdit.text())
         startDir = None
-        if len(currentDir) == 0:
+        if not currentDir:
             projDir = str(self.projLineEdit.text())
-            if len(projDir) == 0:
+            if not projDir:
                 startDir = os.getcwd()
             else:
                 startDir = projDir
         else:
             startDir = currentDir
 
-        sceneFile = self.browseFileButtonHandler(self.sceneLineEdit,
-                                                startDir,
-                                                "Find maya scene file...",
-                                                "All Files(*);;Maya Files (*.ma *.mb);;Batch File (*.bat);;Fusion Comp (*.comp)")
-        if sceneFile and str(self.niceNameLineEdit.text()) == "":
-            defName = sceneFile.split("/")[-1]
-            self.niceNameLineEdit.setText(defName)
+        fileFilter = "All Files(*);;Maya Files (*.ma *.mb);;Batch File (*.bat);;Fusion Comp (*.comp)"
 
-    def projButtonHandler(self):
+        sceneFile = QtGui.QFileDialog.getOpenFileName(self, "Find scene file...",
+                                                        startDir, fileFilter)
+
+        if sceneFile:
+            sceneFile = os.path.normpath(str(sceneFile))
+            self.sceneLineEdit.setText(sceneFile)
+            if str(self.niceNameLineEdit.text()) == "":
+                _, tail = os.path.split(sceneFile)
+                self.niceNameLineEdit.setText(tail)
+
+    def proj_button_handler(self):
         currentDir = str(self.projLineEdit.text())
         startDir = None
-        if len(currentDir) == 0:
+        if not currentDir:
             sceneDir = str(self.sceneLineEdit.text())
-            if len(sceneDir) == 0:
+            if not sceneDir:
                 startDir = os.getcwd()
             else:
-                sceneDir = str(sceneDir).split('/')
-                sceneDir.pop()
-                sceneDir.pop()
-                sceneDir = '/'.join(sceneDir) + '/'
                 startDir = sceneDir
         else:
             startDir = currentDir
-        self.browseFileButtonHandler(self.projLineEdit,
-                                    startDir,
-                                    "Find maya workspace.mel in project directory...",
-                                    "workspace.mel;;All Files(*)")
 
-    def toggleTestBoxes(self):
+        projDir = QtGui.QFileDialog.getOpenFileName(self,
+                                                    "Find maya workspace.mel in project directory...",
+                                                    startDir, "workspace.mel;;All Files(*)")
+
+        if projDir:
+            projDir = os.path.normpath(str(projDir))
+            if str(projDir).endswith(".mel"):
+                projDir, _ = os.path.split(projDir)
+            self.projLineEdit.setText(projDir)
+
+
+    def frame_dir_button_handler(self):
+        currentDir = str(self.frameDirLineEdit.text())
+        startDir = None
+        if not currentDir:
+            projDir = str(self.projLineEdit.text())
+            if not projDir:
+                startDir = os.getcwd()
+            else:
+                startDir = projDir
+        else:
+            startDir = currentDir
+
+        caption = "Select the directory where you want your frames to be rendered..."
+
+        frameDir = QtGui.QFileDialog.getExistingDirectory(self, caption, startDir)
+
+        if frameDir:
+            frameDir = os.path.normpath(str(frameDir))
+            self.frameDirLineEdit.setText(frameDir)
+
+    def toggle_test_boxes(self):
         if self.testFramesSpinBox.isEnabled():
             self.testFramesSpinBox.setEnabled(False)
             self.maxNodesP1SpinBox.setEnabled(False)
@@ -355,33 +344,34 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             self.testFramesSpinBox.setEnabled(True)
             self.maxNodesP1SpinBox.setEnabled(True)
 
-    def toggleFinalBoxes(self):
+    def toggle_final_boxes(self):
         if self.maxNodesP2SpinBox.isEnabled():
             self.maxNodesP2SpinBox.setEnabled(False)
         else:
             self.maxNodesP2SpinBox.setEnabled(True)
 
-    def jobTypeSwitcher(self):
+    def job_type_switcher(self):
         jobType = str(self.jobTypeComboBox.currentText())
 
         #Re-enable everything
         allWidgets = [self.renderLayersLineEdit, self.startSpinBox, self.endSpinBox,
                         self.testFramesSpinBox, self.testCheckBox, self.finalCheckBox,
                         self.sceneLineEdit, self.sceneButton, self.projLineEdit,
-                        self.projButton, self.executableComboBox, self.maxNodesP1SpinBox,
-                        self.maxNodesP2SpinBox]
+                        self.frameDirLineEdit, self.frameDirButton, self.projButton,
+                        self.executableComboBox, self.maxNodesP1SpinBox, self.maxNodesP2SpinBox]
 
         _ = [x.setEnabled(True) for x in allWidgets]
 
         #Disable anything we don't want
         batchDisable = [self.renderLayersLineEdit, self.startSpinBox, self.endSpinBox,
                         self.testFramesSpinBox, self.testCheckBox, self.finalCheckBox,
-                        self.projLineEdit, self.projButton, self.executableComboBox,
-                        self.maxNodesP2SpinBox]
+                        self.projLineEdit, self.projButton, self.frameDirLineEdit,
+                        self.frameDirButton, self.executableComboBox, self.maxNodesP2SpinBox]
 
         fusionDisable = [self.renderLayersLineEdit, self.testFramesSpinBox, self.testCheckBox,
                             self.finalCheckBox, self.executableComboBox, self.maxNodesP2SpinBox,
-                            self.projLineEdit, self.projButton]
+                            self.projLineEdit, self.projButton, self.frameDirLineEdit,
+                            self.frameDirButton]
 
         if jobType == "BatchFile":
             self.testCheckBox.setCheckState(0)
@@ -395,45 +385,41 @@ class SubmitterMain(QMainWindow, Ui_MainWindow):
             _ = [x.setEnabled(False) for x in fusionDisable]
             wildcard = "fusion*"
 
-        elif jobType.find("Render") > 0:
-            wildcard = "maya*_render"
+        elif jobType == "Maya_Render":
+            wildcard = "mayaRender_*"
 
         else:
             wildcard = "qwertyuiop"
 
-        i = self.executableComboBox.findText(wildcard, Qt.MatchWildcard)
+        i = self.executableComboBox.findText(wildcard, QtCore.Qt.MatchWildcard)
         if i > 0:
             self.executableComboBox.setCurrentIndex(i)
     #------------------------------------------------------------------------#
     #----------------------------Get/Modify Data-----------------------------#
     #------------------------------------------------------------------------#
 
-    def getReqs(self):
+    def get_reqs(self):
         reqList = []
         for check in self.reqChecks:
             if check.isChecked():
                 reqList.append(str(check.text()))
 
-        return ",".join(sorted(reqList))
+        return "%{}%".format("%".join(sorted(reqList)))
 
-    def getJobStatus(self):
+    def get_job_status(self):
         if self.startStatusRadioButton.isChecked():
             return "R"
         else:
             return "U"
 
-def submitJob(niceName, projectName, owner, status, requirements, execName,
+def submit_job(niceName, projectName, owner, status, requirements, execName,
                 baseCMD, startFrame, endFrame, byFrame, renderLayers, taskFile,
-                priority, phase, maxNodes, timeout, maxAttempts, jobType):
+                priority, phase, maxNodes, timeout, maxAttempts, jobType, frameDir, singleTask):
     """A simple function for submitting a job to the jobBoard"""
-    #Setup default renderLayerTracker
-    renderLayerTracker = ["0" for _ in renderLayers.split(",")]
-    renderLayerTracker = ",".join(renderLayerTracker)
-    niceName = "{0}_PHASE{1:02d}".format(niceName, phase)
+    niceName = "{0}_Phase_{1:02d}".format(niceName, phase)
 
     if jobType == "BatchFile":
         renderLayers = "Batch"
-        renderLayerTracker = "0"
         startFrame = 1
         endFrame = 1
         execName = "none"
@@ -441,23 +427,33 @@ def submitJob(niceName, projectName, owner, status, requirements, execName,
 
     elif jobType == "FusionComp":
         renderLayers = "Fusion"
-        renderLayerTracker = "0"
         execName = "fusion"
         maxNodes = 1
 
-    job = hydra_jobboard(niceName=niceName, projectName=projectName,
+    job = sql.hydra_jobboard(niceName=niceName, projectName=projectName,
                         owner=owner, status=status,
                         requirements=requirements, execName=execName,
                         baseCMD=baseCMD, startFrame=startFrame,
                         endFrame=endFrame, byFrame=byFrame,
                         renderLayers=renderLayers,
-                        renderLayerTracker=renderLayerTracker,
-                        taskFile=taskFile, priority=priority,
-                        phase=phase, maxNodes=maxNodes, timeout=timeout,
-                        maxAttempts=maxAttempts, jobType=jobType)
+                        taskFile=taskFile, priority=priority, maxNodes=maxNodes,
+                        timeout=timeout, maxAttempts=maxAttempts, jobType=jobType,
+                        frameDirectory=frameDir)
 
-    with transaction() as t:
+    if singleTask and phase > 1:
+        frameList = [startFrame]
+    else:
+        frameList = range(startFrame, (endFrame + 1))[::byFrame]
+        frameList += [endFrame] if endFrame not in frameList else []
+
+    with sql.transaction() as t:
         job.insert(trans=t)
+        taskList = [sql.hydra_taskboard(job_id=job.id, status=status, priority=priority,
+                                        startFrame=x, endFrame=x) for x in frameList]
+        for task in taskList:
+            if singleTask and phase > 1:
+                task.endFrame = endFrame
+            task.insert(trans=t)
 
     return job
 
@@ -467,7 +463,7 @@ if __name__ == '__main__':
     except IndexError:
         sys.argv.append("")
 
-    app = QApplication(sys.argv)
+    app = QtGui.QApplication(sys.argv)
 
     window = SubmitterMain()
     window.show()

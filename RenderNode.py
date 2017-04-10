@@ -1,7 +1,6 @@
 #Standard
 import os
 import sys
-import threading
 import datetime
 import subprocess
 import traceback
@@ -10,20 +9,17 @@ import traceback
 import psutil
 
 #Hydra
-from Setups.MySQLSetup import *
-from Setups.LoggingSetup import logger
-import Setups.LogParsers as LogParsers
-from Setups.SingleInstanceLocker import InstanceLock
-from Setups.Threads import stoppableThread
 import Constants
-from Networking.Servers import TCPServer
-import Utilities.Utils as Utils
-from Utilities.NodeUtils import getThisNodeOBJ
+from hydra.logging_setup import logger
+import hydra.hydra_sql as sql
+import hydra.single_instance as single_instance
+import hydra.hydra_utils as hydra_utils
+import networking.servers as servers
 
-class RenderTCPServer(TCPServer):
+class RenderTCPServer(servers.TCPServer):
     """RenderTCPServer waits for a TCP connection from the RenderManagerServer
     telling it to start a render task. The render task is processed and the results
-    updated in the databse."""
+    updated in the database."""
     def __init__(self):
         #Setup Class Variables
         self.renderThread = None
@@ -31,162 +27,151 @@ class RenderTCPServer(TCPServer):
         self.PSUtilProc = None
         self.statusAfterDeath = None
         self.childKilled = 0
-        self.HydraJob = None
-        self.HydraTask = None
-        self.logPath = None
 
         #Get this node data from the database and make sure it exists
-        self.thisNode = getThisNodeOBJ()
+        self.thisNode = sql.get_this_node()
         logger.debug(self.thisNode)
         if not self.thisNode:
             logger.critical("This node does not exist in the database! Please Register this node and try again.")
             sys.exit(-1)
             return
 
-        #Detect RedShift GPUs
-        self.rsGPUs = Utils.getRedshiftPreference("SelectedCudaDevices")
-        if self.rsGPUs:
-            self.rsGPUs = self.rsGPUs.split(",")[:-1]
-            self.rsGPUids = [x.split(":")[0] for x in self.rsGPUs]
-            if len(self.rsGPUs) != len(self.rsGPUids):
-                logger.warning("Problems parsing Redshift Preferences")
-            logger.info("%s Redshift Enabled GPU(s) found on this node", len(self.rsGPUs))
-            logger.debug("GPUs available for rendering are %s", self.rsGPUs)
-        else:
-            logger.warning("Could not find available Redshift GPUs")
+        self.keepAllLogs = hydra_utils.get_info_from_cfg("hydra", "keep_all_render_logs")
+        self.keepAllLogs = True if self.keepAllLogs.lower().startswith("t") else False
 
         #Create RenderLog Directory if it doesn't exit
         if not os.path.isdir(Constants.RENDERLOGDIR):
             os.makedirs(Constants.RENDERLOGDIR)
 
-        self.unstickTask()
-        self.thisNode.software_version = Constants.VERSION
-
-        with transaction() as t:
-            self.thisNode.update(t)
+        self.unstick_task()
 
         #Run The Server
-        port = int(Utils.getInfoFromCFG("network", "port"))
+        port = int(hydra_utils.get_info_from_cfg("network", "port"))
         self.startServerThread(port)
+        self.createIdleLoop("Render_Loop_Thread", self.render_loop, 5)
 
-    @staticmethod
-    def getNewRLTracker(HydraJob, HydraTask):
-        """Makes a new RenderLayer tracker for the RenderJob"""
-        rls = HydraJob.renderLayers.split(",")
-        idx = rls.index(HydraTask.renderLayer)
-        rlTracker = HydraJob.renderLayerTracker.split(",")
-        rlTracker[idx] = str(HydraTask.currentFrame)
-        return ",".join(rlTracker)
+    def render_loop(self):
+        self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,),
+                                                    multiReturn=False)
 
-    def unstickTask(self, statusAfterDeath=CRASHED):
+        if self.thisNode.status in [sql.OFFLINE, sql.PENDING, sql.STARTED]:
+            return
+
+        sqlQuery = """SELECT T.* FROM hydra.hydra_taskboard T
+                        JOIN (SELECT id, failedNodes, attempts, maxAttempts,
+                                    maxNodes, requirements, archived
+                                FROM hydra.hydra_jobboard) J
+                        ON (T.job_id = J.id)
+                        WHERE T.status = 'R'
+                            AND J.archived = 0
+                            AND T.priority > %s
+                            AND J.maxAttempts > J.attempts
+                            AND J.failedNodes NOT LIKE %s
+                            AND %s LIKE J.requirements
+                            AND (J.maxNodes = 0
+                                OR J.maxNodes > (SELECT COUNT(*)
+                                                FROM hydra.hydra_taskboard
+                                                WHERE job_id = T.job_id
+                                                    AND status = 'S'))
+                        ORDER BY T.priority DESC, T.id ASC
+                        LIMIT 1;"""
+
+        sqlTuple = (self.thisNode.minPriority, self.thisNode.get_sql_selector(), self.thisNode.capabilities)
+
+        with sql.transaction() as t:
+            logger.debug("Checking for tasks")
+            renderTask = sql.hydra_taskboard.doFetch(t, sqlQuery, sqlTuple,
+                                                        multiReturn=False)
+            if renderTask:
+                logger.debug("RenderTask found %s", renderTask)
+                renderJob = renderTask.get_job()
+                #Task Updates
+                renderTask.status = "S"
+                renderTask.host = self.thisNode.host
+                renderTask.startTime = datetime.datetime.now().replace(microsecond=0)
+                #Job Updates
+                renderJob.status = "S"
+                #Node Updates
+                self.thisNode.status = "S"
+                self.thisNode.task_id = renderTask.id
+                #Push updates to the db
+                renderTask.update(t)
+                renderJob.update(t)
+                self.thisNode.update(t)
+
+        if renderTask and renderJob:
+            self.launch_render_task(renderJob, renderTask)
+
+    def unstick_task(self, statusAfterDeath=sql.READY):
         """Cleanup task if the node starts with one assigned to it
         (Like if the node crashed/restarted)"""
-        #self.thisNode will be updated in in init statement
-        self.thisNode = getThisNodeOBJ()
-        nodeStatus = self.thisNode.status
-        taskUpdate = False
-        if self.thisNode.task_id:
-            taskUpdate = True
-            if not all([self.HydraTask, self.HydraJob, self.logPath]):
-                logger.info("Rouge task discovered. Unsticking...")
-                self.HydraTask = hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,),
-                                                cols=["id", "job_id", "renderLayer",
-                                                        "status", "exitCode",
-                                                        "endTime", "host",
-                                                        "currentFrame"])
+        task = None
+        with sql.transaction() as t:
+            if self.thisNode.status in [sql.STARTED, sql.PENDING]:
+                self.thisNode.status = sql.IDLE if self.thisNode.status == sql.STARTED else sql.OFFLINE
 
-                self.HydraJob = hydra_jobboard.fetch("WHERE id = %s", (self.HydraTask.job_id,),
-                                                cols=["jobType", "renderLayerTracker"])
+            if self.thisNode.task_id:
+                task = sql.hydra_taskboard.fetch("WHERE id = %s", (self.thisNode.task_id,),
+                                                multiReturn=False, explicitTransaction=t)
+                task.status = statusAfterDeath
+                task.endTime = datetime.datetime.now().replace(microsecond=0)
+                task.exitCode = 999
+                self.thisNode.task_id = None
 
-                self.logPath = self.HydraTask.getLogPath()
-
-            self.HydraTask.kill(statusAfterDeath, False)
-
-            self.progressUpdate(False)
-
-            self.thisNode.status = IDLE if self.thisNode.status in [STARTED, IDLE] else OFFLINE
-            self.thisNode.task_id = None
-
-            if statusAfterDeath == ERROR:
-                self.taskFailure()
-
-        elif nodeStatus in [STARTED, PENDING]:
-            logger.warning("Reseting bad status, node set %s but no task found!", self.thisNode.status)
-            self.thisNode.status = IDLE if nodeStatus == STARTED else OFFLINE
-
-        with transaction() as t:
             self.thisNode.update(t)
-            if taskUpdate:
-                self.HydraTask.update(t)
-                self.HydraJob.update(t)
-
-        self.childProcess = None
-        self.PSUtilProc = None
-        self.HydraJob = None
-        self.HydraTask = None
-        self.logPath = None
+            if task:
+                task.update(t)
 
     def shutdown(self):
         """Offline node, Kill current job, shutdown servers, reset node status"""
-        self.thisNode = hydra_rendernode.fetch("WHERE host = %s",
-                                                (self.thisNode.host,))
+        self.thisNode = sql.get_this_node()
         currentStatus = self.thisNode.status
-        self.thisNode.offline()
-        if currentStatus in [STARTED, PENDING] or self.childProcess:
-            logger.info("Attempting to kill current job.")
-            self.killCurrentJob(KILLED)
-            logger.info("Kill Response Code: %s", self.childKilled)
-        TCPServer.shutdown(self)
-        #Online AFTER servers are shutdown
-        if currentStatus == STARTED:
+        newStatus = sql.IDLE if currentStatus in [sql.IDLE, sql.STARTED] else sql.OFFLINE
+        if currentStatus in [sql.STARTED, sql.PENDING] or self.childProcess:
+            self.thisNode.get_off()
+        else:
+            self.thisNode.offline()
+
+        servers.TCPServer.shutdown(self)
+
+        if newStatus == sql.IDLE:
             self.thisNode.online()
-        logger.info("RenderNode Servers Shutdown")
+        else:
+            self.thisNode.offline()
 
-    def startRenderTask(self, HydraJob, HydraTask):
-        """Command sent to the RenderTCPServer, starts the render task in a new
-        thread to prevent thread locking during the render."""
-        self.renderThread = threading.Thread(target=self.launchRenderTask,
-                                                args=(HydraJob, HydraTask))
-        self.renderThread.start()
-        return self.renderThread.isAlive()
+        logger.info("RenderNode servers Shutdown")
 
-    def launchRenderTask(self, HydraJob, HydraTask):
+    def launch_render_task(self, job, task):
         """Does the actual rendering, then records the results on the database"""
-        logger.info("Starting task with id %s on job with id %s", HydraTask.id, HydraJob.id)
-        self.HydraJob = HydraJob
-        self.HydraTask = HydraTask
+        logger.info("Starting task with id %s on job with id %s", task.id, task.job_id)
         self.childKilled = 0
         self.statusAfterDeath = None
         self.childProcess = None
         self.PSUtilProc = None
 
-        originalCurrentFrame = int(self.HydraTask.currentFrame)
-        renderTaskCMD = self.HydraTask.createTaskCMD(self.HydraJob, sys.platform)
+        renderTaskCMD = task.create_task_cmd(job, sys.platform)
+        logPath = task.get_log_path()
         logger.debug(renderTaskCMD)
 
-        self.logPath = self.HydraTask.getLogPath()
-        logger.info("Starting render task %s", self.HydraTask.id)
         try:
-            log = file(self.logPath, 'w')
+            log = file(logPath, 'w')
         except (IOError, OSError, WindowsError) as e:
             logger.error(e)
-            self.thisNode.getOff()
+            self.thisNode.offline()
             return
-        log.write('Hydra log file {0} on {1}\n'.format(self.logPath, self.HydraTask.host))
+
+        log.write('Hydra log file {0} on {1}\n'.format(logPath, self.thisNode.host))
         log.write('RenderNode is {0}\n'.format(sys.argv))
         log.write('Command: {0}\n\n'.format(renderTaskCMD))
-        Utils.flushOut(log)
-
-        progressUpdateThread = stoppableThread(self.progressUpdate, 120,
-                                                "Progress_Update_Thread")
+        flush_out(log)
 
         try:
             #Run the job and keep track of the process
             self.childProcess = subprocess.Popen(renderTaskCMD,
                                                 stdout=log, stderr=log,
-                                                **Utils.buildSubprocessArgs(False))
+                                                **build_subprocess_args(False))
 
-            logger.info("Started PID %s to do Task %s", self.childProcess.pid, self.HydraTask.id)
+            logger.info("Started PID %s to do Task %s", self.childProcess.pid, task.id)
 
             self.PSUtilProc = psutil.Process(self.childProcess.pid)
             #Wait for task to finish
@@ -199,121 +184,82 @@ class RenderTCPServer(TCPServer):
             log.write("\n\n-----------Job crashed on startup!-----------\n")
             log.write(e)
             log.close()
-            #unstickTask will update all info on the DB and cleanup variables
-            self.unstickTask(ERROR)
+            #unstick_task will update all info on the DB and cleanup variables
+            self.unstick_task()
             return
 
-        #If it gets this far then the subprocess has exited for one reason or another
-        #Get Exit Code, Record the results
-        self.HydraTask.exitCode = self.childProcess.returncode if self.childProcess else 1234
-        logString = "\nProcess exited with code {0} at {1} on {2}\n"
-        nowTime = datetime.datetime.now().replace(microsecond=0)
-        log.write(logString.format(self.HydraTask.exitCode, nowTime,
-                                    self.thisNode.host))
-
-        progressUpdateThread.terminate()
-
-        #Update HydraTask and HydraJob with currentFrame, MPF, and RLTracker
-        self.progressUpdate(commit=False)
-
-        #EndTime
-        self.HydraTask.endTime = datetime.datetime.now()
-
-        #Work around for batch files
-        if self.HydraJob.jobType == "BatchFile" and self.HydraTask.exitCode == 0:
-            self.HydraTask.currentFrame = (self.HydraTask.endFrame + 1)
-            self.HydraJob.renderLayerTracker = str((self.HydraTask.endFrame + 1))
-
-        #Status, Attempts. Failures
-        if self.childKilled == 1:
-            self.HydraTask.status = self.statusAfterDeath
-            self.HydraTask.exitCode = 1
-
-        else:
-            if self.HydraTask.exitCode == 0 and self.HydraTask.currentFrame >= originalCurrentFrame:
-                self.HydraTask.status = FINISHED
+        with sql.transaction() as t:
+            #Task
+            logger.debug("childKilled = %s", self.childKilled)
+            task.endTime = datetime.datetime.now().replace(microsecond=0)
+            if self.childProcess:
+                if self.childKilled == 0:
+                    task.exitCode = self.childProcess.returncode
+                else:
+                    task.exitCode = 1
             else:
-                self.taskFailure()
+                task.exitCode = 1234
 
-        #Update data on the DB
-        with transaction() as t:
-            self.HydraTask.update(t)
-            self.HydraJob.update(t)
-
-        self.resetThisNode()
-        log.close()
-        logger.info("Done with render task %s", self.HydraTask.id)
-        self.childProcess = None
-        self.PSUtilProc = None
-        self.HydraJob = None
-        self.HydraTask = None
-        self.logPath = None
-
-    def taskFailure(self):
-        self.HydraTask.status = ERROR
-        self.HydraJob.attempts += 1
-        if not self.HydraJob.failures or self.HydraJob.failures == "":
-            self.HydraJob.failures = self.thisNode.host
-        else:
-            self.HydraJob.failures += ",{0}".format(self.thisNode.host)
-
-    def progressUpdate(self, commit=True):
-        """Parse the render log file and update the databse with the currently
-        rendering frame, MPF (minutes per frame) and the renderLayerTracker.
-        Optional commit can stop the data from being updated on the databse if
-        set to False."""
-        if not all([self.HydraTask, self.HydraJob, self.logPath]):
-            logger.debug("Could not update progress")
-            return
-
-        #Get Log Parser and find the highest rendered frame
-        HydraLogObject = LogParsers.getLog(self.HydraJob, self.logPath)
-        if not HydraLogObject:
-            logger.debug("Log could not be parsed")
-            return
-
-        newCurrentFrame = HydraLogObject.getNewCurrentFrame()
-        if not newCurrentFrame:
-            newCurrentFrame = self.HydraTask.currentFrame
-        else:
-            #If we have a valid new currentFrame add one since it's now on the next frame
-            newCurrentFrame += 1
-            self.HydraTask.lastNewFrameTime = datetime.datetime.now()
-
-        mpf = HydraLogObject.getAverageRenderTime()
-
-        #currentFrame, renderLayerTracker
-        self.HydraTask.currentFrame = newCurrentFrame
-        self.HydraJob.renderLayerTracker = self.getNewRLTracker(self.HydraJob,
-                                                            self.HydraTask)
-        #MintuesPerFrame
-        if mpf:
-            self.HydraTask.mpf = mpf
-            if self.HydraJob.mpf:
-                tSecs = int((self.HydraJob.mpf.total_seconds() + mpf.total_seconds()) / 2)
-                self.HydraJob.mpf = datetime.timedelta(seconds=tSecs)
+            if task.exitCode == 0:
+                task.status = sql.FINISHED
+                task.mpf = (task.endTime - task.startTime)
             else:
-                self.HydraJob.mpf = mpf
+                task.status = sql.READY
+                task.host = ""
+            task.update(t)
+            #Job
+            taskList = task.get_other_subtasks(["status"], t)
+            taskList += [task]
+            allTaskDone = all([ta.status == sql.FINISHED for ta in taskList])
+            allTaskStart = any([ta.status == sql.STARTED for ta in taskList])
+            if allTaskDone:
+                job.status = sql.FINISHED
+            elif allTaskStart:
+                job.status = sql.STARTED
+            else:
+                job.status = sql.READY
 
-        if commit:
-            with transaction() as t:
-                self.HydraJob.update(t)
-                self.HydraTask.update(t)
+            if task.exitCode != 0 and self.childKilled == 0:
+                job.attempts += 1
+                job.failedNodes += "{} ".format(self.thisNode.host)
 
-    def resetThisNode(self):
-        """Resets node after render, sets current task to None and updates
-        node status."""
-        with transaction() as t:
-            self.thisNode = hydra_rendernode.fetch("WHERE host = %s",
-                                                    (self.thisNode.host,),
-                                                    explicitTransaction=t)
-            status = IDLE if self.thisNode.status == STARTED else OFFLINE
-            self.thisNode.status = status
-            logger.debug("New Node Status: %s", self.thisNode.status)
+            if job.attempts >= job.maxAttempts:
+                job.status = sql.ERROR
+
+            if task.exitCode == 0:
+                if job.mpf:
+                    job.mpf = ((job.mpf + task.mpf) / 2)
+                else:
+                    job.mpf = task.mpf
+            job.update(t)
+            #Node
+            self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
             self.thisNode.task_id = None
+            self.thisNode.status = sql.OFFLINE if self.thisNode.status == sql.PENDING else sql.IDLE
             self.thisNode.update(t)
 
-    def killCurrentJob(self, statusAfterDeath):
+        logString = "\nProcess exited with code {0} at {1} on {2}\n"
+        log.write(logString.format(task.exitCode, task.endTime, self.thisNode.host))
+        self.childProcess = None
+        self.PSUtilProc = None
+
+        log.close()
+        if not self.keepAllLogs and task.exitCode == 0:
+            try:
+                os.remove(logPath)
+            except (OSError, WindowsError):
+                logger.warning("Unable to remove log")
+
+        logPath = None
+
+        logger.info("Done with render task %s", task.id)
+        return
+
+    #--------------------------------------------------------------------------#
+    #-------------------------Incoming TCP Handlers----------------------------#
+    #--------------------------------------------------------------------------#
+
+    def kill_current_job(self, statusAfterDeath):
         """Kills the render node's current job if it's running one.
         Return Codes: 1 = process killed, -1 = parent could not be killed,
         -9 = child could not be killed, -10 = child and parent could not be killed"""
@@ -354,32 +300,37 @@ class RenderTCPServer(TCPServer):
             self.childKilled += -10
 
 def heartbeat():
-    """Updates a column on the node's database with the current time, signifying
-    that the node software is still running."""
-    host = Utils.myHostName()
-    with transaction() as t:
-        t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() WHERE host = %s",
-                    (host,))
+    #TODO Make this do the thing
+    pass
 
-def softwareUpdaterLoop():
-    """Checks for a new verison in the HYDRA environ, if one is found it starts
-    a batch process to start the new verison and kills the current one running."""
-    logger.debug("Checking for updates...")
-    updateAnswer = Utils.softwareUpdater()
-    if updateAnswer:
-        logger.debug("Update found!")
-        Utils.launchHydraApp("RenderNodeConsole", 10)
-        socketServer.shutdown()
-        sys.exit(0)
+def build_subprocess_args(include_stdout=False):
+    if hasattr(subprocess, 'STARTUPINFO'):
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        env = os.environ
     else:
-        logger.debug("No updates found")
+        si = None
+        env = None
+
+    ret = {'stdin': subprocess.PIPE,
+            'startupinfo': si, 'env': env}
+
+    if include_stdout:
+        ret.update({'stdout:': subprocess.PIPE})
+
+    return ret
+
+def flush_out(f):
+    """Flush and sync a file to disk"""
+    f.flush()
+    os.fsync(f.fileno())
 
 if __name__ == "__main__":
     logger.info("Starting in %s", os.getcwd())
     logger.info("arglist %s", sys.argv)
 
     #Check for other RenderNode isntances
-    lockFile = InstanceLock("HydraRenderNode")
+    lockFile = single_instance.InstanceLock("HydraRenderNode")
     lockStatus = lockFile.isLocked()
     logger.debug("Lock File Status: %s", lockStatus)
     if not lockStatus:
@@ -388,7 +339,4 @@ if __name__ == "__main__":
 
     #Start the Render Server and Heartbeat Thread
     socketServer = RenderTCPServer()
-    socketServer.createIdleLoop("Pulse_Thread", heartbeat, 60)
-    #If this is an exe, start the software updater thread
-    if sys.argv[0].endswith(".exe") and os.getenv("HYDRA"):
-        socketServer.createIdleLoop("Software_Updater_Thread", softwareUpdaterLoop, 900)
+    #socketServer.createIdleLoop("Pulse_Thread", heartbeat, 60)
