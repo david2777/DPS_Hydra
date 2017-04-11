@@ -17,34 +17,37 @@ class NodeEditorDialog(QtGui.QDialog, Ui_nodeEditorDialog):
         QtGui.QDialog.__init__(self, parent)
         self.setupUi(self)
 
+        #Set globals
+        self.save = False
         self.schedEnabled = False
 
         #Connect Buttons
-        self.cancelButton.clicked.connect(self.cancelButtonHandler)
-        self.okButton.clicked.connect(self.okButtonHandler)
-        self.schedulerEditButton.clicked.connect(self.schedulerEditButtonHandler)
-        self.schedCheckBox.stateChanged.connect(self.schedCheckBoxHandler)
+        self.cancelButton.clicked.connect(self.cancel_button_handler)
+        self.okButton.clicked.connect(self.ok_button_handler)
+        self.schedulerEditButton.clicked.connect(self.scheduler_edit_button_handler)
+        self.schedCheckBox.stateChanged.connect(self.sched_check_box_handler)
 
-        #Set globals
-        self.save = False
-
-        self.populateComps()
+        #Load requirements and populate checkboxes
+        self.populate_comps()
 
         self.defaults = defaults
         if defaults:
             title = "Editing {0}:".format(defaults["host"])
             self.editorGroup.setTitle(title)
             self.minPrioritySpinbox.setValue(defaults["priority"])
+            if defaults["ip_addr"]:
+                self.ipLineEdit.setText(defaults["ip_addr"])
             if defaults["schedule_enabled"] == 1:
                 self.schedCheckBox.setCheckState(2)
-
+            if bool(defaults["is_render_node"]):
+                self.renderNodeCheckBox.setCheckState(2)
 
             cbxList = defaults["comps"]
             for cbx in self.compChecks:
                 if cbx.text() in cbxList:
                     cbx.setCheckState(2)
 
-    def populateComps(self):
+    def populate_comps(self):
         #Get requirements master list from the DB
         compatabilities = sql.hydra_capabilities.fetch()
         compatabilities = [comp.name for comp in compatabilities]
@@ -62,21 +65,23 @@ class NodeEditorDialog(QtGui.QDialog, Ui_nodeEditorDialog):
 
             self.compChecks.append(c)
 
-    def getComps(self):
+    def get_comps(self):
         compList = []
         for check in self.compChecks:
             if check.isChecked():
                 compList.append(str(check.text()))
         return sorted(compList)
 
-    def getValues(self):
-        comps = " ".join(self.getComps())
+    def get_values(self):
+        comps = " ".join(self.get_comps())
         rDict = {"priority" : int(self.minPrioritySpinbox.value()),
                 "schedule_enabled" : self.schedEnabled,
-                "comps" : comps}
+                "comps" : comps,
+                "is_render_node" : bool(self.renderNodeCheckBox.isChecked()),
+                "ip_addr": str(self.ipLineEdit.text())}
         return rDict
 
-    def schedulerEditButtonHandler(self):
+    def scheduler_edit_button_handler(self):
         edits = NodeSchedulerDialog.create(self.defaults)
         if edits is None:
             return
@@ -95,18 +100,18 @@ class NodeEditorDialog(QtGui.QDialog, Ui_nodeEditorDialog):
                 t.cur.execute(cmd, (None, self.defaults["host"]))
             self.schedCheckBox.setCheckState(0)
 
-    def schedCheckBoxHandler(self):
+    def sched_check_box_handler(self):
         if self.schedEnabled:
             self.schedEnabled = False
             self.schedulerEditButton.setEnabled(False)
-        elif not self.schedEnabled:
+        else:
             self.schedEnabled = True
             self.schedulerEditButton.setEnabled(True)
 
-    def cancelButtonHandler(self):
+    def cancel_button_handler(self):
         self.close()
 
-    def okButtonHandler(self):
+    def ok_button_handler(self):
         self.save = True
         self.close()
 
@@ -115,7 +120,7 @@ class NodeEditorDialog(QtGui.QDialog, Ui_nodeEditorDialog):
         dialog = NodeEditorDialog(defaults)
         dialog.exec_()
         if dialog.save:
-            return dialog.getValues()
+            return dialog.get_values()
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)

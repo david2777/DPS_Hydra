@@ -22,12 +22,12 @@ class NodeSchedulerDialog(QtGui.QDialog, Ui_nodeSchedulerDialog):
             self.editorGroup.setTitle("Week Schedule for {0}".format(self.defaults["host"]))
             self.defaultSchedule = expand_schedule_data(self.defaults["week_schedule"])
 
-        self.buildUI()
+        self.build_ui()
 
         #Set globals
         self.save = False
 
-    def buildUI(self):
+    def build_ui(self):
         #Load style sheet
         with open(find_resource("assets/styleSheet.css"), "r") as myStyles:
             self.setStyleSheet(myStyles.read())
@@ -38,10 +38,10 @@ class NodeSchedulerDialog(QtGui.QDialog, Ui_nodeSchedulerDialog):
         self.whiteColor = QtGui.QColor(255, 255, 255)
 
         #Connect Buttons
-        self.cancelButton.clicked.connect(self.cancelButtonHandler)
-        self.okButton.clicked.connect(self.okButtonHandler)
-        self.onlineButton.clicked.connect(self.onlineButtonHandler)
-        self.offlineButton.clicked.connect(self.offlineButtonHandler)
+        self.cancelButton.clicked.connect(self.cancel_button_handler)
+        self.okButton.clicked.connect(self.ok_button_handler)
+        self.onlineButton.clicked.connect(self.online_button_handler)
+        self.offlineButton.clicked.connect(self.offline_button_handler)
 
         #Set properties
         self.scheduleTable.horizontalHeader().setResizeMode(QtGui.QHeaderView.Fixed)
@@ -91,14 +91,14 @@ class NodeSchedulerDialog(QtGui.QDialog, Ui_nodeSchedulerDialog):
                 if row > 6:
                     break
 
-    def cancelButtonHandler(self):
+    def cancel_button_handler(self):
         self.close()
 
-    def okButtonHandler(self):
+    def ok_button_handler(self):
         self.save = True
         self.close()
 
-    def getCurrentTableSelection(self):
+    def get_current_table_selection(self):
         tableSel = self.scheduleTable.selectedRanges()
         returnList = []
         for sel in tableSel:
@@ -114,21 +114,21 @@ class NodeSchedulerDialog(QtGui.QDialog, Ui_nodeSchedulerDialog):
 
         return returnList
 
-    def onlineButtonHandler(self):
-        mySel = self.getCurrentTableSelection()
+    def online_button_handler(self):
+        mySel = self.get_current_table_selection()
         for sel in mySel:
             self.scheduleTable.item(sel[0], sel[1]).setBackgroundColor(self.onlineColor)
             self.scheduleTable.item(sel[0], sel[1]).setText("1")
         self.scheduleTable.clearSelection()
 
-    def offlineButtonHandler(self):
-        mySel = self.getCurrentTableSelection()
+    def offline_button_handler(self):
+        mySel = self.get_current_table_selection()
         for sel in mySel:
             self.scheduleTable.item(sel[0], sel[1]).setBackgroundColor(self.offlineColor)
             self.scheduleTable.item(sel[0], sel[1]).setText("0")
         self.scheduleTable.clearSelection()
 
-    def getValues(self):
+    def get_values(self):
         rowCount = self.scheduleTable.rowCount()
         colCount = self.scheduleTable.columnCount()
         current = None
@@ -148,7 +148,7 @@ class NodeSchedulerDialog(QtGui.QDialog, Ui_nodeSchedulerDialog):
         dialog = NodeSchedulerDialog(defaults)
         dialog.exec_()
         if dialog.save:
-            return dialog.getValues()
+            return dialog.get_values()
 
 def main():
     app = QtGui.QApplication(sys.argv)

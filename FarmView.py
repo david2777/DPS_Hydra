@@ -905,13 +905,17 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                                             cols=["host", "minPriority",
                                                     "capabilities",
                                                     "schedule_enabled",
-                                                    "week_schedule"])
+                                                    "week_schedule",
+                                                    "is_render_node",
+                                                    "ip_addr"])
         comps = thisNode.capabilities.split(" ")
         defaults = {"host" : thisNode.host,
                     "priority" : thisNode.minPriority,
                     "comps" : comps,
                     "schedule_enabled" : int(thisNode.schedule_enabled),
-                    "week_schedule" : thisNode.week_schedule}
+                    "week_schedule" : thisNode.week_schedule,
+                    "is_render_node" : bool(thisNode.is_render_node),
+                    "ip_addr" : thisNode.ip_addr}
         edits = NodeEditorDialog.create(defaults)
 
         if edits:
@@ -921,8 +925,10 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                 schedEnabled = 0
             query = "UPDATE hydra_rendernode SET minPriority = %s"
             query += ", schedule_enabled = %s, capabilities = %s"
+            query += ", is_render_node = %s, ip_addr = %s"
             query += " WHERE host = %s"
-            editsTuple = (edits["priority"], schedEnabled, edits["comps"], host_name)
+            editsTuple = (edits["priority"], schedEnabled, edits["comps"],
+                            edits["is_render_node"], edits["ip_addr"], host_name)
             with sql.transaction() as t:
                 t.cur.execute(query, editsTuple)
             self.populate_node_tree()

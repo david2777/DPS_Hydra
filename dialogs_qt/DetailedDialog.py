@@ -14,14 +14,14 @@ class DetailedDialog(QtGui.QDialog, Ui_detailedDialog):
 
         self.data = data
         #Connect Buttons
-        self.okButton.clicked.connect(self.okButtonHandler)
+        self.okButton.clicked.connect(self.ok_button_handler)
 
-        self.updateRenderJobGrid()
+        self.update_render_job_grid()
 
-    def okButtonHandler(self):
+    def ok_button_handler(self):
         self.close()
 
-    def updateRenderJobGrid(self):
+    def update_render_job_grid(self):
         columns = self.data[0].__dict__.keys()
         columns = [labelFactory(col) for col in columns if col.find("__") is not 0]
 

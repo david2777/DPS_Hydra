@@ -24,18 +24,18 @@ class DatabaseLogin(QtGui.QWidget, Ui_Login):
         self.databaseName = get_info_from_cfg("database", "db")
         self.port = int(get_info_from_cfg("database", "port"))
 
-        self.loginButton.clicked.connect(self.loginButtonHandler)
+        self.loginButton.clicked.connect(self.login_button_handler)
 
         self.loginSuccess = False
 
 
-    def getValues(self):
+    def get_values(self):
         if self.loginSuccess:
             return self.db_username, self._db_password
         else:
             return None, None
 
-    def closeEvent(self, event):
+    def close_event(self, event):
         """Make it so when the user presses the X in the window it exits
         rather than just closing the login window and opening FarmView"""
         event.accept()
@@ -43,7 +43,7 @@ class DatabaseLogin(QtGui.QWidget, Ui_Login):
             sys.exit(1)
 
 
-    def loginButtonHandler(self):
+    def login_button_handler(self):
         self.db_username = str(self.user.text())
         self._db_password = str(self.password.text())
 

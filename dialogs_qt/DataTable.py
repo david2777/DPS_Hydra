@@ -11,14 +11,14 @@ class DataTableDialog(QtGui.QDialog, Ui_DataTableWidget):
 
         self.data = data
         #Connect Buttons
-        self.OkButton.clicked.connect(self.okButtonHandler)
+        self.OkButton.clicked.connect(self.ok_button_handler)
 
-        self.buildDataTable()
+        self.build_data_table()
 
-    def okButtonHandler(self):
+    def ok_button_handler(self):
         self.close()
 
-    def buildDataTable(self):
+    def build_data_table(self):
         rows = self.data.__dict__.keys()
         rows = [str(row) for row in rows if row.find("__") is not 0]
         self.DataTable.setRowCount(len(rows))
