@@ -53,7 +53,7 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
         #Get the -flag args
         try:
-            opts = getopt.getopt(sys.argv[2:], "s:e:n:p:l:x:m:d:c:q:t:")[0]
+            opts = getopt.getopt(sys.argv[2:], "a:b:c:d:e:f:g:l:m:n:o:p:q:r:s:t:x:z:")[0]
         except getopt.GetoptError:
             logger.error("Bad Opt!")
             about_box(self, "Bad Opt!", "One of the command line options you entered was invalid.\n"+
@@ -65,18 +65,26 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             _, defName = os.path.split(self.scene)
         else:
             defName = ""
-
-        self.settingsDict = {"-s":101,      #Start Frame (Int)
-                            "-e":101,       #End Frame (Int)
-                            "-n":defName,   #Nice Name (Str)
-                            "-p":"",        #Proj (Str)
-                            "-l":"",        #Render Layers (Str,Sep,By,Comma)
-                            "-x":"",        #Executabe (Str)
-                            "-m":"",        #CMD (Str)
-                            "-d":"",        #RenderDirectory (Str)
+        #Things this can't set: Start Status
+        #DEFAULTS:
+        self.settingsDict = {"-a":0,        #Max Nodes Phase_02 (Int)
+                            "-b":10,        #By Frame (Int)
                             "-c":"",        #Compatabilities (Str,Sep,By,Comma)
+                            "-d":"",        #RenderDirectory (Str)
+                            "-e":101,       #End Frame (Int)
+                            "-f":"1,1",     #Phases Enabled Bool,Bool (Str)
+                            "-g":"m",       #Task Style, M or S (Str)
+                            "-l":"",        #Render Layers (Str,Sep,By,Comma)
+                            "-m":"",        #CMD (Str)
+                            "-n":defName,   #Nice Name (Str)
+                            "-o":1,         #Max Nodes Phase_01 (Int)
+                            "-p":"",        #Proj (Str)
                             "-q":"",        #Project Name (Str)
+                            "-r":50,        #Priority (Int)
+                            "-s":101,       #Start Frame (Int)
                             "-t":"",        #Job Type (Str)
+                            "-x":"",        #Executabe (Str)
+                            "-z":170,       #Timeout in Minutes (Int)
                             }
 
         #Apply the -flag args
@@ -90,7 +98,8 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
         self.settingsDict["-p"] = os.path.normpath(self.settingsDict["-p"]) if self.settingsDict["-p"]  else ""
         self.settingsDict["-d"] = os.path.normpath(self.settingsDict["-d"]) if self.settingsDict["-d"]  else ""
         #Fix Compatabilities
-        self.settingsDict["-c"] = self.settingsDict["-c"].split(",")
+        self.settingsDict["-c"] = self.settingsDict["-c"].replace("%", ",").split(",")
+        self.settingsDict["-c"] = [x for x in self.settingsDict["-c"] if x]
         #Add underscores to niceName
         self.settingsDict["-n"] = self.settingsDict["-n"].replace(" ", "_")
 

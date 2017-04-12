@@ -329,6 +329,11 @@ class hydra_jobboard(hydraObject):
                                             multiReturn=True, cols=cols,
                                             explicitTransaction=explicitTransaction)
 
+    def get_complementary_phase(self):
+        #TODO: Make this get the job object for the other phase of this job
+        self.status = self.status
+        return None
+
     def start(self):
         if self.status in [PAUSED, KILLED]:
             self.status = READY
