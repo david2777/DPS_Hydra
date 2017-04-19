@@ -169,6 +169,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         #Job Tree
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+S"), self, self.start_job)
+        QtGui.QShortcut(QtGui.QKeySequence("Ctrl+T"), self, self.start_test_tasks)
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+P"), self, self.pause_job)
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+K"), self, self.kill_job)
         QtGui.QShortcut(QtGui.QKeySequence("Ctrl+R"), self, self.reset_job)
@@ -247,6 +248,10 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                 "Ctrl+R")
         self.jobMenu.addSeparator()
 
+        self.add_item(self.jobMenu, "Start Test Tasks", self.start_test_tasks,
+                "Mark the first x tasks as Ready and give them a higher priority", "Ctrl+T")
+        self.jobMenu.addSeparator()
+
         self.add_item(self.jobMenu, "Archive Jobs", self.archive_job,
                 "Archive Job(s) and hide them from the jobTree",
                 "Del")
@@ -305,7 +310,11 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
     def format_job_data(job):
         """Takes a hydra_jobboard record and returns an ordered list of the data
         to be inserted into the jobTree"""
-        taskString = "{0} ({1}/{2})".format(0, 0, 0)
+        tasks = job.get_tasks()
+        total = len(tasks)
+        done = sum([1 for t in tasks if t.status == sql.FINISHED])
+        percString = "{0:.0f}%".format(done / total * 100)
+        taskString = "{0} ({1}/{2})".format(percString, done, total)
 
         return [job.niceName, str(job.id), sql.niceNames[job.status],
                 taskString, job.owner, str(job.priority), str(job.mpf),
@@ -404,6 +413,30 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if mode == "start":
             _ = [job.start() for job in jobOBJs]
 
+        #Start Test Tasks
+        elif mode == "test":
+            for job in jobOBJs:
+                reply = MessageBoxes.int_box(self, "Start Test Tasks",
+                                                    "How many test tasks to start for \"{}\"?".format(job.niceName),
+                                                    10)
+                if all(reply):
+                    numToStart = int(reply[0])
+                    logger.debug(numToStart)
+                    tasks = job.get_tasks()
+                    startTasks = tasks[:numToStart]
+                    logger.debug(tasks)
+                    logger.debug(startTasks)
+                    #TODO: Make sure tasks aren't already started/done
+                    with sql.transaction() as t:
+                        job.status = sql.READY
+                        job.update(t)
+                        for task in startTasks:
+                            task.priority = int(job.priority * 1.25)
+                            task.status = sql.READY
+                            task.update(t)
+                else:
+                    logger.debug("Skipping %s because of no response", job.id)
+
         #Pause Job
         elif mode == "pause":
             _ = [job.pause() for job in jobOBJs]
@@ -482,6 +515,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
     #Convience Functions to get rid of all the functools.partial calls
     def start_job(self):
         self.job_action_handler("start")
+
+    def start_test_tasks(self):
+        self.job_action_handler("test")
 
     def pause_job(self):
         self.job_action_handler("pause")

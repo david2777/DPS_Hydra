@@ -57,6 +57,8 @@ class RenderTCPServer(servers.TCPServer):
         if self.thisNode.status in [sql.OFFLINE, sql.PENDING, sql.STARTED]:
             return
 
+        #TODO: Figure out a way to keep phase 02 from starting too many tasks at the same time
+
         sqlQuery = """SELECT T.* FROM hydra.hydra_taskboard T
                         JOIN (SELECT id, failedNodes, attempts, maxAttempts,
                                     maxNodes, requirements, archived
@@ -211,13 +213,19 @@ class RenderTCPServer(servers.TCPServer):
             taskList = task.get_other_subtasks(["status"], t)
             taskList += [task]
             allTaskDone = all([ta.status == sql.FINISHED for ta in taskList])
-            allTaskStart = any([ta.status == sql.STARTED for ta in taskList])
+            anyTaskStart = any([ta.status == sql.STARTED for ta in taskList])
+            anyTaskReady = any([ta.status == sql.READY for ta in taskList])
+            anyTaskError = any([ta.status == sql.ERROR for ta in taskList])
             if allTaskDone:
                 job.status = sql.FINISHED
-            elif allTaskStart:
+            elif anyTaskStart:
                 job.status = sql.STARTED
-            else:
+            elif anyTaskReady:
                 job.status = sql.READY
+            elif anyTaskError:
+                job.status = sql.ERROR
+            else:
+                job.status = sql.PAUSED
 
             if task.exitCode != 0 and self.childKilled == 0:
                 job.attempts += 1

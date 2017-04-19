@@ -174,10 +174,6 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
     #------------------------------------------------------------------------#
 
     def submit_button_handler(self):
-        #######################################################################
-        #TODO: Rework this to work with multiple job types
-        #######################################################################
-
         #Getting data in same order as JobTicket
         execName = str(self.executableComboBox.currentText())
         baseCMD = str(self.cmdLineEdit.text())
@@ -212,7 +208,6 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
         if jobType not in ["BatchFile", "FusionComp"]:
             baseCMD += " -proj {0}".format(proj)
-        #To prevent phase 3 from being generated accidentally
         elif jobType == "BatchFile":
             startFrame = 1
             endFrame = 1
@@ -223,12 +218,12 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             #Phase specific overrides
             phase = 1
             
-            #baseCMDOverride = baseCMD + " -x 640 -y 360"
+            #TODO: Override render sizes
 
             phase01 = submit_job(niceName, projectName, owner, jobStatus,
                                 compatabilityList, execName, baseCMD,
                                 startFrame, endFrame, byFrame, renderLayers,
-                                taskFile, int(priority * 1.25), phase, maxNodesP1,
+                                taskFile, int(priority * 1.5), phase, maxNodesP1,
                                 timeout, 10, jobType, frameDir, singleTask)
 
             logger.info("Phase 01 submitted with id: %s", phase01.id)
@@ -239,17 +234,8 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 02")
             #Phase specific overrides
             frameRange = range(startFrame, endFrame + 1)
-            if not singleTask:
-                phase02Frames = frameRange[:10]
-                phase03Frames = frameRange[10:]
-            else:
-                phase02Frames = frameRange
-
-            if jobType == "FusionComp":
-                phase02Frames = frameRange
-                phase03Frames = []
-
             byFrame = 1
+            
             if phase01Status:
                 jobStatusOverride = sql.PAUSED
             else:
@@ -257,21 +243,11 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
             phase = 2
             phase02 = submit_job(niceName, projectName, owner, jobStatusOverride,
-                                compatabilityList, execName, baseCMD, phase02Frames[0],
-                                phase02Frames[-1], byFrame, renderLayers, taskFile, priority,
+                                compatabilityList, execName, baseCMD, frameRange[0],
+                                frameRange[-1], byFrame, renderLayers, taskFile, priority,
                                 phase, maxNodesP2, timeout, 10, jobType, frameDir, singleTask)
 
             logger.info("Phase 02 submitted with id: %s", phase02.id)
-
-            if phase03Frames:
-                logger.info("Building Phase 03")
-                phase = 3
-                phase03 = submit_job(niceName, projectName, owner, sql.PAUSED,
-                                    compatabilityList, execName, baseCMD, phase03Frames[0],
-                                    phase03Frames[-1], byFrame, renderLayers, taskFile, priority,
-                                    phase, maxNodesP2, timeout, 10, jobType, frameDir, singleTask)
-
-                logger.info("Phase 03 submitted with id: %s", phase03.id)
 
 
         self.submitButton.setEnabled(False)
@@ -462,7 +438,7 @@ def submit_job(niceName, projectName, owner, status, requirements, execName,
         for task in taskList:
             if singleTask and phase > 1:
                 task.endFrame = endFrame
-            task.insert(trans=t)
+            task.insert(t)
 
     return job
 
