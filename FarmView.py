@@ -260,32 +260,8 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         self.add_item(self.jobMenu, "Set Job Priority...", self.prioritize_job,
         "Set priority on each job selected in the Job List", "Ctrl+Q")
-        self.add_item(self.jobMenu, "Edit Job...", self.edit_job, "Edit Job, WIP")
 
         self.jobMenu.popup(QtGui.QCursor.pos())
-
-    def edit_job(self):
-        jobIDs = self.get_job_tree_sel()
-        if not jobIDs:
-            return None
-
-        #TODO: Warn user about what this does
-        #TODO: Move Maya Project to its own db col
-
-        jobOBJs = [sql.hydra_jobboard.fetch("WHERE id = %s", (jID,)) for jID in jobIDs]
-
-        #TODO: Check if jobs are running, kill and archive. 
-        for job in jobOBJs:
-            #tasks = job.get_tasks()
-            #TODO: Add checks for non required fields
-            #TODO: Add more flags
-            command = "python %USERPROFILE%\\Documents\\GitHub\\DPS_Hydra\\SubmitterMain.py "
-            command += "\"{0}\" -s {1} -e {2} ".format(job.taskFile, job.startFrame, job.endFrame)
-            command += "-n {0} -p {1} -l {2} ".format(job.niceName, "TODO:FINDPROJ", job.renderLayers)
-            command += "-x {0} -m \"{1}\" -d \"{2}\" ".format(job.execName, job.baseCMD, job.frameDirectory)
-            command += "-c {0} -q {1} -t {2}".format(job.requirements, job.projectName, job.jobType)
-            logger.debug(command)
-            subprocess.Popen(command, shell=True)
 
     def fetch_jobs(self, mode="all", job_id=None):
         """Fetch all of the hydra_jobboard jobs corrisponding with the current
