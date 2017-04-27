@@ -5,7 +5,6 @@ import sys
 import fnmatch
 import datetime
 import webbrowser
-import subprocess
 from operator import attrgetter
 from collections import defaultdict
 
@@ -426,16 +425,20 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                     startTasks = tasks[:numToStart]
                     logger.debug(tasks)
                     logger.debug(startTasks)
-                    #TODO: Make sure tasks aren't already started/done
-                    with sql.transaction() as t:
-                        job.status = sql.READY
-                        job.update(t)
-                        for task in startTasks:
-                            task.priority = int(job.priority * 1.25)
-                            task.status = sql.READY
-                            task.update(t)
+                    taskCheck = any([ta.status in [sql.FINISHED, sql.STARTED] for ta in tasks])
+                    if taskCheck:
+                        MessageBoxes.warning_box(self, "Error!",
+                                                    "Skipping {} because one or more of the tasks is already started or done.".format(job.niceName))
+                    else:
+                        with sql.transaction() as t:
+                            job.status = sql.READY
+                            job.update(t)
+                            for task in startTasks:
+                                task.priority = int(job.priority * 1.25)
+                                task.status = sql.READY
+                                task.update(t)
                 else:
-                    logger.debug("Skipping %s because of no response", job.id)
+                    logger.debug("Skipping %s because of no response", job.niceName)
 
         #Pause Job
         elif mode == "pause":
@@ -502,13 +505,13 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         elif mode == "priority":
             for job in jobOBJs:
-                msgString = "Priority for job {0}:".format(job.id)
+                msgString = "Priority for job {0}:".format(job.niceName)
                 reply = MessageBoxes.int_box(self, "Set Job Priority", msgString, job.priority)
                 if reply[1]:
                     job.prioritize(reply[0])
                     self.populate_job_tree()
                 else:
-                    logger.debug("PrioritizeJob skipped on %s", job.id)
+                    logger.debug("PrioritizeJob skipped on %s", job.niceName)
 
         self.do_update()
 

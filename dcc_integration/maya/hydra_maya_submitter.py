@@ -25,6 +25,11 @@ def DPSHydra_MayaSubmitter():
     _ = {"vray":"VRay", "renderMan":"RenderMan",
                         "renderManRIS":"RenderMan", "arnold":"Arnold"}
 
+    #-----------------Unlock Attributes-------------------#
+    cmds.setAttr("defaultResolution.aspectLock", l=False)
+    cmds.setAttr("defaultResolution.w", l=False)
+    cmds.setAttr("defaultResolution.h", l=False)
+
     #-----------------Get Data from Maya------------------#
     sceneFile = cmds.file(q=True, exn=True)
     sceneName = sceneFile.split("/")[-1]

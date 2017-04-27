@@ -172,9 +172,15 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
     def closeEvent(self, event):
         choice = yes_no_box(self, "Confirm", "Really exit the RenderNodeMain server?")
         if choice == QtGui.QMessageBox.Yes:
-            self.shutdown()
+            self.exit()
         else:
             event.ignore()
+
+    def exit(self):
+        self.shutdown()
+        self.trayIcon.hide()
+        event.accept()
+        sys.exit(0)
 
     def shutdown(self):
         logger.info("Shutting down...")
@@ -185,9 +191,12 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         if self.renderServerStatus:
             self.renderServer.shutdown()
         logger.debug("All servers Shutdown")
-        self.trayIcon.hide()
-        event.accept()
-        sys.exit(0)
+
+    def reboot(self):
+        #TODO: Make a timeout box so the user can stop a reboot
+        logger.info("Rebooting Node...")
+        self.shutdown()
+        self.renderServer.reboot()
 
     def auto_update_handler(self):
         """Toggles Auto Updater

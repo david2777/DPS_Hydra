@@ -143,6 +143,14 @@ class RenderTCPServer(servers.TCPServer):
 
         logger.info("RenderNode servers Shutdown")
 
+    def reboot(self):
+        """Shutdown and restart node"""
+        self.shutdown()
+        if sys.platform.startswith("win"):
+            os.system("shutdown -r -f -t 60 -c \"Rebooting to update RenderNode software\"")
+        else:
+            os.system("reboot now")
+
     def launch_render_task(self, job, task):
         """Does the actual rendering, then records the results on the database"""
         logger.info("Starting task with id %s on job with id %s", task.id, task.job_id)
@@ -160,6 +168,7 @@ class RenderTCPServer(servers.TCPServer):
         except (IOError, OSError, WindowsError) as e:
             logger.error(e)
             self.thisNode.offline()
+            self.shutdown()
             return
 
         log.write('Hydra log file {0} on {1}\n'.format(logPath, self.thisNode.host))
@@ -308,8 +317,10 @@ class RenderTCPServer(servers.TCPServer):
             self.childKilled += -10
 
 def heartbeat():
-    #TODO Make this do the thing
-    pass
+    host = hydra_utils.my_host_name()
+    with sql.transaction() as t:
+        t.cur.execute("UPDATE hydra_rendernode SET pulse = NOW() "
+                    "WHERE host = '{0}'".format(host))
 
 def build_subprocess_args(include_stdout=False):
     if hasattr(subprocess, 'STARTUPINFO'):

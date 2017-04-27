@@ -217,8 +217,6 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             logger.info("Building Phase 01")
             #Phase specific overrides
             phase = 1
-            
-            #TODO: Override render sizes
 
             phase01 = submit_job(niceName, projectName, owner, jobStatus,
                                 compatabilityList, execName, baseCMD,

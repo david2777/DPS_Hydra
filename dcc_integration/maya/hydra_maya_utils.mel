@@ -1,6 +1,17 @@
 //TODO: Generic pre-render which detects with render engine is being used
 global proc DPSHydra_RSPreRender(){
-  if (! `getAttr -l "redshiftOptions.logLevel"`){
-    setAttr "redshiftOptions.logLevel" 2;
-  }
+	if (! `getAttr -l "redshiftOptions.logLevel"`){
+		setAttr "redshiftOptions.logLevel" 2;
+	}
+}
+
+global proc DPSHydra_Phase01PreRender(){
+	if (! `getAttr -l "defaultResolution.aspectLock"`){
+		if (! `getAttr -l "defaultResolution.w"`){
+			if (! `getAttr -l "defaultResolution.h"`){
+				setAttr "defaultResolution.aspectLock" 1;
+				setAttr "defaultResolution.w" (`getAttr "defaultResolution.w"` * .25);
+			}
+		}
+	}
 }

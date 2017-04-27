@@ -534,9 +534,15 @@ class hydra_taskboard(hydraObject):
         if hydraJob.jobType == "Maya_Render":
             renderList = [execsDict[hydraJob.execName]]
             renderList += baseCMD
-
+            
+            renderList += ["-preRender"]
+            preRender = "source hydra_maya_utils;"
             if hydraJob.baseCMD.find("-r redshift") > 0:
-                renderList += ["-preRender", "source hydra_maya_utils;DPSHydra_RSPreRender;"]
+                preRender += "DPSHydra_RSPreRender;"
+            #TODO: Replace with phase col once that is implemented
+            if hydraJob.niceName.find("Phase_01"):
+                preRender += "DPSHydra_Phase01PreRender;"
+            renderList += [preRender]
 
             renderList += ["-s", self.startFrame, "-e", self.endFrame, "-b",
                             hydraJob.byFrame, "-rl", hydraJob.renderLayers]

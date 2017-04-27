@@ -19,3 +19,9 @@ class KillCurrentTaskQuestion(object):
     def compute_answer(self, server):
         server.kill_current_job(self.statusAfterDeath)
         return server.childKilled
+
+class RebootNodeQuestion(object):
+    """A Question for running arbitrary commands on a server."""
+    def compute_answer(self, server):
+        return server.reboot()
+        
