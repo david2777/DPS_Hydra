@@ -1,0 +1,4 @@
+keyring==10.3.1
+configparser==3.5.0
+passlib==1.7.1
+psutil==5.2.1
