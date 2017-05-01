@@ -18,7 +18,7 @@ class InstanceLock(object):
         logger.info("Temp File: %s", self.tempFilePath)
 
         #Windows
-        if sys.platform == "win32":
+        if sys.platform.startswith("win"):
             try:
                 if os.path.exists(self.tempFilePath):
                     os.unlink(self.tempFilePath)
@@ -48,7 +48,7 @@ class InstanceLock(object):
         if not self.locked:
             return
 
-        if sys.platform == "win32":
+        if sys.platform.startswith("win"):
             if hasattr(self, "tempFile"):
                 try:
                     os.close(self.tempFile)

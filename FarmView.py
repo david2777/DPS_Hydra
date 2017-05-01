@@ -59,7 +59,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         #Make sure this node exists
         self.thisNodeButtonsEnabled = True
-        self.thisNodeExists = self.find_this_node()
+        self.thisNode = self.find_this_node()
 
         #Setup Signals
         QtCore.SIGNAL("do_update")
@@ -730,7 +730,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             if mode == "log":
                 webbrowser.open(logPath)
             elif mode == "tail":
-                if sys.platform == "win32":
+                if sys.platform.startswith("win"):
                     cmd = " ".join(["start powershell Get-Content", logPath, "-Wait"])
                     os.system(cmd)
                 else:
@@ -828,7 +828,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         #Formatting
         nodeItem.setBackgroundColor(1, niceColors[node.status])
-        if node.host == self.thisNodeName:
+        if node.id == self.thisNode.id:
             nodeItem.setFont(0, QtGui.QFont('Segoe UI', 8, QtGui.QFont.DemiBold))
 
     @staticmethod
@@ -1045,7 +1045,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
     def node_editor_handler(self):
         """Opens a NodeEditorDialog for this node"""
-        if self.thisNodeExists:
+        if self.thisNode:
             self.node_editor(self.thisNodeName)
 
     #--------------------------------------------------------------------------#
@@ -1063,12 +1063,18 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             self.set_this_node_buttons_enabled(False)
             return None
 
+    def get_this_node(self):
+        if self.thisNode:
+            return sql.hydra_rendernode.fetch("WHERE id = %s", self.thisNode.id, multiReturn=False)
+        else:
+            return None
+
     def doFetch(self):
         """Aggregate method for initilizaing all of the widgets on the default tab."""
         self.populate_node_tree()
         self.populate_job_tree(clear=True)
-        if self.thisNodeExists:
-            thisNode = self.find_this_node()
+        if self.thisNode:
+            thisNode = self.get_this_node()
             self.update_status_bar(thisNode)
         if self.currentJobSel:
             self.load_task_tree(self.currentJobSel, True)
@@ -1096,7 +1102,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             self.load_task_grid()
         elif curTab == 2:
             #This Node
-            if self.thisNodeExists:
+            if self.thisNode:
                 self.update_this_node_info(thisNode)
 
     def update_this_node_info(self, thisNode):

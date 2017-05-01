@@ -153,9 +153,9 @@ def calcuate_sleep_time(now, dbData):
 
     return sleepyTime, status
 
-def calcuate_sleep_time_from_node(nodeName):
+def calcuate_sleep_time_from_node(nodeID):
     """A convience function that does calcuate_sleep_time given a host name"""
-    thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (nodeName,),
-                                        cols=["week_schedule", "host"])
+    thisNode = sql.hydra_rendernode.fetch("WHERE id = %s", (nodeID,),
+                                        cols=["week_schedule"])
     nowDateTime = datetime.datetime.now().replace(microsecond=0)
     return calcuate_sleep_time(nowDateTime, thisNode.week_schedule)

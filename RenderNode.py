@@ -9,7 +9,6 @@ import traceback
 import psutil
 
 #Hydra
-import Constants
 from hydra.logging_setup import logger
 import hydra.hydra_sql as sql
 import hydra.single_instance as single_instance
@@ -31,7 +30,9 @@ class RenderTCPServer(servers.TCPServer):
         #Get this node data from the database and make sure it exists
         self.thisNode = sql.get_this_node()
         logger.debug(self.thisNode)
-        if not self.thisNode:
+        if self.thisNode:
+            self.thisNodeID = self.thisNode.id
+        else:
             logger.critical("This node does not exist in the database! Please Register this node and try again.")
             sys.exit(-1)
             return
@@ -40,8 +41,9 @@ class RenderTCPServer(servers.TCPServer):
         self.keepAllLogs = True if self.keepAllLogs.lower().startswith("t") else False
 
         #Create RenderLog Directory if it doesn't exit
-        if not os.path.isdir(Constants.RENDERLOGDIR):
-            os.makedirs(Constants.RENDERLOGDIR)
+        renderLogDir = hydra_utils.get_info_from_cfg("logging", "render_log_path")
+        if not os.path.isdir(renderLogDir):
+            os.makedirs(renderLogDir)
 
         self.unstick_task()
 
@@ -51,7 +53,7 @@ class RenderTCPServer(servers.TCPServer):
         self.createIdleLoop("Render_Loop_Thread", self.render_loop, 5)
 
     def render_loop(self):
-        self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,),
+        self.thisNode = sql.hydra_rendernode.fetch("WHERE id = %s", (self.thisNodeID,),
                                                     multiReturn=False)
 
         if self.thisNode.status in [sql.OFFLINE, sql.PENDING, sql.STARTED]:
@@ -250,7 +252,7 @@ class RenderTCPServer(servers.TCPServer):
                     job.mpf = task.mpf
             job.update(t)
             #Node
-            self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
+            self.thisNode = sql.hydra_rendernode.fetch("WHERE id = %s", (self.thisNodeID,))
             self.thisNode.task_id = None
             self.thisNode.status = sql.OFFLINE if self.thisNode.status == sql.PENDING else sql.IDLE
             self.thisNode.update(t)

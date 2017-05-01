@@ -1,22 +1,18 @@
-"""Things that will remain constant. Also makes them easy to change in here..."""
+"""Things that will remain constant"""
 #Standard
 import os
 import sys
-import getpass
 
 #Versioning
 VERSION = 0.31
 
 #Files
-if sys.platform == "win32":
+if sys.platform.startswith("win"):
     BASEDIR = r"C:\Hydra"
 else:
-    user = getpass.getuser()
-    BASEDIR = os.path.join("/home", user, "Hydra")
+    BASEDIR = os.path.join("~", "Hydra")
 
 BASELOGDIR = os.path.join(BASEDIR, "logs")
-RENDERLOGDIR = os.path.join(BASELOGDIR, "render")
-FRAMELOGPATH = os.path.join(RENDERLOGDIR, 'TempFrameTracker.log.txt')
 SETTINGS = os.path.join(BASEDIR, "HydraSettings.cfg")
 
 #connections

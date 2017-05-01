@@ -9,7 +9,6 @@ import os
 import MySQLdb
 
 #Hydra
-import Constants
 from hydra.logging_setup import logger
 from hydra import password_storage
 import hydra.hydra_utils as hydra_utils
@@ -96,7 +95,7 @@ def get_this_node():
 
 class transaction(object):
     """Handle transactions with the database"""
-    
+
     #Setup db/login info as class variables so that all instnaces already have it
     host, db_username, _db_password, databaseName, port = get_database_info()
 
@@ -258,8 +257,8 @@ class hydraObject(object):
 
 class hydra_rendernode(hydraObject):
     """Class representing render node records as listed in the hydra_rendernode table on the database"""
-    autoColumn = None
-    primaryKey = "host"
+    autoColumn = "id"
+    primaryKey = "id"
 
     def get_task(self, cols=None, explicitTransaction=None):
         if self.task_id:
@@ -330,9 +329,9 @@ class hydra_jobboard(hydraObject):
                                             explicitTransaction=explicitTransaction)
 
     def get_complementary_phase(self):
-        #TODO: Make this get the job object for the other phase of this job
-        self.status = self.status
-        return None
+        #TODO: Return the job object for the job's other phase
+        phaseToFind = 1 if self.phase == 2 else 2
+        return phaseToFind
 
     def start(self):
         if self.status in [PAUSED, KILLED]:
@@ -521,7 +520,7 @@ class hydra_taskboard(hydraObject):
 
     def create_task_cmd(self, hydraJob, platform="win32"):
         execs = hydra_executable.fetch(multiReturn=True)
-        if platform == "win32":
+        if platform.startswith("win"):
             execsDict = {ex.name: ex.win32 for ex in execs}
         else:
             execsDict = {ex.name: ex.linux for ex in execs}
@@ -534,7 +533,7 @@ class hydra_taskboard(hydraObject):
         if hydraJob.jobType == "Maya_Render":
             renderList = [execsDict[hydraJob.execName]]
             renderList += baseCMD
-            
+
             renderList += ["-preRender"]
             preRender = "source hydra_maya_utils;"
             if hydraJob.baseCMD.find("-r redshift") > 0:
@@ -574,7 +573,8 @@ class hydra_taskboard(hydraObject):
 
     def get_log_path(self):
         thisHost = hydra_utils.my_host_name()
-        path = os.path.join(Constants.RENDERLOGDIR, '{:0>10}.log.txt'.format(self.id))
+        renderLogDir = hydra_utils.get_info_from_cfg("logging", "render_log_path")
+        path = os.path.join(renderLogDir, '{:0>10}.log.txt'.format(self.id))
         if self.host and thisHost == self.host:
             return path
         elif self.host:

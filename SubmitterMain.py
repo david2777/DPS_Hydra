@@ -233,7 +233,6 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
             #Phase specific overrides
             frameRange = range(startFrame, endFrame + 1)
             byFrame = 1
-            
             if phase01Status:
                 jobStatusOverride = sql.PAUSED
             else:
@@ -421,7 +420,7 @@ def submit_job(niceName, projectName, owner, status, requirements, execName,
                         renderLayers=renderLayers,
                         taskFile=taskFile, priority=priority, maxNodes=maxNodes,
                         timeout=timeout, maxAttempts=maxAttempts, jobType=jobType,
-                        frameDirectory=frameDir)
+                        frameDirectory=frameDir, phase=phase)
 
     if singleTask and phase > 1:
         frameList = [startFrame]

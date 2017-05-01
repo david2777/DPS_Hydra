@@ -311,8 +311,8 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
                 schedEnabled = 0
             query = "UPDATE hydra_rendernode SET minPriority = %s"
             query += ", schedule_enabled = %s, capabilities = %s"
-            query += " WHERE host = %s"
-            editsTuple = (edits["priority"], schedEnabled, edits["comps"], self.thisNode.host)
+            query += " WHERE id = %s"
+            editsTuple = (edits["priority"], schedEnabled, edits["comps"], self.thisNode.id)
             with sql.transaction() as t:
                 t.cur.execute(query, editsTuple)
             self.update_thisnode()
@@ -324,7 +324,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         self.emit(QtCore.SIGNAL("update_thisnode"))
 
     def update_thisnode(self):
-        self.thisNode = sql.hydra_rendernode.fetch("WHERE host = %s", (self.thisNode.host,))
+        self.thisNode = sql.hydra_rendernode.fetch("WHERE id = %s", (self.thisNode.id,))
 
         #Check for changes in schedule
         if self.thisNode.week_schedule != self.currentSchedule or self.thisNode.schedule_enabled != self.currentScheduleEnabled:
@@ -368,7 +368,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
 
         self.update_thisnode()
 
-        sleepTime, nowStatus = node_scheduling.calcuate_sleep_time_from_node(self.thisNode.host)
+        sleepTime, nowStatus = node_scheduling.calcuate_sleep_time_from_node(self.thisNode.id)
         if not sleepTime or not nowStatus:
             logger.error("Could not find schdule! Checking again in 24 hours.")
             return 86400

@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.7.9, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 5.7.17, for Win64 (x86_64)
 --
--- Host: godzilla    Database: hydra
+-- Host: 192.168.0.200    Database: hydra
 -- ------------------------------------------------------
--- Server version	5.7.17
+-- Server version	5.7.18
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -81,6 +81,7 @@ CREATE TABLE `hydra_jobboard` (
   `attempts` int(1) NOT NULL DEFAULT '0' COMMENT 'Number of times a job has been attempted and failed.',
   `maxAttempts` int(1) NOT NULL DEFAULT '10' COMMENT 'Maximum attempts before a job is stopped as Error.',
   `archived` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
+  `phase` int(1) NOT NULL DEFAULT '2',
   `startFrame` int(4) DEFAULT NULL COMMENT 'The start frame of the job',
   `endFrame` int(4) DEFAULT NULL COMMENT 'The end frame of the job',
   `byFrame` int(4) DEFAULT NULL COMMENT 'Render each x frame. Caluclated by SubmitterMain for now so we can append the last frame to the frames. Should be editable in FarmView eventually. ',
@@ -114,6 +115,7 @@ DROP TABLE IF EXISTS `hydra_rendernode`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `hydra_rendernode` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `host` varchar(80) NOT NULL COMMENT 'Name of the render node',
   `status` char(1) NOT NULL DEFAULT 'O' COMMENT 'The one character abbreviation for the node''s status (Idle, Started, etc)',
   `minPriority` int(11) NOT NULL DEFAULT '0' COMMENT 'Lowest priority task that can be run by this node (Note this also exists in the hydraSettings.cfg file on each node but that one does nothing- David)',
@@ -126,11 +128,12 @@ CREATE TABLE `hydra_rendernode` (
   `pulse` datetime DEFAULT NULL COMMENT 'The last time RenderNodeMain.exe was known to be running, if ever',
   `software_version` varchar(255) DEFAULT NULL COMMENT 'The version of the RenderNodeMain.exe currently running on this node',
   `is_render_node` int(1) DEFAULT '0' COMMENT 'Is this node used for rendering, 0 = False 1 = True',
-  PRIMARY KEY (`host`),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `id_UNIQUE` (`id`),
   UNIQUE KEY `host_UNIQUE` (`host`),
   KEY `rendertask_key_idx` (`task_id`),
   CONSTRAINT `rendertask_key` FOREIGN KEY (`task_id`) REFERENCES `hydra_taskboard` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Describes all of the RenderNodes. Made in MySQL Workbench. ';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='Describes all of the RenderNodes. Made in MySQL Workbench. ';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -169,4 +172,4 @@ CREATE TABLE `hydra_taskboard` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-02-02 19:57:12
+-- Dump completed on 2017-04-30 19:52:21
