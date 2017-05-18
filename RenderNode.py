@@ -238,6 +238,8 @@ class RenderTCPServer(servers.TCPServer):
             else:
                 job.status = sql.PAUSED
 
+            job.task_done = int(sum([1 for ta in taskList if ta.status == sql.FINISHED]))
+
             if task.exitCode != 0 and self.childKilled == 0:
                 job.attempts += 1
                 job.failedNodes += "{} ".format(self.thisNode.host)

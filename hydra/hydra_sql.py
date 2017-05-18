@@ -136,8 +136,7 @@ class hydraObject(object):
             #logger.debug(('dirty', k, v))
 
     def __getattr__(self, attr):
-        """Return the requested attribute if available, searche the database if not, return None if still not found"""
-        logger.info(attr)
+        """Return the requested attribute if available, search the database if not, return None if still not found"""
         if attr in self.__dict__.keys():
             return self.attr
         else:

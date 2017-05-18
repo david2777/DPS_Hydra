@@ -82,6 +82,8 @@ CREATE TABLE `hydra_jobboard` (
   `maxAttempts` int(1) NOT NULL DEFAULT '10' COMMENT 'Maximum attempts before a job is stopped as Error.',
   `archived` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Mark a job as archived, 0 = False, 1 = True',
   `phase` int(1) NOT NULL DEFAULT '2',
+  `task_total` int(1) NOT NULL DEFAULT '1' COMMENT 'Total number of tasks',
+  `task_done` int(1) NOT NULL DEFAULT '0' COMMENT 'Number of tasks complete',
   `startFrame` int(4) DEFAULT NULL COMMENT 'The start frame of the job',
   `endFrame` int(4) DEFAULT NULL COMMENT 'The end frame of the job',
   `byFrame` int(4) DEFAULT NULL COMMENT 'Render each x frame. Caluclated by SubmitterMain for now so we can append the last frame to the frames. Should be editable in FarmView eventually. ',

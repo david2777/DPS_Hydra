@@ -412,6 +412,14 @@ def submit_job(niceName, projectName, owner, status, requirements, execName,
         execName = "fusion"
         maxNodes = 1
 
+    if singleTask and phase > 1:
+        frameList = [startFrame]
+    else:
+        frameList = range(startFrame, (endFrame + 1))[::byFrame]
+        frameList += [endFrame] if endFrame not in frameList else []
+
+    total_tasks = len(frameList)
+
     job = sql.hydra_jobboard(niceName=niceName, projectName=projectName,
                         owner=owner, status=status,
                         requirements=requirements, execName=execName,
@@ -420,13 +428,7 @@ def submit_job(niceName, projectName, owner, status, requirements, execName,
                         renderLayers=renderLayers,
                         taskFile=taskFile, priority=priority, maxNodes=maxNodes,
                         timeout=timeout, maxAttempts=maxAttempts, jobType=jobType,
-                        frameDirectory=frameDir, phase=phase)
-
-    if singleTask and phase > 1:
-        frameList = [startFrame]
-    else:
-        frameList = range(startFrame, (endFrame + 1))[::byFrame]
-        frameList += [endFrame] if endFrame not in frameList else []
+                        frameDirectory=frameDir, phase=phase, task_total=total_tasks)
 
     with sql.transaction() as t:
         job.insert(trans=t)
