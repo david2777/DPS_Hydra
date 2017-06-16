@@ -15,7 +15,7 @@ import hydra.hydra_utils as hydra_utils
 from networking.questions import KillCurrentTaskQuestion
 from networking.connections import TCPConnection
 
-#pylint: disable=E1101,E0203,R0903
+#pylint: disable=E1101,E0203,R0903,W1201
 
 #Statuses for either jobs/tasks or render nodes
 STARTED = 'S'               #Working on a job/job in progress
@@ -49,7 +49,7 @@ niceNames = {STARTED: 'Started',
             GETOFF: 'GetOff'
             }
 
-niceNamesRev = {v: k for k, v in niceNames.items()}
+niceNamesRev = {v: k for k, v in niceNames.iteritems()}
 
 def get_database_info():
     """Return host, username, password, database name, and port for logging into database"""
@@ -57,24 +57,24 @@ def get_database_info():
 
     #Get database information
     host = hydra_utils.get_info_from_cfg("database", "host")
-    domain = hydra_utils.get_info_from_cfg("network", "dnsDomainExtension").replace(" ", "")
-    if domain != "" and host != "localhost":
+    domain = hydra_utils.get_info_from_cfg("network", "dnsDomainExtension")
+    if domain and host not in ["localhost", "::1"] and not host.startswith("127."):
         host += ".{}".format(domain)
     databaseName = hydra_utils.get_info_from_cfg("database", "db")
     port = int(hydra_utils.get_info_from_cfg("database", "port"))
     db_username = hydra_utils.get_info_from_cfg("database", "username")
 
     #Get login information
-    autoLogin = hydra_utils.get_info_from_cfg("database", "autologin")
-    autoLogin = True if str(autoLogin).lower()[0] == "t" else False
+    al = hydra_utils.get_info_from_cfg("database", "autologin")
+    autoLogin = True if al.lower().startswith("t") else False
     if autoLogin:
-        _db_password = password_storage.loadCredentials(db_username)
+        _db_password = password_storage.load_credentials(db_username)
         if not _db_password:
             autoLogin = False
 
     if not autoLogin:
-        returnValues = password_storage.qtPrompt()
-        if not returnValues[0] or not returnValues[1]:
+        returnValues = password_storage.qt_prompt()
+        if not all(returnValues):
             logger.error("Could not login!")
             sys.exit(1)
         else:
@@ -87,11 +87,8 @@ def get_this_node():
     """Return a hydra_rendernode class of the current host, None if host not found in the database"""
     thisNode = hydra_rendernode.fetch("WHERE host = %s", (hydra_utils.my_host_name(),),
                                         multiReturn=False)
-    #If it's an empty list just return None
-    if not thisNode:
-        return None
-    else:
-        return thisNode
+    #Fetch will return an empty list if it can't find the host, just return none instead
+    return thisNode if thisNode else None
 
 class transaction(object):
     """Handle transactions with the database"""
@@ -136,7 +133,8 @@ class hydraObject(object):
             #logger.debug(('dirty', k, v))
 
     def __getattr__(self, attr):
-        """Return the requested attribute if available, search the database if not, return None if still not found"""
+        """Return the requested attribute if available, search the database
+        if not, raise except if still not found"""
         if attr in self.__dict__.keys():
             return self.attr
         else:
@@ -146,8 +144,9 @@ class hydraObject(object):
                 self.__dict__[attr] = value[0]
                 return value[0]
             else:
-                logger.warning("Could not find %s in database...", attr)
-                return None
+                err = "Could not find {0} in {1}".format(attr, self.tableName())
+                logger.critical(err)
+                raise Exception(err)
 
     def __repr__(self):
         return "{0} {1}".format(self.tableName(), getattr(self, self.primaryKey))
@@ -174,7 +173,6 @@ class hydraObject(object):
         select = "SELECT {0} FROM {1} {2}"
         select = select.format(colStatement, cls.tableName(),
                                 clause)
-        #pylint: disable=W1201
         logger.debug(select % arguments)
 
         #Fetch the data
@@ -268,21 +266,21 @@ class hydra_rendernode(hydraObject):
             return None
 
     def online(self):
-        if self.status == "O":
-            return self.updateAttr("status", "I")
-        elif self.status == "P":
-            return self.updateAttr("status", "S")
+        if self.status == OFFLINE:
+            return self.updateAttr("status", IDLE)
+        elif self.status == PENDING:
+            return self.updateAttr("status", STARTED)
         else:
             logger.debug("No status changes made to %s", self.host)
             return True
 
     def offline(self):
-        newStatus = "P" if self.status == "S" else "O"
+        newStatus = PENDING if self.status == STARTED else OFFLINE
         return self.updateAttr("status", newStatus)
 
     def get_off(self):
         response = True
-        if self.status == "S":
+        if self.status == STARTED:
             self.updateAttr("status", PENDING)
             task = self.get_task(["id", "status", "exitCode", "endTime", "host"])
             response = task.kill()
@@ -296,7 +294,7 @@ class hydra_rendernode(hydraObject):
         return response
 
     def kill_task(self, statusAfterDeath=KILLED):
-        if self.status == "S" and self.task_id:
+        if self.status == STARTED and self.task_id:
             taskOBJ = self.get_task(["host", "status", "exitCode", "endTime"])
             logger.debug("Killing task %d on %s", self.task_id, self.host)
             return taskOBJ.kill(statusAfterDeath, True)

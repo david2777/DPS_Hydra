@@ -301,18 +301,19 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
                     "priority" : self.thisNode.minPriority,
                     "comps" : comps,
                     "schedule_enabled" : int(self.thisNode.schedule_enabled),
-                    "week_schedule" : self.thisNode.week_schedule}
+                    "week_schedule" : self.thisNode.week_schedule,
+                    "is_render_node" : bool(self.thisNode.is_render_node),
+                    "ip_addr" : self.thisNode.ip_addr}
         edits = NodeEditorDialog.create(defaults)
         #logger.debug(edits)
         if edits:
-            if edits["schedule_enabled"]:
-                schedEnabled = 1
-            else:
-                schedEnabled = 0
+            schedEnabled = bool(edits["schedule_enabled"])
             query = "UPDATE hydra_rendernode SET minPriority = %s"
             query += ", schedule_enabled = %s, capabilities = %s"
+            query += ", is_render_node = %s, ip_addr = %s"
             query += " WHERE id = %s"
-            editsTuple = (edits["priority"], schedEnabled, edits["comps"], self.thisNode.id)
+            editsTuple = (edits["priority"], schedEnabled, edits["comps"],
+                            edits["is_render_node"], edits["ip_addr"], self.thisNode.id)
             with sql.transaction() as t:
                 t.cur.execute(query, editsTuple)
             self.update_thisnode()

@@ -279,7 +279,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
                                             "endFrame", "maxNodes",
                                             "projectName", "archived",
                                             "renderLayers", "attempts", "mpf",
-                                            "byFrame"])
+                                            "byFrame", "task_total", "task_done"])
 
     def user_filter_action(self):
         """Toggle fetching only jobs owned by this user"""
@@ -934,9 +934,9 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             query = "UPDATE hydra_rendernode SET minPriority = %s"
             query += ", schedule_enabled = %s, capabilities = %s"
             query += ", is_render_node = %s, ip_addr = %s"
-            query += " WHERE host = %s"
+            query += " WHERE id = %s"
             editsTuple = (edits["priority"], schedEnabled, edits["comps"],
-                            edits["is_render_node"], edits["ip_addr"], host_name)
+                            edits["is_render_node"], edits["ip_addr"], thisNode.id)
             with sql.transaction() as t:
                 t.cur.execute(query, editsTuple)
             self.populate_node_tree()

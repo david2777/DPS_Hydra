@@ -16,19 +16,19 @@ from dialogs_qt.LoginWidget import DatabaseLogin
 
 #pylint: disable=E1101
 
-def storeCredentials(username, _password):
+def store_credentials(username, _password):
     keyring.set_password("Hydra", username, _password)
     logger.info("Password Stored in Credentials Vault")
 
-def loadCredentials(username):
+def load_credentials(username):
     logger.info("Fetching login for %s", username)
     return keyring.get_password("Hydra", username)
 
-def updateAutologinUser(newUsername):
+def update_autologin_user(newUsername):
     if hydra_utils.get_info_from_cfg("database", "username") != newUsername:
         return hydra_utils.write_info_to_cfg("database", "username", newUsername)
 
-def consolePrompt():
+def console_prompt():
     print "\n\nStore Auto Login information?"
     #Get Login Information
     username = raw_input("Username: ")
@@ -45,13 +45,13 @@ def consolePrompt():
     try:
         MySQLdb.connect(host=host, user=username, passwd=_password,
                         db=databaseName, port=port)
-        storeCredentials(username, _password)
-        updateAutologinUser(username)
+        store_credentials(username, _password)
+        update_autologin_user(username)
 
     except MySQLdb.Error:
         print "Login information was invalid!"
 
-def qtPrompt():
+def qt_prompt():
     app = QtGui.QApplication(sys.argv)
     loginWin = DatabaseLogin()
     loginWin.show()
@@ -60,6 +60,6 @@ def qtPrompt():
     autoLogin = hydra_utils.get_info_from_cfg("database", "autologin")
     autoLogin = True if str(autoLogin).lower().startswith("t") else False
     if username and autoLogin:
-        updateAutologinUser(username)
-        storeCredentials(username, _password)
+        update_autologin_user(username)
+        store_credentials(username, _password)
     return username, _password

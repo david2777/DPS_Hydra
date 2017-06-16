@@ -90,13 +90,13 @@ class RenderTCPServer(servers.TCPServer):
                 logger.debug("RenderTask found %s", renderTask)
                 renderJob = renderTask.get_job()
                 #Task Updates
-                renderTask.status = "S"
+                renderTask.status = sql.STARTED
                 renderTask.host = self.thisNode.host
                 renderTask.startTime = datetime.datetime.now().replace(microsecond=0)
                 #Job Updates
-                renderJob.status = "S"
+                renderJob.status = sql.STARTED
                 #Node Updates
-                self.thisNode.status = "S"
+                self.thisNode.status = sql.STARTED
                 self.thisNode.task_id = renderTask.id
                 #Push updates to the db
                 renderTask.update(t)

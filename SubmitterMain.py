@@ -390,9 +390,9 @@ class SubmitterMain(QtGui.QMainWindow, Ui_MainWindow):
 
     def get_job_status(self):
         if self.startStatusRadioButton.isChecked():
-            return "R"
+            return sql.READY
         else:
-            return "U"
+            return sql.PAUSED
 
 def submit_job(niceName, projectName, owner, status, requirements, execName,
                 baseCMD, startFrame, endFrame, byFrame, renderLayers, taskFile,
