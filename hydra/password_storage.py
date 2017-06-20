@@ -56,7 +56,7 @@ def qt_prompt():
     loginWin = DatabaseLogin()
     loginWin.show()
     app.exec_()
-    username, _password = loginWin.getValues()
+    username, _password = loginWin.get_values()
     autoLogin = hydra_utils.get_info_from_cfg("database", "autologin")
     autoLogin = True if str(autoLogin).lower().startswith("t") else False
     if username and autoLogin:

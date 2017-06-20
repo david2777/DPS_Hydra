@@ -30,12 +30,16 @@ class RenderTCPServer(servers.TCPServer):
         #Get this node data from the database and make sure it exists
         self.thisNode = sql.get_this_node()
         logger.debug(self.thisNode)
+
         if self.thisNode:
-            self.thisNodeID = self.thisNode.id
+            if not self.thisNode.is_render_node or not self.thisNode.ip_addr:
+                logger.critical("This is not a render node! A render node must be marked as such and have an IP address assinged to it in the database.")
+                sys.exit(-1)
+            else:
+                self.thisNodeID = self.thisNode.id
         else:
             logger.critical("This node does not exist in the database! Please Register this node and try again.")
             sys.exit(-1)
-            return
 
         self.keepAllLogs = hydra_utils.get_info_from_cfg("hydra", "keep_all_render_logs")
         self.keepAllLogs = True if self.keepAllLogs.lower().startswith("t") else False
@@ -302,21 +306,21 @@ class RenderTCPServer(servers.TCPServer):
         logger.info("Killing main task with PID %s", self.PSUtilProc.pid)
         self.PSUtilProc.terminate()
         _, alive = psutil.wait_procs([self.PSUtilProc], timeout=15)
-        if len(alive) > 0:
+        if alive:
             self.PSUtilProc.kill()
             _, alive = psutil.wait_procs([self.PSUtilProc], timeout=15)
-            if len(alive) > 0:
+            if alive:
                 logger.error("Could not kill PID %s", self.PSUtilProc.pid)
                 self.childKilled = -1
 
         #Try to kill the children if they are still running
         _ = [proc.terminate() for proc in childrenProcs if proc.is_running()]
         _, alive = psutil.wait_procs(childrenProcs, timeout=15)
-        if len(alive) > 0:
+        if alive:
             _ = [proc.kill() for proc in alive]
             _, alive = psutil.wait_procs(alive, timeout=15)
 
-        if len(alive) > 0:
+        if alive:
             #ADD negative 10 to the return code
             self.childKilled += -10
 

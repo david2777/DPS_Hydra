@@ -46,8 +46,8 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         self.schedThreadStatus = False
         self.autoUpdateStatus = False
 
-        if not self.thisNode or not bool(self.thisNode.is_render_node):
-            logger.error("Node Error!")
+        if not self.thisNode or not self.thisNode.is_render_node or not self.thisNode.ip_addr:
+            logger.critical("This is not a render node! A render node must be marked as such and have an IP address assinged to it in the database.")
             about_box(self, "Error", RenderNodeError_String)
             sys.exit(1)
 
@@ -318,8 +318,6 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
                 t.cur.execute(query, editsTuple)
             self.update_thisnode()
             return True
-        else:
-            return False
 
     def update_thisnode_signaler(self):
         self.emit(QtCore.SIGNAL("update_thisnode"))
