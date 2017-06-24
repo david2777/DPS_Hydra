@@ -68,6 +68,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
 
         #Start autoUpdater and then fetch data from DB
         self.autoUpdateThread = hydra_threads.stoppableThread(self.do_update_signaler, 10, "AutoUpdate_Thread")
+        self.autoUpdateThread.start()
         self.do_fetch()
 
     def add_item(self, menu, name, handler, statusTip, hotkey=None):
@@ -833,8 +834,8 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
             MessageBoxes.warning_box(self, "Selection Error",
                     "Please select something from the Render Node Table and try again.")
             return None
-        else:
-            return [str(item.text(0)) for item in rows]
+
+        return [str(item.text(0)) for item in rows]
 
     def online_render_nodes_handler(self):
         """Onlines each node selected in the nodeTree"""
@@ -976,7 +977,7 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         if not self.autoUpdateCheckbox.isChecked():
             self.autoUpdateThread.terminate()
         else:
-            self.autoUpdateThread.restart()
+            self.autoUpdateThread.start()
 
     def online_this_node_handler(self):
         """Changes the local render node's status to online if it was offline,
@@ -1029,16 +1030,16 @@ class FarmView(QtGui.QMainWindow, Ui_FarmView):
         thisNode = sql.get_this_node()
         if thisNode:
             return thisNode
-        else:
-            MessageBoxes.warning_box(self, title="Notice", msg=longstr.DoesNotExist_Str)
-            self.set_this_node_buttons_enabled(False)
-            return None
+
+        MessageBoxes.warning_box(self, title="Notice", msg=longstr.DoesNotExist_Str)
+        self.set_this_node_buttons_enabled(False)
+        return None
 
     def get_this_node(self):
         if self.thisNode:
             return sql.hydra_rendernode.fetch("WHERE id = %s", (self.thisNode.id,), multiReturn=False)
-        else:
-            return None
+
+        return None
 
     def do_fetch(self):
         """Aggregate method for initilizaing all of the widgets on the default tab."""

@@ -10,6 +10,7 @@ import psutil
 
 #Hydra
 from hydra.logging_setup import logger
+from hydra import threads
 import hydra.hydra_sql as sql
 import hydra.single_instance as single_instance
 import hydra.hydra_utils as hydra_utils
@@ -157,6 +158,10 @@ class RenderTCPServer(servers.TCPServer):
         else:
             os.system("reboot now")
 
+    @staticmethod
+    def do_nothing():
+        return None
+
     def launch_render_task(self, job, task):
         """Does the actual rendering, then records the results on the database"""
         logger.info("Starting task with id %s on job with id %s", task.id, task.job_id)
@@ -184,6 +189,9 @@ class RenderTCPServer(servers.TCPServer):
 
         try:
             #Run the job and keep track of the process
+            self.timeoutThread = threads.stoppableThread(self.do_nothing, int(job.timeout),
+                                                            "Timeout Thread", True)
+            self.timeoutThread.start()
             self.childProcess = subprocess.Popen(renderTaskCMD,
                                                 stdout=log, stderr=log,
                                                 **build_subprocess_args(False))
@@ -196,6 +204,7 @@ class RenderTCPServer(servers.TCPServer):
         #pylint: disable=W0702
         except:
             #Cleanup a crash
+            self.timeoutThread.terminate()
             e = traceback.format_exc()
             logger.critical(e)
             log.write("\n\n-----------Job crashed on startup!-----------\n")
@@ -205,6 +214,8 @@ class RenderTCPServer(servers.TCPServer):
             self.unstick_task()
             return
 
+        #Done! Record results.
+        self.timeoutThread.terminate()
         with sql.transaction() as t:
             #Task
             logger.debug("childKilled = %s", self.childKilled)
@@ -366,4 +377,4 @@ if __name__ == "__main__":
 
     #Start the Render Server and Heartbeat Thread
     socketServer = RenderTCPServer()
-    #socketServer.createIdleLoop("Pulse_Thread", heartbeat, 60)
+    socketServer.createIdleLoop("Pulse_Thread", heartbeat, 60)

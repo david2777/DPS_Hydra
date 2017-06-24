@@ -24,6 +24,8 @@ import hydra.hydra_utils as hydra_utils
 #Doesn't like Qt classes
 #pylint: disable=E0602,E1101
 
+#Move threads to idle loops???
+
 class EmittingStream(QtCore.QObject):
     """For writing text to the console output"""
     textWritten = QtCore.pyqtSignal(str)
@@ -41,10 +43,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         self.thisNode = sql.get_this_node()
         self.isVisable = True
 
-        self.pulseThreadStatus = False
         self.renderServerStatus = False
-        self.schedThreadStatus = False
-        self.autoUpdateStatus = False
 
         if not self.thisNode or not self.thisNode.is_render_node or not self.thisNode.ip_addr:
             logger.critical("This is not a render node! A render node must be marked as such and have an IP address assinged to it in the database.")
@@ -184,9 +183,11 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
 
     def shutdown(self):
         logger.info("Shutting down...")
-        if self.schedThreadStatus:
+        if self.pulseThread.status:
+            self.pulseThread.terminate()
+        if self.schedThread.status:
             self.schedThread.terminate()
-        if self.autoUpdateStatus:
+        if self.autoUpdateThread.status:
             self.autoUpdateThread.terminate()
         if self.renderServerStatus:
             self.renderServer.shutdown()
@@ -203,11 +204,9 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         Note that this is run AFTER the CheckState is changed so when we do
         .isChecked() it's looking for the state after it has been checked."""
         if not self.autoUpdateCheckBox.isChecked():
-            self.autoUpdateStatus = False
             self.autoUpdateThread.terminate()
         else:
-            self.autoUpdateStatus = True
-            self.autoUpdateThread.restart()
+            self.autoUpdateThread.start()
 
     def show_window(self):
         self.isVisable = True
@@ -260,18 +259,18 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         logger.info("Render Server Started!")
 
         #Start Pulse Thread
-        self.renderServer.createIdleLoop("Pulse_Thread", pulse, 60)
-        self.pulseThreadStatus = True
+        self.pulseThread = threads.stoppableThread(pulse, 60, "Pulse_Thread")
+        self.pulseThread.start()
         self.pulseThreadPixmap.setPixmap(self.donePixmap)
         logger.info("Pulse Thread started!")
 
         #Start Auto Update Thread
         QtCore.SIGNAL("update_thisnode")
         QtCore.QObject.connect(self, QtCore.SIGNAL("update_thisnode"), self.update_thisnode)
-        self.autoUpdateStatus = True
 
         self.autoUpdateThread = threads.stoppableThread(self.update_thisnode_signaler, 10,
                                                 "AutoUpdate_Thread")
+        self.autoUpdateThread.start()
         self.start_schedule_thread()
 
     def start_schedule_thread(self):
@@ -280,7 +279,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         if bool(self.currentScheduleEnabled) and self.currentSchedule:
             self.schedThread = schedulerThread(self.scheduler_main,
                                                 "Schedule_Thread", None)
-            self.schedThreadStatus = True
+            self.schedThread.start()
             self.scheduleThreadPixmap.setPixmap(self.donePixmap)
             logger.info("Schedule Thread started!")
         else:
@@ -329,7 +328,7 @@ class RenderNodeMainUI(QtGui.QMainWindow, Ui_RenderNodeMainWindow):
         if self.thisNode.week_schedule != self.currentSchedule or self.thisNode.schedule_enabled != self.currentScheduleEnabled:
             self.currentSchedule = self.thisNode.week_schedule
             self.currentScheduleEnabled = self.thisNode.schedule_enabled
-            if self.schedThreadStatus:
+            if self.schedThread.status:
                 self.schedThread.terminate()
                 app.processEvents()
             self.start_schedule_thread()
